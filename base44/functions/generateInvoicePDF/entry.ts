@@ -18,174 +18,255 @@ const formatDate = (dateStr) => {
 };
 
 async function generateInvoicePDF(invoice) {
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 size
-  const { width, height } = page.getSize();
+   const pdfDoc = await PDFDocument.create();
+   let page = pdfDoc.addPage([595, 842]); // A4 size
+   const { width, height } = page.getSize();
 
-  let yPosition = height - 40;
-  const margin = 30;
-  const lineHeight = 12;
+   let yPosition = height - 40;
+   const margin = 30;
 
-  const drawText = (text, x, y, options = {}) => {
-    page.drawText(String(text), {
-      x,
-      y,
-      size: options.size || 10,
-      color: options.color || rgb(0, 0, 0),
-    });
-  };
+   const drawText = (text, x, y, options = {}) => {
+     page.drawText(String(text), {
+       x,
+       y,
+       size: options.size || 10,
+       color: options.color || rgb(0, 0, 0),
+     });
+   };
 
-  const drawLine = (y) => {
-    page.drawLine({
-      start: { x: margin, y },
-      end: { x: width - margin, y },
-      thickness: 0.5,
-      color: rgb(0.8, 0.8, 0.8)
-    });
-  };
+   const drawBox = (x, y, w, h, title = null, fields = []) => {
+     page.drawRectangle({ x, y, width: w, height: 1, color: rgb(0.3, 0.3, 0.3) });
 
-  const drawSection = (title, y) => {
-    page.drawRectangle({
-      x: margin,
-      y: y - 20,
-      width: width - 2 * margin,
-      height: 20,
-      color: rgb(0.13, 0.16, 0.21), // Dark blue
-    });
-    drawText(title, margin + 10, y - 15, { size: 11, color: rgb(1, 1, 1) });
-    return y - 30;
-  };
+     if (title) {
+       page.drawRectangle({ x, y: y - 18, width: w, height: 18, color: rgb(0.8, 0.8, 0.8) });
+       drawText(title, x + 5, y - 12, { size: 8 });
+     }
 
-  // Header
-  drawText(`NF-e #${invoice.number} (Série ${invoice.series || "—"})`, margin, yPosition, { size: 16 });
-  yPosition -= 20;
-  drawText(invoice.supplier_name, margin, yPosition, { size: 11 });
-  yPosition -= 25;
-  drawLine(yPosition);
-  yPosition -= 15;
+     let fieldY = y - (title ? 30 : 5);
+     fields.forEach((field) => {
+       drawText(field.label, x + 5, fieldY, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+       drawText(String(field.value), x + 5, fieldY - 10, { size: 9 });
+       fieldY -= 25;
+     });
+   };
 
-  // IDENTIFICAÇÃO
-  yPosition = drawSection("IDENTIFICAÇÃO", yPosition);
-  const idFields = [
-    { label: "Nº DOCUMENTO", value: invoice.number },
-    { label: "SÉRIE", value: invoice.series },
-    { label: "DATA DE EMISSÃO", value: formatDate(invoice.issue_date) },
-    { label: "NATUREZA DA OPERAÇÃO", value: "Venda de mercadorias" },
-    { label: "VALOR TOTAL NF", value: formatCurrency(invoice.total_value) },
-    { label: "DATA DE VENCIMENTO", value: formatDate(invoice.due_date) }
-  ];
+   // Header - Company Info (left)
+   drawText(invoice.supplier_name, margin, yPosition, { size: 11 });
+   yPosition -= 12;
+   drawText(invoice.supplier_phone || "Telefone não informado", margin, yPosition, { size: 9 });
+   yPosition -= 25;
 
-  let col = 0;
-  for (let i = 0; i < idFields.length; i++) {
-    const field = idFields[i];
-    drawText(field.label, margin + (col * 140), yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    drawText(field.value, margin + (col * 140), yPosition - 12, { size: 10 });
-    col++;
-    if (col >= 2) {
-      col = 0;
-      yPosition -= 30;
-    }
-  }
-  yPosition -= 20;
-  drawLine(yPosition);
-  yPosition -= 15;
+   // Title and Header Info (center/right)
+   drawText("DANFE", 240, height - 40, { size: 20 });
+   drawText("Documento Auxiliar da", 240, height - 62, { size: 9 });
+   drawText("Nota Fiscal Eletrônica", 240, height - 72, { size: 9 });
 
-  // EMITENTE
-  yPosition = drawSection("EMITENTE", yPosition);
-  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-  drawText(invoice.supplier_name, margin, yPosition - 12, { size: 10 });
-  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-  drawText(formatCNPJ(invoice.supplier_cnpj), margin + 200, yPosition - 12, { size: 10 });
-  yPosition -= 30;
-  drawLine(yPosition);
-  yPosition -= 15;
+   drawText(`Nº ${invoice.number} Série: ${invoice.series || "—"}`, margin, height - 95, { size: 12 });
+   drawText(`Emissão: ${formatDate(invoice.issue_date)}`, margin, height - 110, { size: 10 });
 
-  // DESTINATÁRIO
-  yPosition = drawSection("DESTINATÁRIO", yPosition);
-  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-  drawText(invoice.recipient_name || "—", margin, yPosition - 12, { size: 10 });
-  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-  drawText(formatCNPJ(invoice.recipient_cnpj), margin + 200, yPosition - 12, { size: 10 });
-  yPosition -= 30;
-  drawLine(yPosition);
-  yPosition -= 15;
+   // Right side header - CNPJ, IE, etc
+   drawText("CHAVE DE ACESSO", 420, height - 40, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.access_key || "—", 420, height - 62, { size: 8 });
+   drawText(`CNPJ: ${formatCNPJ(invoice.supplier_cnpj)}`, 420, height - 75, { size: 8 });
+   drawText(`IE: ${invoice.supplier_ie || "—"}`, 420, height - 85, { size: 8 });
 
-  // PRODUTOS
-  if (invoice.items && invoice.items.length > 0) {
-    yPosition = drawSection(`PRODUTOS / SERVIÇOS (${invoice.items.length})`, yPosition);
-    drawText("DESCRIÇÃO", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    drawText("QTD", margin + 300, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    drawText("VLR UNIT.", margin + 360, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    drawText("TOTAL", margin + 440, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    yPosition -= 15;
+   yPosition = height - 125;
 
-    invoice.items.forEach((item) => {
-      if (yPosition < margin + 100) {
-        page = pdfDoc.addPage([595, 842]);
-        yPosition = height - 40;
-      }
-      drawText(item.description, margin, yPosition, { size: 9 });
-      drawText(String(item.quantity), margin + 300, yPosition, { size: 9 });
-      drawText(formatCurrency(item.unit_value), margin + 360, yPosition, { size: 9 });
-      drawText(formatCurrency(item.total), margin + 440, yPosition, { size: 9 });
-      yPosition -= 15;
-    });
-    drawLine(yPosition);
-    yPosition -= 15;
-  }
+   // Natureza e Protocolo
+   page.drawRectangle({ x: margin, y: yPosition - 40, width: (width - 2 * margin) / 2, height: 40, color: rgb(0.9, 0.9, 0.9) });
+   page.drawRectangle({ x: margin + (width - 2 * margin) / 2, y: yPosition - 40, width: (width - 2 * margin) / 2, height: 40, color: rgb(0.9, 0.9, 0.9) });
 
-  // CÁLCULO DO IMPOSTO / TOTAIS
-  yPosition = drawSection("CÁLCULO DO IMPOSTO / TOTAIS", yPosition);
-  const taxFields = [
-    { label: "BASE CÁLC. ICMS", value: formatCurrency(invoice.total_products || invoice.total_value) },
-    { label: "VALOR ICMS", value: formatCurrency(invoice.tax_icms || 0) },
-    { label: "VALOR IPI", value: formatCurrency(invoice.tax_ipi || 0) },
-    { label: "VALOR PIS", value: formatCurrency(invoice.tax_pis || 0) },
-    { label: "VALOR COFINS", value: formatCurrency(invoice.tax_cofins || 0) },
-    { label: "DESCONTO", value: formatCurrency(invoice.total_discount || 0) },
-    { label: "FRETE", value: formatCurrency(invoice.total_freight || 0) }
-  ];
+   drawText("NATUREZA DA OPERAÇÃO", margin + 5, yPosition - 10, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText("Venda de mercadorias", margin + 5, yPosition - 22, { size: 10 });
 
-  col = 0;
-  for (let i = 0; i < taxFields.length; i++) {
-    const field = taxFields[i];
-    drawText(field.label, margin + (col * 180), yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
-    drawText(field.value, margin + (col * 180), yPosition - 12, { size: 10 });
-    col++;
-    if (col >= 3) {
-      col = 0;
-      yPosition -= 30;
-    }
-  }
+   drawText("PROTOCOLO DE AUTORIZAÇÃO", margin + (width - 2 * margin) / 2 + 5, yPosition - 10, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText("NF-e Autorizada", margin + (width - 2 * margin) / 2 + 5, yPosition - 22, { size: 10 });
 
-  // Total highlight
-  yPosition -= 30;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 30,
-    width: width - 2 * margin,
-    height: 30,
-    color: rgb(1, 0.85, 0.4), // Amber
-  });
-  drawText("TOTAL NF", margin + 10, yPosition - 10, { size: 10, color: rgb(0, 0, 0) });
-  drawText(formatCurrency(invoice.total_value), width - margin - 100, yPosition - 10, { size: 14, color: rgb(0, 0, 0) });
-  yPosition -= 50;
+   yPosition -= 60;
 
-  // Footer - Control
-  if (invoice.access_key) {
-    page.drawRectangle({
-      x: margin,
-      y: yPosition - 40,
-      width: width - 2 * margin,
-      height: 40,
-      color: rgb(1, 0.85, 0.4),
-    });
-    drawText("CHAVE DE ACESSO", margin + 10, yPosition - 15, { size: 8, color: rgb(0, 0, 0) });
-    drawText(invoice.access_key, margin + 10, yPosition - 28, { size: 9, color: rgb(0, 0, 0) });
-  }
+   // EMITENTE section
+   page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+   drawText("EMITENTE", margin + 5, yPosition - 15, { size: 8 });
+   yPosition -= 30;
 
-  const pdfBytes = await pdfDoc.save();
-  return pdfBytes;
+   const emitCol1 = margin;
+   const emitCol2 = margin + 160;
+   const emitCol3 = margin + 320;
+
+   drawText("NOME / RAZÃO SOCIAL", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.supplier_name, emitCol1, yPosition - 12, { size: 9 });
+
+   drawText("CNPJ", emitCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCNPJ(invoice.supplier_cnpj), emitCol2, yPosition - 12, { size: 9 });
+
+   drawText("INSCRIÇÃO ESTADUAL", emitCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.supplier_ie || "—", emitCol3, yPosition - 12, { size: 9 });
+
+   yPosition -= 30;
+
+   drawText("ENDEREÇO", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   yPosition -= 50;
+
+   // DESTINATÁRIO section
+   page.drawRectangle({ x: margin, y: yPosition, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+   drawText("DESTINATÁRIO / REMETENTE", margin + 5, yPosition + 5, { size: 8 });
+   yPosition -= 30;
+
+   drawText("NOME / RAZÃO SOCIAL", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.recipient_name || "—", emitCol1, yPosition - 12, { size: 9 });
+
+   drawText("CNPJ / CPF", emitCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCNPJ(invoice.recipient_cnpj), emitCol2, yPosition - 12, { size: 9 });
+
+   drawText("INSCRIÇÃO ESTADUAL", emitCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText("—", emitCol3, yPosition - 12, { size: 9 });
+
+   yPosition -= 30;
+
+   drawText("ENDEREÇO", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   yPosition -= 50;
+
+   // PRODUTOS section
+   if (invoice.items && invoice.items.length > 0) {
+     page.drawRectangle({ x: margin, y: yPosition, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+     drawText("DADOS DOS PRODUTOS / SERVIÇOS", margin + 5, yPosition + 5, { size: 8 });
+     yPosition -= 25;
+
+     // Headers
+     const col1 = margin, col2 = margin + 40, col3 = margin + 140, col4 = margin + 220, col5 = margin + 280, col6 = margin + 330, col7 = margin + 420;
+
+     drawText("Nº", col1, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("DESCRIÇÃO DO PRODUTO / SERVIÇO", col2, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("CÓDIGO", col3, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("NCM", col4, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("CFOP", col5, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("UN", col6, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+     drawText("QTDE", col7, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+
+     yPosition -= 12;
+     invoice.items.forEach((item, idx) => {
+       drawText(String(idx + 1), col1, yPosition, { size: 9 });
+       drawText(item.description, col2, yPosition, { size: 9 });
+       drawText(item.ncm || "—", col3, yPosition, { size: 9 });
+       drawText("—", col4, yPosition, { size: 9 });
+       drawText(item.cfop || "—", col5, yPosition, { size: 9 });
+       drawText("UN", col6, yPosition, { size: 9 });
+       drawText(String(item.quantity), col7, yPosition, { size: 9 });
+       yPosition -= 15;
+     });
+   }
+
+   yPosition -= 20;
+
+   // CÁLCULO DO IMPOSTO / TOTAIS
+   page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+   drawText("CÁLCULO DO IMPOSTO / TOTAIS", margin + 5, yPosition - 15, { size: 8 });
+   yPosition -= 35;
+
+   const taxCol1 = margin;
+   const taxCol2 = margin + 140;
+   const taxCol3 = margin + 280;
+   const taxCol4 = margin + 420;
+
+   drawText("BASE CÁLC. ICMS", taxCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.total_products || invoice.total_value), taxCol1, yPosition - 12, { size: 11 });
+
+   drawText("VALOR ICMS", taxCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.tax_icms || 0), taxCol2, yPosition - 12, { size: 11 });
+
+   drawText("VALOR IPI", taxCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.tax_ipi || 0), taxCol3, yPosition - 12, { size: 11 });
+
+   yPosition -= 30;
+
+   drawText("VALOR PIS", taxCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.tax_pis || 0), taxCol1, yPosition - 12, { size: 11 });
+
+   drawText("VALOR COFINS", taxCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.tax_cofins || 0), taxCol2, yPosition - 12, { size: 11 });
+
+   drawText("DESCONTO", taxCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.total_discount || 0), taxCol3, yPosition - 12, { size: 11 });
+
+   drawText("FRETE", taxCol4, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.total_freight || 0), taxCol4, yPosition - 12, { size: 11 });
+
+   yPosition -= 35;
+
+   // Total box (amber/yellow)
+   page.drawRectangle({
+     x: margin,
+     y: yPosition - 30,
+     width: width - 2 * margin,
+     height: 30,
+     color: rgb(1, 0.85, 0.4),
+   });
+   drawText("TOTAL NF", margin + 10, yPosition - 10, { size: 11, color: rgb(0, 0, 0) });
+   drawText(formatCurrency(invoice.total_value), width - margin - 80, yPosition - 10, { size: 13, color: rgb(0, 0, 0) });
+
+   yPosition -= 55;
+
+   // Payment and Additional info
+   drawText("FORMA DE PAGAMENTO", margin, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText("Boleto Bancário", margin, yPosition - 12, { size: 9 });
+
+   drawText("VALOR DO PAGAMENTO", margin + 200, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(formatCurrency(invoice.total_value), margin + 200, yPosition - 12, { size: 9 });
+
+   yPosition -= 35;
+
+   // Additional info
+   if (invoice.additional_info) {
+     page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+     drawText("INFORMAÇÕES COMPLEMENTARES", margin + 5, yPosition - 15, { size: 8 });
+     yPosition -= 30;
+
+     const maxWidth = width - 2 * margin - 10;
+     const words = invoice.additional_info.split(" ");
+     let line = "";
+     let lineY = yPosition;
+
+     words.forEach((word) => {
+       if (line.length + word.length > 120) {
+         drawText(line, margin + 5, lineY, { size: 8 });
+         line = word + " ";
+         lineY -= 12;
+       } else {
+         line += word + " ";
+       }
+     });
+     if (line) drawText(line, margin + 5, lineY, { size: 8 });
+
+     yPosition -= 50;
+   }
+
+   // Control section (amber/yellow)
+   page.drawRectangle({
+     x: margin,
+     y: yPosition - 30,
+     width: width - 2 * margin,
+     height: 30,
+     color: rgb(1, 0.85, 0.4),
+   });
+   drawText("CONTROLE INTERNO DE LANÇAMENTOS", margin + 10, yPosition - 10, { size: 9 });
+
+   yPosition -= 50;
+
+   const controlCol1 = margin;
+   const controlCol2 = margin + 200;
+   const controlCol3 = margin + 400;
+
+   drawText("LANÇADO SIGV", controlCol1, yPosition, { size: 8, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.sigv_recorded ? "SIM" : "NÃO", controlCol1, yPosition - 12, { size: 10, color: rgb(1, 0, 0) });
+
+   drawText("LANÇADO TOPCON", controlCol2, yPosition, { size: 8, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.topcon_recorded ? "SIM" : "NÃO", controlCol2, yPosition - 12, { size: 10, color: rgb(1, 0, 0) });
+
+   drawText("BOLETO EM MÃOS", controlCol3, yPosition, { size: 8, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.boleto_recorded ? "SIM" : "NÃO", controlCol3, yPosition - 12, { size: 10, color: rgb(1, 0, 0) });
+
+   const pdfBytes = await pdfDoc.save();
+   return pdfBytes;
 }
 
 Deno.serve(async (req) => {
