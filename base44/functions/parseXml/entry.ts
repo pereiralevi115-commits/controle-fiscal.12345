@@ -49,6 +49,9 @@ function parseNFe(xmlText) {
   const supplierNumber = emitEnderEmi ? getTagText(emitEnderEmi, "nro") : "";
   const supplierCity = emitEnderEmi ? getTagText(emitEnderEmi, "xMun") : "";
   const supplierState = emitEnderEmi ? getTagText(emitEnderEmi, "UF") : "";
+  const emitContato = emit?.getElementsByTagName("Ender")[0];
+  const supplierPhone = emitContato ? getTagText(emitContato, "fone") : "";
+  const supplierEmail = emitContato ? getTagText(emitContato, "email") : "";
 
   // Destinatário (recipient)
   const dest = inf.getElementsByTagName("dest")[0];
@@ -177,6 +180,8 @@ function parseNFe(xmlText) {
     supplier_number: supplierNumber,
     supplier_city: supplierCity,
     supplier_state: supplierState,
+    supplier_phone: supplierPhone,
+    supplier_email: supplierEmail,
     recipient_name: recipientName,
     recipient_cnpj: recipientCnpj,
     recipient_ie: recipientIe,

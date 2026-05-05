@@ -107,6 +107,13 @@ async function generateInvoicePDF(invoice) {
    const emitAddress = `${invoice.supplier_address || "—"}, ${invoice.supplier_number || "—"} - ${invoice.supplier_city || "—"} - ${invoice.supplier_state || "—"}`;
    drawText("ENDEREÇO", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
    drawText(emitAddress, emitCol1, yPosition - 12, { size: 8 });
+
+   drawText("TELEFONE", emitCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.supplier_phone || "—", emitCol2, yPosition - 12, { size: 8 });
+
+   drawText("EMAIL", emitCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
+   drawText(invoice.supplier_email || "—", emitCol3, yPosition - 12, { size: 8 });
+
    yPosition -= 30;
 
    // DESTINATÁRIO section
