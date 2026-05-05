@@ -21,6 +21,11 @@ export default function Suppliers() {
     queryFn: () => base44.entities.Supplier.list(),
   });
 
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => base44.entities.Invoice.list("-issue_date", 500),
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Supplier.create(data),
     onSuccess: () => {
@@ -44,6 +49,37 @@ export default function Suppliers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       toast.success("Fornecedor removido!");
+    },
+  });
+
+  const extractSuppliersMutation = useMutation({
+    mutationFn: async () => {
+      const uniqueSuppliers = new Map();
+      invoices.forEach((inv) => {
+        const key = `${inv.supplier_cnpj}`;
+        if (!uniqueSuppliers.has(key)) {
+          uniqueSuppliers.set(key, {
+            name: inv.supplier_name,
+            cnpj: inv.supplier_cnpj,
+          });
+        }
+      });
+
+      const existingCNPJs = suppliers.map((s) => s.cnpj);
+      const newSuppliers = Array.from(uniqueSuppliers.values()).filter(
+        (s) => !existingCNPJs.includes(s.cnpj)
+      );
+
+      if (newSuppliers.length === 0) {
+        toast.info("Nenhum fornecedor novo para adicionar");
+        return;
+      }
+
+      await base44.entities.Supplier.bulkCreate(newSuppliers);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      toast.success("Fornecedores extraídos!");
     },
   });
 
@@ -78,11 +114,20 @@ export default function Suppliers() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Fornecedores</h1>
-        <p className="text-muted-foreground mt-1">
-          {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Fornecedores</h1>
+          <p className="text-muted-foreground mt-1">
+            {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <Button 
+          onClick={() => extractSuppliersMutation.mutate()}
+          variant="outline"
+          className="gap-2"
+        >
+          Extrair de Notas Fiscais
+        </Button>
       </div>
 
       <div className="flex gap-3">
