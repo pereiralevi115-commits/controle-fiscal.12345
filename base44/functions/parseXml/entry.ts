@@ -220,6 +220,11 @@ Deno.serve(async (req) => {
 
         const created = await base44.entities.Invoice.create(parsed);
         results.push(created);
+
+        // Small delay to avoid rate limiting
+        if ((i + 1) % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       } catch (err) {
         errors.push({ index: i, error: err.message });
       }
