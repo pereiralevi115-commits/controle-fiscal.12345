@@ -142,19 +142,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             </div>
           )}
 
-          {/* AÇÃO */}
-          {invoice.status === "pendente" && (
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={() => onMarkReceived(invoice)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                size="lg"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                Marcar como Recebida
-              </Button>
-            </div>
-          )}
+
         </div>
       </DialogContent>
     </Dialog>
