@@ -84,12 +84,13 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
             </TableHead>
             <TableHead className="font-semibold">Produto</TableHead>
             <TableHead className="font-semibold">Informações Adicionais</TableHead>
+            <TableHead className="font-semibold">Cancelamento</TableHead>
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {invoices.map((invoice) => (
-            <TableRow key={invoice.id} className="group">
+            <TableRow key={invoice.id} className={`group ${invoice.cancelled ? "bg-red-50" : ""}`}>
               <TableCell className="font-medium">
                 <InvoiceTableTooltip content={`Destinatário: ${invoice.recipient_name}\nCNPJ: ${formatCNPJ(invoice.recipient_cnpj)}`}>
                   <span>{getBranchName(invoice.branch_cnpj)}</span>
@@ -157,6 +158,18 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                       : "—"}
                   </span>
                 </InvoiceTableTooltip>
+              </TableCell>
+              <TableCell className="text-sm">
+                {invoice.cancelled ? (
+                  <div className="space-y-1">
+                    <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">Cancelada</span>
+                    {invoice.cancellation_date && (
+                      <p className="text-xs text-muted-foreground">{invoice.cancellation_date}</p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">

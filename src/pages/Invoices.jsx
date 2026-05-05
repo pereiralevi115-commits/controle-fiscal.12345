@@ -8,7 +8,7 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 
 export default function Invoices() {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -52,11 +52,19 @@ export default function Invoices() {
       const statusMatch = filters.status === "all" || inv.status === filters.status;
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
       
+      // Filter by cancellation status
+      let cancelledMatch = true;
+      if (filters.cancelled === "ativas") {
+        cancelledMatch = !inv.cancelled;
+      } else if (filters.cancelled === "canceladas") {
+        cancelledMatch = inv.cancelled;
+      }
+      
       // Filter out invoices from hidden suppliers
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
       
-      return searchMatch && statusMatch && branchMatch && supplierNotHidden;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden;
     });
 
     // Sort by multiple criteria
@@ -119,7 +127,7 @@ export default function Invoices() {
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} showCancelledFilter={true} />
 
         <div className="bg-white rounded-xl shadow-lg border-0">
         <InvoiceTable

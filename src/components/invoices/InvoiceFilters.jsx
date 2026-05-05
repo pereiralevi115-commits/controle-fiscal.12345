@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 
-export default function InvoiceFilters({ filters, onFilterChange, branches }) {
+export default function InvoiceFilters({ filters, onFilterChange, branches, showCancelledFilter }) {
   return (
     <div className="flex flex-wrap gap-3">
       <div className="relative flex-1 min-w-[220px]">
@@ -44,6 +44,21 @@ export default function InvoiceFilters({ filters, onFilterChange, branches }) {
           ))}
         </SelectContent>
       </Select>
+      {showCancelledFilter && (
+        <Select
+          value={filters.cancelled || "ativas"}
+          onValueChange={(val) => onFilterChange({ ...filters, cancelled: val })}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Cancelamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ativas">Ativas</SelectItem>
+            <SelectItem value="canceladas">Canceladas</SelectItem>
+            <SelectItem value="todas">Todas</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }

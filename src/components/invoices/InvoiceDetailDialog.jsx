@@ -187,6 +187,21 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             </div>
           )}
 
+          {/* CANCELAMENTO */}
+          {invoice.cancelled && (
+            <div className="border rounded-lg overflow-hidden bg-red-50">
+              <SectionHeader title="CANCELAMENTO" />
+              <div className="space-y-0">
+                <InfoField label="Status" value="Cancelada" />
+                {invoice.cancellation_date && (
+                  <InfoField label="Data do Cancelamento" value={invoice.cancellation_date ? format(new Date(invoice.cancellation_date), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+                )}
+                {invoice.cancellation_reason && (
+                  <InfoField label="Motivo" value={invoice.cancellation_reason} />
+                )}
+              </div>
+            </div>
+          )}
 
         </div>
       </DialogContent>

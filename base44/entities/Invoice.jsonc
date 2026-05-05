@@ -78,6 +78,20 @@
       "format": "date",
       "description": "Data em que a nota foi recebida"
     },
+    "cancelled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a nota fiscal foi cancelada"
+    },
+    "cancellation_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do cancelamento da nota fiscal"
+    },
+    "cancellation_reason": {
+      "type": "string",
+      "description": "Motivo do cancelamento"
+    },
     "items": {
       "type": "array",
       "description": "Itens da nota fiscal",
