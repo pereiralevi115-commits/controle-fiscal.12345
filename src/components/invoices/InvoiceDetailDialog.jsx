@@ -167,64 +167,6 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             </div>
           </div>
 
-          {/* PAGAMENTO */}
-          {((invoice.installments && invoice.installments.length > 0) || (invoice.payments && invoice.payments.length > 0)) && (
-            <div className="border rounded-lg overflow-hidden">
-              <SectionHeader title="PAGAMENTO" />
-              <div className="space-y-0">
-                {invoice.installments && invoice.installments.length > 0 && (
-                  <div>
-                    <div className="bg-slate-50 px-6 py-3">
-                      <p className="text-xs font-semibold text-slate-700">PARCELAS</p>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-b">
-                          <TableHead className="text-xs font-semibold">Parcela</TableHead>
-                          <TableHead className="text-xs font-semibold">Vencimento</TableHead>
-                          <TableHead className="text-xs font-semibold text-right">Valor</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {invoice.installments.map((inst, idx) => (
-                          <TableRow key={idx} className="hover:bg-muted/50">
-                            <TableCell className="text-sm">{inst.number || `${idx + 1}`}</TableCell>
-                            <TableCell className="text-sm">{inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</TableCell>
-                            <TableCell className="text-sm text-right">{formatCurrency(inst.value)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-                {invoice.payments && invoice.payments.length > 0 && (
-                  <InfoField 
-                    label="Forma de Pagamento" 
-                    value={
-                      {
-                        "01": "Dinheiro",
-                        "02": "Cheque",
-                        "03": "Cartão de Crédito",
-                        "04": "Cartão de Débito",
-                        "05": "Crediário",
-                        "10": "Vale Alimentação",
-                        "11": "Vale Refeição",
-                        "12": "Vale Presente",
-                        "13": "Vale Combustível",
-                        "14": "Duplicata",
-                        "15": "Boleto Bancário",
-                        "16": "Depósito Bancário",
-                        "17": "Pagamento Instantâneo (Pix)",
-                        "18": "Transferência Bancária",
-                        "19": "Programas de Fidelização"
-                      }[invoice.payments[0].payment_type] || "Boleto Bancário"
-                    } 
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
           {/* INFORMAÇÕES COMPLEMENTARES */}
           {invoice.additional_info && (
             <div className="border rounded-lg overflow-hidden">

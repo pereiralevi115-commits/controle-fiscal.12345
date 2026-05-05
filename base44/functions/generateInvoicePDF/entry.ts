@@ -162,60 +162,6 @@ async function generateInvoicePDF(invoice) {
 
    yPosition -= 20;
 
-   // PAGAMENTO section
-   if ((invoice.installments && invoice.installments.length > 0) || (invoice.payments && invoice.payments.length > 0)) {
-     page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
-     drawText("PAGAMENTO", margin + 5, yPosition - 15, { size: 8 });
-     yPosition -= 30;
-
-     const payCol1 = margin;
-     const payCol2 = margin + 140;
-     const payCol3 = margin + 280;
-
-     if (invoice.installments && invoice.installments.length > 0) {
-       invoice.installments.forEach((inst, idx) => {
-         if (idx > 0) yPosition -= 15;
-         const instNumber = inst.number || `${idx + 1}`;
-         const instDueDate = formatDate(inst.due_date);
-         const instValue = formatCurrency(inst.value);
-
-         drawText(`PARCELA ${instNumber}`, payCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-         drawText(instDueDate, payCol1, yPosition - 10, { size: 9 });
-
-         drawText("VALOR", payCol2, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-         drawText(instValue, payCol2, yPosition - 10, { size: 9 });
-       });
-     }
-
-     if (invoice.payments && invoice.payments.length > 0) {
-       yPosition -= 25;
-       const payment = invoice.payments[0];
-       const paymentTypeMap = {
-         "01": "Dinheiro",
-         "02": "Cheque",
-         "03": "Cartão de Crédito",
-         "04": "Cartão de Débito",
-         "05": "Crediário",
-         "10": "Vale Alimentação",
-         "11": "Vale Refeição",
-         "12": "Vale Presente",
-         "13": "Vale Combustível",
-         "14": "Duplicata",
-         "15": "Boleto Bancário",
-         "16": "Depósito Bancário",
-         "17": "Pagamento Instantâneo (Pix)",
-         "18": "Transferência Bancária",
-         "19": "Programas de Fidelização"
-       };
-       const paymentType = paymentTypeMap[payment.payment_type] || "Boleto Bancário";
-
-       drawText("FORMA DE PAGAMENTO", payCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-       drawText(paymentType, payCol1, yPosition - 10, { size: 9 });
-     }
-
-     yPosition -= 30;
-   }
-
    // CÁLCULO DO IMPOSTO / TOTAIS
    page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
    drawText("CÁLCULO DO IMPOSTO / TOTAIS", margin + 5, yPosition - 15, { size: 8 });
