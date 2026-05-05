@@ -43,11 +43,23 @@ function parseNFe(xmlText) {
   const emit = inf.getElementsByTagName("emit")[0];
   const supplierName = getTagText(emit, "xNome") || getTagText(emit, "xFant");
   const supplierCnpj = getTagText(emit, "CNPJ");
+  const supplierIe = getTagText(emit, "IE");
+  const emitEnderEmi = emit?.getElementsByTagName("enderEmit")[0];
+  const supplierAddress = emitEnderEmi ? getTagText(emitEnderEmi, "xLgr") : "";
+  const supplierNumber = emitEnderEmi ? getTagText(emitEnderEmi, "nro") : "";
+  const supplierCity = emitEnderEmi ? getTagText(emitEnderEmi, "xMun") : "";
+  const supplierState = emitEnderEmi ? getTagText(emitEnderEmi, "UF") : "";
 
   // Destinatário (recipient)
   const dest = inf.getElementsByTagName("dest")[0];
   const recipientName = getTagText(dest, "xNome");
   const recipientCnpj = getTagText(dest, "CNPJ");
+  const recipientIe = getTagText(dest, "IE");
+  const destEnder = dest?.getElementsByTagName("enderDest")[0];
+  const recipientAddress = destEnder ? getTagText(destEnder, "xLgr") : "";
+  const recipientNumber = destEnder ? getTagText(destEnder, "nro") : "";
+  const recipientCity = destEnder ? getTagText(destEnder, "xMun") : "";
+  const recipientState = destEnder ? getTagText(destEnder, "UF") : "";
 
   // Total and taxes
   const total = inf.getElementsByTagName("total")[0];
@@ -160,8 +172,18 @@ function parseNFe(xmlText) {
     access_key: accessKey,
     supplier_name: supplierName,
     supplier_cnpj: supplierCnpj,
+    supplier_ie: supplierIe,
+    supplier_address: supplierAddress,
+    supplier_number: supplierNumber,
+    supplier_city: supplierCity,
+    supplier_state: supplierState,
     recipient_name: recipientName,
     recipient_cnpj: recipientCnpj,
+    recipient_ie: recipientIe,
+    recipient_address: recipientAddress,
+    recipient_number: recipientNumber,
+    recipient_city: recipientCity,
+    recipient_state: recipientState,
     total_value: totalValue,
     issue_date: formattedDate,
     due_date: dueDate,

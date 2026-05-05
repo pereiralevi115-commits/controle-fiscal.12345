@@ -104,8 +104,10 @@ async function generateInvoicePDF(invoice) {
 
    yPosition -= 30;
 
+   const emitAddress = `${invoice.supplier_address || "—"}, ${invoice.supplier_number || "—"} - ${invoice.supplier_city || "—"} - ${invoice.supplier_state || "—"}`;
    drawText("ENDEREÇO", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-   yPosition -= 50;
+   drawText(emitAddress, emitCol1, yPosition - 12, { size: 8 });
+   yPosition -= 30;
 
    // DESTINATÁRIO section
    page.drawRectangle({ x: margin, y: yPosition, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
@@ -119,12 +121,14 @@ async function generateInvoicePDF(invoice) {
    drawText(formatCNPJ(invoice.recipient_cnpj), emitCol2, yPosition - 12, { size: 9 });
 
    drawText("INSCRIÇÃO ESTADUAL", emitCol3, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-   drawText("—", emitCol3, yPosition - 12, { size: 9 });
+   drawText(invoice.recipient_ie || "—", emitCol3, yPosition - 12, { size: 9 });
 
    yPosition -= 30;
 
+   const destAddress = `${invoice.recipient_address || "—"}, ${invoice.recipient_number || "—"} - ${invoice.recipient_city || "—"} - ${invoice.recipient_state || "—"}`;
    drawText("ENDEREÇO", emitCol1, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-   yPosition -= 50;
+   drawText(destAddress, emitCol1, yPosition - 12, { size: 8 });
+   yPosition -= 30;
 
    // PRODUTOS section
    if (invoice.items && invoice.items.length > 0) {
