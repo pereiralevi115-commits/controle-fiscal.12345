@@ -11,8 +11,8 @@ export default function Invoices() {
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
-    { key: "issue_date", direction: "asc" },
-    { key: "branch_cnpj", direction: "asc" }
+    { key: "branch_cnpj", direction: "asc" },
+    { key: "issue_date", direction: "asc" }
   ]);
 
   const { data: invoices = [], isLoading } = useQuery({
