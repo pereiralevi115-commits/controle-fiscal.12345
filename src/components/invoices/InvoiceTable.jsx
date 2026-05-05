@@ -121,7 +121,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-right font-semibold">
-                <InvoiceTableTooltip content={`Valor com tributação: ${formatCurrency(invoice.total_value)}`}>
+                <InvoiceTableTooltip content={`CÁLCULO DO IMPOSTO / TOTAIS\n\nVALOR PRODUTOS\n${formatCurrency(invoice.total_products || invoice.total_value)}\n\nVALOR ICMS\n${formatCurrency(invoice.tax_icms || 0)}\n\nVALOR IPI\n${formatCurrency(invoice.tax_ipi || 0)}\n\nVALOR PIS\n${formatCurrency(invoice.tax_pis || 0)}\n\nTOTAL NF\n${formatCurrency(invoice.total_value)}`}>
                   <span className="cursor-help">{formatCurrency(invoice.total_value)}</span>
                 </InvoiceTableTooltip>
               </TableCell>
