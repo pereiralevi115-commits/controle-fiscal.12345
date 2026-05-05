@@ -1,0 +1,23 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome/Raz\u00e3o social do fornecedor"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor"
+    },
+    "requires_control": {
+      "type": "boolean",
+      "default": true,
+      "description": "Indica se as notas deste fornecedor precisam de controle"
+    }
+  },
+  "required": [
+    "name",
+    "cnpj"
+  ]
+}

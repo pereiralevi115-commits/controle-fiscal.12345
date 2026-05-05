@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Invoices from './pages/Invoices';
 import ImportXml from './pages/ImportXml';
 import Branches from './pages/Branches';
+import Suppliers from './pages/Suppliers';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -39,6 +40,7 @@ const AuthenticatedApp = () => {
         <Route path="/notas" element={<Invoices />} />
         <Route path="/importar" element={<ImportXml />} />
         <Route path="/filiais" element={<Branches />} />
+        <Route path="/fornecedores" element={<Suppliers />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
