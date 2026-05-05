@@ -219,82 +219,42 @@ async function generateInvoicePDF(invoice) {
 
    // PAGAMENTO section
    page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
-   drawText("DADOS DO PAGAMENTO", margin + 5, yPosition - 15, { size: 8 });
+   drawText("PARCELAS", margin + 5, yPosition - 15, { size: 8 });
    yPosition -= 30;
-
-   // Headers
-   const payCol1 = margin;
-   const payCol2 = margin + 80;
-   const payCol3 = margin + 180;
-   const payCol4 = margin + 300;
-
-   drawText("PARCELA", payCol1, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
-   drawText("VALOR", payCol2, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
-   drawText("VENCIMENTO", payCol3, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
-   drawText("FORMA DE PAGAMENTO", payCol4, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
-
-   yPosition -= 12;
 
    // Installments or single payment
    if (invoice.installments && invoice.installments.length > 0) {
      invoice.installments.forEach((inst, idx) => {
-       const paymentType = invoice.payments && invoice.payments[0] ? invoice.payments[0].payment_type : "01";
-       const paymentTypeMap = {
-         "01": "Dinheiro",
-         "02": "Cheque",
-         "03": "Cartão",
-         "04": "Débito",
-         "05": "Crediário",
-         "10": "Vale Alimentação"
-       };
-       const paymentTypeStr = paymentTypeMap[paymentType] || "Boleto";
+       const instNumber = String(inst.number || idx + 1).padStart(3, '0');
+       const instDate = inst.due_date ? formatDate(inst.due_date) : "—";
+       const instValue = formatCurrency(inst.value);
 
-       drawText(String(inst.number || idx + 1), payCol1, yPosition, { size: 9 });
-       drawText(formatCurrency(inst.value), payCol2, yPosition, { size: 9 });
-       drawText(inst.due_date ? formatDate(inst.due_date) : "—", payCol3, yPosition, { size: 9 });
-       drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
-       yPosition -= 12;
+       drawText(`Parcela ${instNumber}`, margin + 5, yPosition, { size: 9 });
+       drawText(`${instDate} - ${instValue}`, margin + 5, yPosition - 12, { size: 9 });
+       yPosition -= 25;
      });
    } else if (invoice.payments && invoice.payments.length > 0) {
      // Fallback: display payments if no installments
      invoice.payments.forEach((payment, idx) => {
-       const paymentTypeMap = {
-         "01": "Dinheiro",
-         "02": "Cheque",
-         "03": "Cartão",
-         "04": "Débito",
-         "05": "Crediário",
-         "10": "Vale Alimentação"
-       };
-       const paymentTypeStr = paymentTypeMap[payment.payment_type] || "Boleto";
+       const paymentNumber = String(idx + 1).padStart(3, '0');
+       const paymentDate = invoice.due_date ? formatDate(invoice.due_date) : "—";
+       const paymentValue = formatCurrency(payment.value);
 
-       drawText(String(idx + 1), payCol1, yPosition, { size: 9 });
-       drawText(formatCurrency(payment.value), payCol2, yPosition, { size: 9 });
-       drawText(invoice.due_date ? formatDate(invoice.due_date) : "—", payCol3, yPosition, { size: 9 });
-       drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
-       yPosition -= 12;
+       drawText(`Parcela ${paymentNumber}`, margin + 5, yPosition, { size: 9 });
+       drawText(`${paymentDate} - ${paymentValue}`, margin + 5, yPosition - 12, { size: 9 });
+       yPosition -= 25;
      });
    } else {
      // Fallback: display single row with total value
-     const paymentTypeMap = {
-       "01": "Dinheiro",
-       "02": "Cheque",
-       "03": "Cartão",
-       "04": "Débito",
-       "05": "Crediário",
-       "10": "Vale Alimentação"
-     };
-     const paymentType = invoice.payments && invoice.payments[0] ? invoice.payments[0].payment_type : "01";
-     const paymentTypeStr = paymentTypeMap[paymentType] || "Boleto";
+     const paymentDate = invoice.due_date ? formatDate(invoice.due_date) : "—";
+     const paymentValue = formatCurrency(invoice.total_value);
 
-     drawText("1", payCol1, yPosition, { size: 9 });
-     drawText(formatCurrency(invoice.total_value), payCol2, yPosition, { size: 9 });
-     drawText(invoice.due_date ? formatDate(invoice.due_date) : "—", payCol3, yPosition, { size: 9 });
-     drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
-     yPosition -= 12;
+     drawText("Parcela 001", margin + 5, yPosition, { size: 9 });
+     drawText(`${paymentDate} - ${paymentValue}`, margin + 5, yPosition - 12, { size: 9 });
+     yPosition -= 25;
    }
 
-   yPosition -= 20;
+   yPosition -= 10;
 
    // Additional info
    if (invoice.additional_info) {
