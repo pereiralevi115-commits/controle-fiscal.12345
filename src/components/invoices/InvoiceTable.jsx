@@ -83,12 +83,12 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 </CellTooltip>
               </TableCell>
               <TableCell className="text-sm max-w-[200px]">
-                <CellTooltip content={invoice.additional_info || "—"} maxLength={80}>
+                <CellTooltip content={invoice.additional_info || "—"} maxLength={50}>
                   <span>
                     {invoice.additional_info
                       ? (() => {
                           const text = invoice.additional_info;
-                          return text.length > 80 ? text.substring(0, 80) + "..." : text;
+                          return text.length > 50 ? text.substring(0, 50) + "..." : text;
                         })()
                       : "—"}
                   </span>
