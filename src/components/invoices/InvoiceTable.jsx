@@ -129,7 +129,9 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 ? invoice.items.map(item => item.description).join(", ") : "—"}>
                   <span className="cursor-help">
                     {invoice.items && invoice.items.length > 0
-                      ? invoice.items.map(item => item.description).join(", ")
+                      ? (invoice.items.map(item => item.description).join(", ").length > 35
+                        ? invoice.items.map(item => item.description).join(", ").substring(0, 35) + "..."
+                        : invoice.items.map(item => item.description).join(", "))
                       : "—"}
                   </span>
                 </InvoiceTableTooltip>
@@ -137,7 +139,11 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
               <TableCell className="text-sm">
                 <InvoiceTableTooltip content={invoice.additional_info || "—"}>
                   <span className="cursor-help">
-                    {invoice.additional_info || "—"}
+                    {invoice.additional_info
+                      ? (invoice.additional_info.length > 35
+                        ? invoice.additional_info.substring(0, 35) + "..."
+                        : invoice.additional_info)
+                      : "—"}
                   </span>
                 </InvoiceTableTooltip>
               </TableCell>
