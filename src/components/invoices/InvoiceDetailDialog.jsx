@@ -181,25 +181,64 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
               <SectionHeader title="DADOS DE PAGAMENTO" />
               <div className="p-6 space-y-3">
                 {invoice.installments && invoice.installments.length > 0 ? (
-                  invoice.installments.map((inst, idx) => (
-                    <div key={idx} className="flex justify-between items-start pb-3 border-b border-border last:border-b-0">
-                      <div>
-                        <p className="font-medium text-sm">Parcela {String(inst.number || idx + 1).padStart(3, '0')}</p>
-                        <p className="text-xs text-muted-foreground">{inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                  invoice.installments.map((inst, idx) => {
+                    const paymentTypeMap = {
+                      "01": "Dinheiro",
+                      "02": "Cheque",
+                      "03": "Cartão Crédito",
+                      "04": "Cartão Débito",
+                      "05": "Crediário",
+                      "10": "Vale Alimentação",
+                      "11": "Vale Refeição",
+                      "12": "Duplicata",
+                      "13": "Boleto Bancário",
+                      "99": "Outro"
+                    };
+                    const paymentType = invoice.payments?.[0]?.payment_type || "13";
+                    const paymentTypeStr = paymentTypeMap[paymentType] || "Boleto Bancário";
+
+                    return (
+                      <div key={idx} className="pb-3 border-b border-border last:border-b-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="font-medium text-sm">Parcela {String(inst.number || idx + 1).padStart(3, '0')}</p>
+                          <p className="font-semibold text-sm">{formatCurrency(inst.value)}</p>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          <p className="text-xs text-muted-foreground">{inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                          <p className="text-xs text-muted-foreground">{paymentTypeStr}</p>
+                        </div>
                       </div>
-                      <p className="font-semibold text-sm">{formatCurrency(inst.value)}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : invoice.payments && invoice.payments.length > 0 ? (
-                  invoice.payments.map((payment, idx) => (
-                    <div key={idx} className="flex justify-between items-start pb-3 border-b border-border last:border-b-0">
-                      <div>
-                        <p className="font-medium text-sm">Pagamento {idx + 1}</p>
-                        <p className="text-xs text-muted-foreground">{invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                  invoice.payments.map((payment, idx) => {
+                    const paymentTypeMap = {
+                      "01": "Dinheiro",
+                      "02": "Cheque",
+                      "03": "Cartão Crédito",
+                      "04": "Cartão Débito",
+                      "05": "Crediário",
+                      "10": "Vale Alimentação",
+                      "11": "Vale Refeição",
+                      "12": "Duplicata",
+                      "13": "Boleto Bancário",
+                      "99": "Outro"
+                    };
+                    const paymentTypeStr = paymentTypeMap[payment.payment_type] || "Boleto Bancário";
+
+                    return (
+                      <div key={idx} className="pb-3 border-b border-border last:border-b-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="font-medium text-sm">Pagamento {idx + 1}</p>
+                          <p className="font-semibold text-sm">{formatCurrency(payment.value)}</p>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          <p className="text-xs text-muted-foreground">{invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                          <p className="text-xs text-muted-foreground">{paymentTypeStr}</p>
+                        </div>
                       </div>
-                      <p className="font-semibold text-sm">{formatCurrency(payment.value)}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : null}
               </div>
             </div>
