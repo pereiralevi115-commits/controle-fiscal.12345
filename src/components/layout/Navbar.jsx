@@ -1,12 +1,13 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileText, Upload, Building2 } from "lucide-react";
+import { LayoutDashboard, FileText, Upload, Store, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Notas Fiscais", path: "/notas", icon: FileText },
   { label: "Importar XML", path: "/importar", icon: Upload },
+  { label: "Fornecedores", path: "/fornecedores", icon: Store },
   { label: "Filiais", path: "/filiais", icon: Building2 },
 ];
 
