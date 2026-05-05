@@ -156,7 +156,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <InvoiceActionButtons invoiceId={invoice.id} />
+                  <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />
                   <Button
                     variant="ghost"
                     size="icon"

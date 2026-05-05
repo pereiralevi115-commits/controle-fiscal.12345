@@ -246,6 +246,21 @@
           }
         }
       }
+    },
+    "sigv_recorded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a nota foi registrada no SIGV"
+    },
+    "topcon_recorded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a nota foi registrada no TOPCON"
+    },
+    "boleto_recorded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o boleto foi registrado"
     }
   },
   "required": [
