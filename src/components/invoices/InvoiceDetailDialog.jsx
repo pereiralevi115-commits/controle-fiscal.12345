@@ -11,7 +11,7 @@ import InvoiceStatusBadge from "./InvoiceStatusBadge";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkReceived, branchName }) {
+export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkReceived, branches }) {
   if (!invoice) return null;
 
   return (
@@ -37,7 +37,9 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Filial</p>
-            <p className="font-medium mt-1">{branchName || "—"}</p>
+            <p className="font-medium mt-1">
+              {branches?.find((b) => b.cnpj === invoice.branch_cnpj)?.name || "—"}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Emissão</p>

@@ -30,9 +30,9 @@
       "type": "string",
       "description": "CNPJ do destinat\u00e1rio (filial)"
     },
-    "branch_id": {
+    "branch_cnpj": {
       "type": "string",
-      "description": "ID da filial destinat\u00e1ria"
+      "description": "CNPJ da filial destinat\u00e1ria"
     },
     "total_value": {
       "type": "number",

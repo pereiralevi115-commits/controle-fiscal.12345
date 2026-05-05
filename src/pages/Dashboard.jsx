@@ -28,7 +28,7 @@ export default function Dashboard() {
   const totalPendente = pendentes.reduce((sum, i) => sum + (i.total_value || 0), 0);
   const recentPendentes = pendentes.slice(0, 5);
 
-  const getBranchName = (id) => branches.find((b) => b.id === id)?.name || "—";
+  const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   if (isLoading) {
     return (
@@ -100,7 +100,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{invoice.supplier_name}</p>
                   <p className="text-sm text-muted-foreground">
-                    NF #{invoice.number} • {getBranchName(invoice.branch_id)}
+                    NF #{invoice.number} • {getBranchName(invoice.branch_cnpj)}
                   </p>
                 </div>
                 <div className="text-right ml-4">

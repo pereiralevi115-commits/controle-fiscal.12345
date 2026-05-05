@@ -119,13 +119,8 @@ Deno.serve(async (req) => {
       try {
         const parsed = parseNFe(xml_contents[i]);
 
-        // Try to match branch by recipient CNPJ
-        const matchedBranch = branches.find(
-          (b) => b.cnpj?.replace(/\D/g, "") === parsed.recipient_cnpj?.replace(/\D/g, "")
-        );
-        if (matchedBranch) {
-          parsed.branch_id = matchedBranch.id;
-        }
+        // Set branch CNPJ as the identifier
+        parsed.branch_cnpj = parsed.recipient_cnpj;
 
         // Check for duplicates by access_key or number + supplier
         let existing = [];

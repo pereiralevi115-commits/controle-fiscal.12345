@@ -41,12 +41,12 @@ export default function Invoices() {
         inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
         inv.number?.includes(filters.search);
       const statusMatch = filters.status === "all" || inv.status === filters.status;
-      const branchMatch = filters.branch === "all" || inv.branch_id === filters.branch;
+      const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
       return searchMatch && statusMatch && branchMatch;
     });
   }, [invoices, filters]);
 
-  const getBranchName = (id) => branches.find((b) => b.id === id)?.name || "—";
+  const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   if (isLoading) {
     return (
@@ -81,7 +81,7 @@ export default function Invoices() {
         open={!!selectedInvoice}
         onClose={() => setSelectedInvoice(null)}
         onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
-        branchName={selectedInvoice ? getBranchName(selectedInvoice.branch_id) : ""}
+        branches={branches}
       />
     </div>
   );

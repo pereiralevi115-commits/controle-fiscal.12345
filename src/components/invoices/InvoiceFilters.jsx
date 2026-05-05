@@ -38,7 +38,7 @@ export default function InvoiceFilters({ filters, onFilterChange, branches }) {
         <SelectContent>
           <SelectItem value="all">Todas as filiais</SelectItem>
           {branches.map((branch) => (
-            <SelectItem key={branch.id} value={branch.id}>
+            <SelectItem key={branch.cnpj} value={branch.cnpj}>
               {branch.name}
             </SelectItem>
           ))}
