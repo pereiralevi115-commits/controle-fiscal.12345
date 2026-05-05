@@ -79,8 +79,13 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                      })()
                    : "—"}
                </TableCell>
-               <TableCell>
-                 <InvoiceStatusBadge status={invoice.status} />
+               <TableCell className="text-sm max-w-[200px]">
+                 {invoice.additional_info
+                   ? (() => {
+                       const text = invoice.additional_info;
+                       return text.length > 80 ? text.substring(0, 80) + "..." : text;
+                     })()
+                   : "—"}
                </TableCell>
                <TableCell className="text-right">
                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
