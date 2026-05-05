@@ -12,9 +12,6 @@ function parseNFe(xmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "text/xml");
 
-  // Try different root elements
-  const nfeProc = doc.getElementsByTagName("nfeProc");
-  const NFe = doc.getElementsByTagName("NFe");
   const infNFe = doc.getElementsByTagName("infNFe");
 
   if (infNFe.length === 0) {
@@ -29,13 +26,12 @@ function parseNFe(xmlText) {
   const series = getTagText(ide, "serie");
   const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
 
-  // Access key from infNFe Id attribute or protNFe
+  // Access key
   let accessKey = "";
   const infId = inf.getAttribute("Id") || "";
   if (infId.startsWith("NFe")) {
     accessKey = infId.substring(3);
   }
-  // Try protNFe
   if (!accessKey) {
     const protNFe = doc.getElementsByTagName("protNFe");
     if (protNFe.length > 0) {
@@ -128,7 +124,6 @@ function parseNFe(xmlText) {
         value: vPag
       };
 
-      // Card data if available
       const card = detPag.getElementsByTagName("card")[0];
       if (card) {
         paymentObj.card_type = getTagText(card, "tpIntegra");
@@ -138,13 +133,24 @@ function parseNFe(xmlText) {
         paymentObj.network_authorization = getTagText(card, "nAutOrig");
       }
 
-      // Processing institution CNPJ
       const cnpjPg = getTagText(detPag, "CNPJ");
       if (cnpjPg && !paymentObj.card_network) {
         paymentObj.processing_cnpj = cnpjPg;
       }
 
       payments.push(paymentObj);
+    }
+  }
+
+  // Protocol info
+  let protocolNumber = "";
+  let protocolDate = "";
+  const protNFe = doc.getElementsByTagName("protNFe")[0];
+  if (protNFe) {
+    protocolNumber = getTagText(protNFe, "nProt");
+    const dhRecbto = getTagText(protNFe, "dhRecbto") || getTagText(protNFe, "dRecbto");
+    if (dhRecbto) {
+      protocolDate = dhRecbto.substring(0, 10);
     }
   }
 
@@ -188,20 +194,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: "xml_contents deve ser um array de strings XML" }, { status: 400 });
     }
 
-    // Get branches to auto-match
-    const branches = await base44.entities.Branch.filter({});
-
     const results = [];
     const errors = [];
 
     for (let i = 0; i < xml_contents.length; i++) {
       try {
         const parsed = parseNFe(xml_contents[i]);
-
-        // Set branch CNPJ as the identifier
         parsed.branch_cnpj = parsed.recipient_cnpj;
 
-        // Check for duplicates by access_key or number + supplier
         let existing = [];
         if (parsed.access_key) {
           existing = await base44.entities.Invoice.filter({ access_key: parsed.access_key });
