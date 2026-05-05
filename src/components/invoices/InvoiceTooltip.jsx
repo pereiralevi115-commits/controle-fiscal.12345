@@ -54,10 +54,10 @@ export default function InvoiceTooltip({ invoice, children }) {
             {/* Produtos */}
             {invoice.items && invoice.items.length > 0 && (
               <div>
-                <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Produtos</p>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
+                <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Produtos ({invoice.items.length})</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
                   {invoice.items.map((item, idx) => (
-                    <p key={idx} className="text-xs line-clamp-1">{item.description}</p>
+                    <p key={idx} className="text-xs">{item.description}</p>
                   ))}
                 </div>
               </div>

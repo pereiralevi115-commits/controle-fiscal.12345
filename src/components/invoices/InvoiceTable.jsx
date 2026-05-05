@@ -73,7 +73,10 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                </TableCell>
                <TableCell className="text-sm max-w-[180px]">
                  {invoice.items && invoice.items.length > 0
-                   ? invoice.items.map(item => item.description).join(", ")
+                   ? (() => {
+                       const text = invoice.items.map(item => item.description).join(", ");
+                       return text.length > 50 ? text.substring(0, 50) + "..." : text;
+                     })()
                    : "—"}
                </TableCell>
                <TableCell>
