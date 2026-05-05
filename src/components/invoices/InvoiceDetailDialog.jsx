@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, X, Download, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import { formatCNPJ } from "@/lib/formatters";
 
@@ -26,7 +28,34 @@ const InfoField = ({ label, value }) => (
 );
 
 export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkReceived, branches }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!invoice) return null;
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsDownloading(true);
+      const response = await base44.functions.invoke("generateInvoicePDF", { invoice });
+      
+      // Create blob from response data
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `NF_${invoice.number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("PDF baixado com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao gerar PDF");
+      console.error(error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -36,9 +65,25 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             <h2 className="text-2xl font-bold">NF-e #{invoice.number} <span className="text-lg font-normal">(Série {invoice.series || "—"})</span></h2>
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="gap-2"
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Baixar PDF
+            </Button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
