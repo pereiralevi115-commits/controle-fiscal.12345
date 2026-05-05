@@ -10,7 +10,10 @@ export default function Invoices() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: "issue_date", direction: "desc" });
+  const [sortConfig, setSortConfig] = useState([
+    { key: "issue_date", direction: "asc" },
+    { key: "supplier_name", direction: "asc" }
+  ]);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -56,33 +59,44 @@ export default function Invoices() {
       return searchMatch && statusMatch && branchMatch && supplierNotHidden;
     });
 
-    // Sort
+    // Sort by multiple criteria
     filtered.sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
+      for (let config of sortConfig) {
+        const aValue = a[config.key];
+        const bValue = b[config.key];
 
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
 
-      if (typeof aValue === "string") {
-        return sortConfig.direction === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+        let comparison = 0;
+        if (typeof aValue === "string") {
+          comparison = aValue.localeCompare(bValue);
+        } else {
+          comparison = aValue - bValue;
+        }
+
+        if (comparison !== 0) {
+          return config.direction === "asc" ? comparison : -comparison;
+        }
       }
-
-      return sortConfig.direction === "asc"
-        ? aValue - bValue
-        : bValue - aValue;
+      return 0;
     });
 
     return filtered;
   }, [invoices, filters, sortConfig, suppliers]);
 
   const handleSort = (key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
+    setSortConfig((prev) => {
+      const existing = prev.find((s) => s.key === key);
+      if (existing) {
+        return prev.map((s) =>
+          s.key === key
+            ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" }
+            : s
+        );
+      }
+      return [{ key, direction: "asc" }, ...prev];
+    });
   };
 
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";

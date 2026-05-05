@@ -11,25 +11,29 @@ import InvoiceActionButtons from "./InvoiceActionButtons";
 import { formatCNPJ } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
-const SortableHeader = ({ label, sortKey, currentSort, onSort }) => (
-  <button
-    onClick={() => onSort(sortKey)}
-    className="flex items-center gap-2 hover:text-foreground transition-colors"
-  >
-    {label}
-    <span className="inline-block">
-      {currentSort.key === sortKey ? (
-        currentSort.direction === "asc" ? (
-          <ArrowUp className="w-4 h-4" />
+const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
+  const sortConfig = currentSort.find((s) => s.key === sortKey);
+  
+  return (
+    <button
+      onClick={() => onSort(sortKey)}
+      className="flex items-center gap-2 hover:text-foreground transition-colors"
+    >
+      {label}
+      <span className="inline-block">
+        {sortConfig ? (
+          sortConfig.direction === "asc" ? (
+            <ArrowUp className="w-4 h-4" />
+          ) : (
+            <ArrowDown className="w-4 h-4" />
+          )
         ) : (
-          <ArrowDown className="w-4 h-4" />
-        )
-      ) : (
-        <ArrowUpDown className="w-4 h-4 opacity-30" />
-      )}
-    </span>
-  </button>
-);
+          <ArrowUpDown className="w-4 h-4 opacity-30" />
+        )}
+      </span>
+    </button>
+  );
+};
 
 export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort }) {
   const getBranchName = (branchCnpj) => {
