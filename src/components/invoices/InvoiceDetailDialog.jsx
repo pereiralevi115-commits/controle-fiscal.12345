@@ -27,9 +27,9 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
 
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Fornecedor</p>
-            <p className="font-medium mt-1">{invoice.supplier_name}</p>
-            <p className="text-sm text-muted-foreground font-mono">{formatCNPJ(invoice.supplier_cnpj)}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">CNPJ Fornecedor</p>
+            <p className="font-bold mt-1 text-lg">{formatCNPJ(invoice.supplier_cnpj)}</p>
+            <p className="text-sm text-muted-foreground mt-2">{invoice.supplier_name}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Destinatário</p>
