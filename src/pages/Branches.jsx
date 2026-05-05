@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
 
-const emptyBranch = { name: "", cnpj: "", city: "", state: "" };
+const emptyBranch = { name: "", cnpj: "" };
 
 export default function Branches() {
   const queryClient = useQueryClient();
@@ -56,7 +56,7 @@ export default function Branches() {
 
   const openEdit = (branch) => {
     setEditingBranch(branch);
-    setForm({ name: branch.name, cnpj: branch.cnpj, city: branch.city || "", state: branch.state || "" });
+    setForm({ name: branch.name, cnpj: branch.cnpj });
     setDialogOpen(true);
   };
 
@@ -114,8 +114,6 @@ export default function Branches() {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold">Nome</TableHead>
                 <TableHead className="font-semibold">CNPJ</TableHead>
-                <TableHead className="font-semibold">Cidade</TableHead>
-                <TableHead className="font-semibold">UF</TableHead>
                 <TableHead className="font-semibold text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -124,8 +122,6 @@ export default function Branches() {
                 <TableRow key={branch.id} className="group">
                   <TableCell className="font-medium">{branch.name}</TableCell>
                   <TableCell className="font-mono text-sm text-muted-foreground">{branch.cnpj}</TableCell>
-                  <TableCell>{branch.city || "—"}</TableCell>
-                  <TableCell>{branch.state || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(branch)}>
@@ -161,16 +157,6 @@ export default function Branches() {
             <div className="space-y-2">
               <Label>CNPJ *</Label>
               <Input value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Cidade</Label>
-                <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Cidade" />
-              </div>
-              <div className="space-y-2">
-                <Label>UF</Label>
-                <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="SP" maxLength={2} />
-              </div>
             </div>
           </div>
           <DialogFooter className="mt-4">
