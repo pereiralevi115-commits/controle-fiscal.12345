@@ -14,7 +14,7 @@ export default function Suppliers() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-  const [formData, setFormData] = useState({ name: "", cnpj: "", requires_control: true });
+  const [formData, setFormData] = useState({ name: "", cnpj: "" });
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -30,7 +30,7 @@ export default function Suppliers() {
     mutationFn: (data) => base44.entities.Supplier.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      setFormData({ name: "", cnpj: "", requires_control: true });
+      setFormData({ name: "", cnpj: "" });
       setShowDialog(false);
       toast.success("Fornecedor adicionado!");
     },
@@ -92,12 +92,7 @@ export default function Suppliers() {
     createMutation.mutate(formData);
   };
 
-  const toggleControl = (supplier) => {
-    updateMutation.mutate({
-      id: supplier.id,
-      data: { requires_control: !supplier.requires_control }
-    });
-  };
+
 
   const filteredSuppliers = suppliers.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -145,14 +140,13 @@ export default function Suppliers() {
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold">Fornecedor</TableHead>
               <TableHead className="font-semibold">CNPJ</TableHead>
-              <TableHead className="font-semibold text-center">Requer Controle</TableHead>
               <TableHead className="font-semibold text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredSuppliers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan="4" className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan="3" className="text-center py-8 text-muted-foreground">
                   Nenhum fornecedor encontrado
                 </TableCell>
               </TableRow>
@@ -161,12 +155,6 @@ export default function Suppliers() {
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={supplier.requires_control}
-                      onCheckedChange={() => toggleControl(supplier)}
-                    />
-                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -206,13 +194,7 @@ export default function Suppliers() {
                 placeholder="00.000.000/0000-00"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formData.requires_control}
-                onCheckedChange={(checked) => setFormData({ ...formData, requires_control: checked })}
-              />
-              <label className="text-sm">Requer controle de notas</label>
-            </div>
+
             <div className="flex gap-2 justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                 Cancelar
