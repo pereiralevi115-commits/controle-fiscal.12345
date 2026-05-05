@@ -210,14 +210,47 @@ async function generateInvoicePDF(invoice) {
 
    yPosition -= 55;
 
-   // Payment and Additional info
-   drawText("FORMA DE PAGAMENTO", margin, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-   drawText("Boleto Bancário", margin, yPosition - 12, { size: 9 });
+   // PAGAMENTO section
+   page.drawRectangle({ x: margin, y: yPosition - 20, width: width - 2 * margin, height: 20, color: rgb(0.8, 0.8, 0.8) });
+   drawText("DADOS DO PAGAMENTO", margin + 5, yPosition - 15, { size: 8 });
+   yPosition -= 30;
 
-   drawText("VALOR DO PAGAMENTO", margin + 200, yPosition, { size: 7, color: rgb(0.4, 0.4, 0.4) });
-   drawText(formatCurrency(invoice.total_value), margin + 200, yPosition - 12, { size: 9 });
+   // Headers
+   const payCol1 = margin;
+   const payCol2 = margin + 80;
+   const payCol3 = margin + 180;
+   const payCol4 = margin + 300;
 
-   yPosition -= 35;
+   drawText("PARCELA", payCol1, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+   drawText("VALOR", payCol2, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+   drawText("VENCIMENTO", payCol3, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+   drawText("FORMA DE PAGAMENTO", payCol4, yPosition, { size: 7, color: rgb(0.5, 0.5, 0.5) });
+
+   yPosition -= 12;
+
+   // Installments
+   if (invoice.installments && invoice.installments.length > 0) {
+     invoice.installments.forEach((inst, idx) => {
+       const paymentType = invoice.payments && invoice.payments[0] ? invoice.payments[0].payment_type : "01";
+       const paymentTypeMap = {
+         "01": "Dinheiro",
+         "02": "Cheque",
+         "03": "Cartão",
+         "04": "Débito",
+         "05": "Crediário",
+         "10": "Vale Alimentação"
+       };
+       const paymentTypeStr = paymentTypeMap[paymentType] || "Boleto";
+
+       drawText(String(inst.number || idx + 1), payCol1, yPosition, { size: 9 });
+       drawText(formatCurrency(inst.value), payCol2, yPosition, { size: 9 });
+       drawText(inst.due_date ? formatDate(inst.due_date) : "—", payCol3, yPosition, { size: 9 });
+       drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
+       yPosition -= 12;
+     });
+   }
+
+   yPosition -= 20;
 
    // Additional info
    if (invoice.additional_info) {
