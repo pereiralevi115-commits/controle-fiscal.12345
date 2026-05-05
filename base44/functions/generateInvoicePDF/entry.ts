@@ -27,13 +27,11 @@ async function generateInvoicePDF(invoice) {
   const lineHeight = 12;
 
   const drawText = (text, x, y, options = {}) => {
-    page.drawText(text, {
+    page.drawText(String(text), {
       x,
       y,
       size: options.size || 10,
-      color: rgb(...(options.color || [0, 0, 0])),
-      font: options.bold ? undefined : undefined,
-      ...options
+      color: options.color || rgb(0, 0, 0),
     });
   };
 
@@ -54,7 +52,7 @@ async function generateInvoicePDF(invoice) {
       height: 20,
       color: rgb(0.13, 0.16, 0.21), // Dark blue
     });
-    drawText(title, margin + 10, y - 15, { size: 11, color: [1, 1, 1] });
+    drawText(title, margin + 10, y - 15, { size: 11, color: rgb(1, 1, 1) });
     return y - 30;
   };
 
@@ -80,7 +78,7 @@ async function generateInvoicePDF(invoice) {
   let col = 0;
   for (let i = 0; i < idFields.length; i++) {
     const field = idFields[i];
-    drawText(field.label, margin + (col * 140), yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+    drawText(field.label, margin + (col * 140), yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
     drawText(field.value, margin + (col * 140), yPosition - 12, { size: 10 });
     col++;
     if (col >= 2) {
@@ -94,9 +92,9 @@ async function generateInvoicePDF(invoice) {
 
   // EMITENTE
   yPosition = drawSection("EMITENTE", yPosition);
-  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
   drawText(invoice.supplier_name, margin, yPosition - 12, { size: 10 });
-  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
   drawText(formatCNPJ(invoice.supplier_cnpj), margin + 200, yPosition - 12, { size: 10 });
   yPosition -= 30;
   drawLine(yPosition);
@@ -104,9 +102,9 @@ async function generateInvoicePDF(invoice) {
 
   // DESTINATÁRIO
   yPosition = drawSection("DESTINATÁRIO", yPosition);
-  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+  drawText("RAZÃO SOCIAL", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
   drawText(invoice.recipient_name || "—", margin, yPosition - 12, { size: 10 });
-  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+  drawText("CNPJ", margin + 200, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
   drawText(formatCNPJ(invoice.recipient_cnpj), margin + 200, yPosition - 12, { size: 10 });
   yPosition -= 30;
   drawLine(yPosition);
@@ -115,10 +113,10 @@ async function generateInvoicePDF(invoice) {
   // PRODUTOS
   if (invoice.items && invoice.items.length > 0) {
     yPosition = drawSection(`PRODUTOS / SERVIÇOS (${invoice.items.length})`, yPosition);
-    drawText("DESCRIÇÃO", margin, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
-    drawText("QTD", margin + 300, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
-    drawText("VLR UNIT.", margin + 360, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
-    drawText("TOTAL", margin + 440, yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+    drawText("DESCRIÇÃO", margin, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
+    drawText("QTD", margin + 300, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
+    drawText("VLR UNIT.", margin + 360, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
+    drawText("TOTAL", margin + 440, yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
     yPosition -= 15;
 
     invoice.items.forEach((item) => {
@@ -151,7 +149,7 @@ async function generateInvoicePDF(invoice) {
   col = 0;
   for (let i = 0; i < taxFields.length; i++) {
     const field = taxFields[i];
-    drawText(field.label, margin + (col * 180), yPosition, { size: 8, color: [0.5, 0.5, 0.5] });
+    drawText(field.label, margin + (col * 180), yPosition, { size: 8, color: rgb(0.5, 0.5, 0.5) });
     drawText(field.value, margin + (col * 180), yPosition - 12, { size: 10 });
     col++;
     if (col >= 3) {
@@ -169,8 +167,8 @@ async function generateInvoicePDF(invoice) {
     height: 30,
     color: rgb(1, 0.85, 0.4), // Amber
   });
-  drawText("TOTAL NF", margin + 10, yPosition - 10, { size: 10, color: [0, 0, 0] });
-  drawText(formatCurrency(invoice.total_value), width - margin - 100, yPosition - 10, { size: 14, color: [0, 0, 0] });
+  drawText("TOTAL NF", margin + 10, yPosition - 10, { size: 10, color: rgb(0, 0, 0) });
+  drawText(formatCurrency(invoice.total_value), width - margin - 100, yPosition - 10, { size: 14, color: rgb(0, 0, 0) });
   yPosition -= 50;
 
   // Footer - Control
@@ -182,8 +180,8 @@ async function generateInvoicePDF(invoice) {
       height: 40,
       color: rgb(1, 0.85, 0.4),
     });
-    drawText("CHAVE DE ACESSO", margin + 10, yPosition - 15, { size: 8, color: [0, 0, 0] });
-    drawText(invoice.access_key, margin + 10, yPosition - 28, { size: 9, color: [0, 0, 0] });
+    drawText("CHAVE DE ACESSO", margin + 10, yPosition - 15, { size: 8, color: rgb(0, 0, 0) });
+    drawText(invoice.access_key, margin + 10, yPosition - 28, { size: 9, color: rgb(0, 0, 0) });
   }
 
   const pdfBytes = await pdfDoc.save();
