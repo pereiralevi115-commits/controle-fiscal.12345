@@ -17,6 +17,11 @@
     "email": {
       "type": "string",
       "description": "Email do fornecedor"
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o fornecedor est\u00e1 oculto (suas NFs n\u00e3o aparecem na listagem)"
     }
   },
   "required": [

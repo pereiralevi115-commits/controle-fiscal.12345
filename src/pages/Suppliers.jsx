@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus } from "lucide-react";
+import { Eye, EyeOff, Plus } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 
 export default function Suppliers() {
@@ -44,11 +44,21 @@ export default function Suppliers() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supplier.delete(id),
+  const hideMutation = useMutation({
+    mutationFn: (id) => base44.entities.Supplier.update(id, { hidden: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      toast.success("Fornecedor removido!");
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Fornecedor oculto!");
+    },
+  });
+
+  const unhideMutation = useMutation({
+    mutationFn: (id) => base44.entities.Supplier.update(id, { hidden: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Fornecedor restaurado!");
     },
   });
 
@@ -142,6 +152,7 @@ export default function Suppliers() {
               <TableHead className="font-semibold">CNPJ</TableHead>
               <TableHead className="font-semibold">Telefone</TableHead>
               <TableHead className="font-semibold">Email</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
               <TableHead className="font-semibold text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -154,19 +165,30 @@ export default function Suppliers() {
               </TableRow>
             ) : (
               filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id}>
+                <TableRow key={supplier.id} className={supplier.hidden ? "opacity-60" : ""}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
                   <TableCell className="text-sm">{supplier.email || "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {supplier.hidden ? (
+                      <span className="text-amber-600 font-medium">Oculto</span>
+                    ) : (
+                      <span className="text-green-600 font-medium">Ativo</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(supplier.id)}
+                      className="h-8 w-8"
+                      onClick={() => supplier.hidden ? unhideMutation.mutate(supplier.id) : hideMutation.mutate(supplier.id)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {supplier.hidden ? (
+                        <Eye className="w-4 h-4 text-amber-600" />
+                      ) : (
+                        <EyeOff className="w-4 h-4 text-muted-foreground" />
+                      )}
                     </Button>
                   </TableCell>
                 </TableRow>

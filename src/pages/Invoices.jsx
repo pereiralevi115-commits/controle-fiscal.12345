@@ -22,6 +22,11 @@ export default function Invoices() {
     queryFn: () => base44.entities.Branch.list(),
   });
 
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => base44.entities.Supplier.list(),
+  });
+
   const markReceivedMutation = useMutation({
     mutationFn: (invoice) =>
       base44.entities.Invoice.update(invoice.id, {
@@ -43,7 +48,12 @@ export default function Invoices() {
         inv.number?.includes(filters.search);
       const statusMatch = filters.status === "all" || inv.status === filters.status;
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
-      return searchMatch && statusMatch && branchMatch;
+      
+      // Filter out invoices from hidden suppliers
+      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
+      const supplierNotHidden = !supplier || !supplier.hidden;
+      
+      return searchMatch && statusMatch && branchMatch && supplierNotHidden;
     });
 
     // Sort
@@ -66,7 +76,7 @@ export default function Invoices() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig]);
+  }, [invoices, filters, sortConfig, suppliers]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
