@@ -12,7 +12,7 @@ export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "issue_date", direction: "asc" },
-    { key: "supplier_name", direction: "asc" }
+    { key: "branch_cnpj", direction: "asc" }
   ]);
 
   const { data: invoices = [], isLoading } = useQuery({
