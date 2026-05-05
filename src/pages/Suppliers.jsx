@@ -14,7 +14,7 @@ export default function Suppliers() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-  const [formData, setFormData] = useState({ name: "", cnpj: "" });
+  const [formData, setFormData] = useState({ name: "", cnpj: "", phone: "", email: "" });
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -30,7 +30,7 @@ export default function Suppliers() {
     mutationFn: (data) => base44.entities.Supplier.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      setFormData({ name: "", cnpj: "" });
+      setFormData({ name: "", cnpj: "", phone: "", email: "" });
       setShowDialog(false);
       toast.success("Fornecedor adicionado!");
     },
@@ -140,13 +140,15 @@ export default function Suppliers() {
             <TableRow className="hover:bg-transparent">
               <TableHead className="font-semibold">Fornecedor</TableHead>
               <TableHead className="font-semibold">CNPJ</TableHead>
+              <TableHead className="font-semibold">Telefone</TableHead>
+              <TableHead className="font-semibold">Email</TableHead>
               <TableHead className="font-semibold text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredSuppliers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan="3" className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan="5" className="text-center py-8 text-muted-foreground">
                   Nenhum fornecedor encontrado
                 </TableCell>
               </TableRow>
@@ -155,6 +157,8 @@ export default function Suppliers() {
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
+                  <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
+                  <TableCell className="text-sm">{supplier.email || "—"}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -192,6 +196,22 @@ export default function Suppliers() {
                 value={formData.cnpj}
                 onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
                 placeholder="00.000.000/0000-00"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Telefone</label>
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="(00) 0000-0000"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="contato@fornecedor.com"
               />
             </div>
 

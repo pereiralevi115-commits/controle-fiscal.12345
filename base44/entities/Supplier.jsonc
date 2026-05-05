@@ -10,10 +10,13 @@
       "type": "string",
       "description": "CNPJ do fornecedor"
     },
-    "requires_control": {
-      "type": "boolean",
-      "default": true,
-      "description": "Indica se as notas deste fornecedor precisam de controle"
+    "phone": {
+      "type": "string",
+      "description": "Telefone do fornecedor"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do fornecedor"
     }
   },
   "required": [
