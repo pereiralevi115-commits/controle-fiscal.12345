@@ -48,7 +48,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
           disabled={recordMutation.isPending}
           className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
             invoice[btn.field]
-              ? `${btn.bgColor} ${btn.textColor} border-2`
+              ? `bg-emerald-600 text-white border-2 border-emerald-600`
               : `${btn.textColor} hover:${btn.bgColor}`
           }`}
         >
