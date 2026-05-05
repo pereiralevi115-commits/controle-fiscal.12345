@@ -32,9 +32,9 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   };
 
   const buttons = [
-    { id: "SIGV", label: "SIGV", borderColor: "border-emerald-500", textColor: "text-emerald-600", bgColor: "bg-emerald-50", field: "sigv_recorded" },
-    { id: "TOPCON", label: "TOPCON", borderColor: "border-violet-500", textColor: "text-violet-600", bgColor: "bg-violet-50", field: "topcon_recorded" },
-    { id: "BOLETO", label: "BOLETO", borderColor: "border-amber-500", textColor: "text-amber-600", bgColor: "bg-amber-50", field: "boleto_recorded" }
+    { id: "SIGV", label: "SIGV", borderColor: "border-emerald-500", textColor: "text-emerald-600", bgColor: "bg-emerald-50", activeBg: "bg-emerald-600", field: "sigv_recorded" },
+    { id: "TOPCON", label: "TOPCON", borderColor: "border-violet-500", textColor: "text-violet-600", bgColor: "bg-violet-50", activeBg: "bg-violet-600", field: "topcon_recorded" },
+    { id: "BOLETO", label: "BOLETO", borderColor: "border-amber-500", textColor: "text-amber-600", bgColor: "bg-amber-50", activeBg: "bg-amber-600", field: "boleto_recorded" }
   ];
 
   return (
@@ -48,7 +48,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
           disabled={recordMutation.isPending}
           className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
             invoice[btn.field]
-              ? `bg-emerald-600 text-white border-2 border-emerald-600`
+              ? `${btn.activeBg} text-white border-2`
               : `${btn.textColor} hover:${btn.bgColor}`
           }`}
         >
