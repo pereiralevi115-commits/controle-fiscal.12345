@@ -285,11 +285,12 @@ Deno.serve(async (req) => {
 
     const pdfBytes = await generateInvoicePDF(invoice);
 
-    return new Response(pdfBytes, {
+    return new Response(pdfBytes.buffer || pdfBytes, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="NF_${invoice.number}.pdf"`
+        "Content-Disposition": `attachment; filename="NF_${invoice.number}.pdf"`,
+        "Content-Length": pdfBytes.length.toString()
       }
     });
   } catch (error) {

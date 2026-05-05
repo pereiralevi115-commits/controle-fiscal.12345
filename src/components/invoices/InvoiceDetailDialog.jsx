@@ -35,7 +35,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
   const handleDownloadPDF = async () => {
     try {
       setIsDownloading(true);
-      const response = await base44.functions.invoke("generateInvoicePDF", { invoice });
+      const response = await base44.functions.invoke("generateInvoicePDF", { invoice }, { responseType: "arraybuffer" });
       
       // Create blob from response data
       const blob = new Blob([response.data], { type: "application/pdf" });
