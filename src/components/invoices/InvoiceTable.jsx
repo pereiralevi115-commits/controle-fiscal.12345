@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import CellTooltip from "./CellTooltip";
 import { formatCNPJ } from "@/lib/formatters";
@@ -113,16 +113,6 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
-                  {invoice.status === "pendente" && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                      onClick={() => onMarkReceived(invoice)}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                    </Button>
-                  )}
                 </div>
               </TableCell>
             </TableRow>
