@@ -111,16 +111,26 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
           <div className="border rounded-lg overflow-hidden">
             <SectionHeader title="CÁLCULO DO IMPOSTO / TOTAIS" />
             <div className="grid grid-cols-4 gap-0">
-              <InfoField label="VALOR PRODUTOS" value={formatCurrency(invoice.total_value)} />
-              <InfoField label="VALOR ICMS" value={formatCurrency(0)} />
-              <InfoField label="VALOR IPI" value={formatCurrency(0)} />
-              <InfoField label="VALOR PIS" value={formatCurrency(0)} />
+              <InfoField label="VALOR PRODUTOS" value={formatCurrency(invoice.total_products || invoice.total_value)} />
+              <InfoField label="VALOR ICMS" value={formatCurrency(invoice.tax_icms || 0)} />
+              <InfoField label="VALOR IPI" value={formatCurrency(invoice.tax_ipi || 0)} />
+              <InfoField label="VALOR PIS" value={formatCurrency(invoice.tax_pis || 0)} />
             </div>
             <div className="bg-amber-50 p-6 border-t border-border">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">TOTAL NF</p>
               <p className="text-3xl font-bold text-amber-700">{formatCurrency(invoice.total_value)}</p>
             </div>
           </div>
+
+          {/* INFORMAÇÕES COMPLEMENTARES */}
+          {invoice.additional_info && (
+            <div className="border rounded-lg overflow-hidden">
+              <SectionHeader title="INFORMAÇÕES COMPLEMENTARES" />
+              <div className="p-6">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{invoice.additional_info}</p>
+              </div>
+            </div>
+          )}
 
           {/* CHAVE DE ACESSO */}
           {invoice.access_key && (

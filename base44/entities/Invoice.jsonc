@@ -86,6 +86,30 @@
         }
       }
     },
+    "tax_icms": {
+      "type": "number",
+      "description": "Valor do ICMS"
+    },
+    "tax_ipi": {
+      "type": "number",
+      "description": "Valor do IPI"
+    },
+    "tax_pis": {
+      "type": "number",
+      "description": "Valor do PIS"
+    },
+    "tax_cofins": {
+      "type": "number",
+      "description": "Valor do COFINS"
+    },
+    "total_products": {
+      "type": "number",
+      "description": "Valor total dos produtos"
+    },
+    "additional_info": {
+      "type": "string",
+      "description": "Informa\u00e7\u00f5es complementares da NF-e"
+    },
     "xml_url": {
       "type": "string",
       "description": "URL do arquivo XML original"

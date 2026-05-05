@@ -53,10 +53,24 @@ function parseNFe(xmlText) {
   const recipientName = getTagText(dest, "xNome");
   const recipientCnpj = getTagText(dest, "CNPJ");
 
-  // Total
+  // Total and taxes
   const total = inf.getElementsByTagName("total")[0];
   const ICMSTot = total?.getElementsByTagName("ICMSTot")[0];
   const totalValue = parseFloat(getTagText(ICMSTot, "vNF")) || 0;
+  const totalICMS = parseFloat(getTagText(ICMSTot, "vICMS")) || 0;
+  const totalIPI = parseFloat(getTagText(ICMSTot, "vIPI")) || 0;
+  const totalPIS = parseFloat(getTagText(ICMSTot, "vPIS")) || 0;
+  const totalCOFINS = parseFloat(getTagText(ICMSTot, "vCOFINS")) || 0;
+  const totalProducts = parseFloat(getTagText(ICMSTot, "vProd")) || 0;
+
+  // Due date
+  const cobr = inf.getElementsByTagName("cobr")[0];
+  const dup = cobr?.getElementsByTagName("dup")[0];
+  const dueDate = getTagText(dup, "dVenc") || "";
+
+  // Complement info
+  const infAdic = inf.getElementsByTagName("infAdic")[0];
+  const complementInfo = getTagText(infAdic, "infCpl") || "";
 
   // Items
   const detElements = inf.getElementsByTagName("det");
@@ -90,8 +104,15 @@ function parseNFe(xmlText) {
     recipient_cnpj: recipientCnpj,
     total_value: totalValue,
     issue_date: formattedDate,
+    due_date: dueDate,
     items,
     status: "pendente",
+    tax_icms: totalICMS,
+    tax_ipi: totalIPI,
+    tax_pis: totalPIS,
+    tax_cofins: totalCOFINS,
+    total_products: totalProducts,
+    additional_info: complementInfo,
   };
 }
 
