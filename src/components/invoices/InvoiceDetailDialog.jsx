@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
+import { formatCNPJ } from "@/lib/formatters";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -28,12 +29,12 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Fornecedor</p>
             <p className="font-medium mt-1">{invoice.supplier_name}</p>
-            <p className="text-sm text-muted-foreground font-mono">{invoice.supplier_cnpj}</p>
+            <p className="text-sm text-muted-foreground font-mono">{formatCNPJ(invoice.supplier_cnpj)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Destinatário</p>
             <p className="font-medium mt-1">{invoice.recipient_name || "—"}</p>
-            <p className="text-sm text-muted-foreground font-mono">{invoice.recipient_cnpj || "—"}</p>
+            <p className="text-sm text-muted-foreground font-mono">{formatCNPJ(invoice.recipient_cnpj) || "—"}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Filial</p>

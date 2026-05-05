@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Eye } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
+import { formatCNPJ } from "@/lib/formatters";
 
 export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails }) {
   const getBranchName = (branchCnpj) => {
@@ -48,7 +49,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
             <TableRow key={invoice.id} className="group">
               <TableCell className="font-medium">{invoice.number}</TableCell>
               <TableCell className="max-w-[200px] truncate">{invoice.supplier_name}</TableCell>
-              <TableCell className="text-muted-foreground text-sm font-mono">{invoice.supplier_cnpj}</TableCell>
+              <TableCell className="text-muted-foreground text-sm font-mono">{formatCNPJ(invoice.supplier_cnpj)}</TableCell>
               <TableCell>{getBranchName(invoice.branch_cnpj)}</TableCell>
               <TableCell>
                 {invoice.issue_date

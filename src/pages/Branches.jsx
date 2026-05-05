@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
+import { formatCNPJ } from "@/lib/formatters";
 
 const emptyBranch = { name: "", cnpj: "" };
 
@@ -121,7 +122,7 @@ export default function Branches() {
               {branches.map((branch) => (
                 <TableRow key={branch.id} className="group">
                   <TableCell className="font-medium">{branch.name}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">{branch.cnpj}</TableCell>
+                  <TableCell className="font-mono text-sm text-muted-foreground">{formatCNPJ(branch.cnpj)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(branch)}>
