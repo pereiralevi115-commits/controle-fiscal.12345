@@ -37,8 +37,8 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
       setIsDownloading(true);
       const response = await base44.functions.invoke("generateInvoicePDF", { invoice });
       
-      // The response data is the PDF content
-      const blob = new Blob([response.data], { type: "application/pdf" });
+      // response.data contains the PDF bytes
+      const blob = new Blob([new Uint8Array(response.data)], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
