@@ -7,6 +7,7 @@ import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import CellTooltip from "./CellTooltip";
 import InvoiceTableTooltip from "./InvoiceTableTooltip";
+import InvoiceActionButtons from "./InvoiceActionButtons";
 import { formatCNPJ } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -155,15 +156,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="sm" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-7 px-3 text-xs font-medium">
-                    SIGV
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-violet-500 text-violet-600 hover:bg-violet-50 h-7 px-3 text-xs font-medium">
-                    TOPCON
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-amber-500 text-amber-600 hover:bg-amber-50 h-7 px-3 text-xs font-medium">
-                    BOLETO
-                  </Button>
+                  <InvoiceActionButtons invoiceId={invoice.id} />
                   <Button
                     variant="ghost"
                     size="icon"
