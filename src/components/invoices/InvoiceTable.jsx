@@ -130,7 +130,9 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-sm">
-                <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 ? invoice.items.map(item => item.description).join(", ") : "—"}>
+                <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 
+                  ? `PRODUTOS\n\n${invoice.items.map(item => `• ${item.description}`).join("\n")}`
+                  : "—"}>
                   <span className="cursor-help">
                     {invoice.items && invoice.items.length > 0
                       ? (invoice.items.map(item => item.description).join(", ").length > 35
