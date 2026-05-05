@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Eye } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
-import InvoiceTooltip from "./InvoiceTooltip";
+import CellTooltip from "./CellTooltip";
 import { formatCNPJ } from "@/lib/formatters";
 
 export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails }) {
@@ -48,69 +48,75 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
         </TableHeader>
         <TableBody>
           {invoices.map((invoice) => (
-           <InvoiceTooltip key={invoice.id} invoice={invoice}>
-             <TableRow className="group cursor-help">
-               <TableCell className="font-medium">{getBranchName(invoice.branch_cnpj)}</TableCell>
-               <TableCell>
-                 <div className="max-w-[200px]">
-                   <p className="font-medium text-sm truncate">{invoice.supplier_name}</p>
-                   <p className="text-xs text-muted-foreground font-mono">{formatCNPJ(invoice.supplier_cnpj)}</p>
-                 </div>
-               </TableCell>
-               <TableCell className="font-medium">{invoice.number}</TableCell>
-               <TableCell>
-                 {invoice.issue_date
-                   ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR })
-                   : "—"}
-               </TableCell>
-               <TableCell>
-                 {invoice.due_date
-                   ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })
-                   : "—"}
-               </TableCell>
-               <TableCell className="text-right font-semibold">
-                 {formatCurrency(invoice.total_value)}
-               </TableCell>
-               <TableCell className="text-sm max-w-[180px]">
-                 {invoice.items && invoice.items.length > 0
-                   ? (() => {
-                       const text = invoice.items.map(item => item.description).join(", ");
-                       return text.length > 50 ? text.substring(0, 50) + "..." : text;
-                     })()
-                   : "—"}
-               </TableCell>
-               <TableCell className="text-sm max-w-[200px]">
-                 {invoice.additional_info
-                   ? (() => {
-                       const text = invoice.additional_info;
-                       return text.length > 80 ? text.substring(0, 80) + "..." : text;
-                     })()
-                   : "—"}
-               </TableCell>
-               <TableCell className="text-right">
-                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     className="h-8 w-8"
-                     onClick={() => onViewDetails(invoice)}
-                   >
-                     <Eye className="w-4 h-4" />
-                   </Button>
-                   {invoice.status === "pendente" && (
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                       onClick={() => onMarkReceived(invoice)}
-                     >
-                       <CheckCircle2 className="w-4 h-4" />
-                     </Button>
-                   )}
-                 </div>
-               </TableCell>
-             </TableRow>
-           </InvoiceTooltip>
+            <TableRow key={invoice.id} className="group">
+              <TableCell className="font-medium">{getBranchName(invoice.branch_cnpj)}</TableCell>
+              <TableCell>
+                <div className="max-w-[200px]">
+                  <p className="font-medium text-sm truncate">{invoice.supplier_name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{formatCNPJ(invoice.supplier_cnpj)}</p>
+                </div>
+              </TableCell>
+              <TableCell className="font-medium">{invoice.number}</TableCell>
+              <TableCell>
+                {invoice.issue_date
+                  ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR })
+                  : "—"}
+              </TableCell>
+              <TableCell>
+                {invoice.due_date
+                  ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })
+                  : "—"}
+              </TableCell>
+              <TableCell className="text-right font-semibold">
+                {formatCurrency(invoice.total_value)}
+              </TableCell>
+              <TableCell className="text-sm max-w-[180px]">
+                <CellTooltip content={invoice.items && invoice.items.length > 0 ? invoice.items.map(item => item.description).join(", ") : "—"} maxLength={50}>
+                  <span>
+                    {invoice.items && invoice.items.length > 0
+                      ? (() => {
+                          const text = invoice.items.map(item => item.description).join(", ");
+                          return text.length > 50 ? text.substring(0, 50) + "..." : text;
+                        })()
+                      : "—"}
+                  </span>
+                </CellTooltip>
+              </TableCell>
+              <TableCell className="text-sm max-w-[200px]">
+                <CellTooltip content={invoice.additional_info || "—"} maxLength={80}>
+                  <span>
+                    {invoice.additional_info
+                      ? (() => {
+                          const text = invoice.additional_info;
+                          return text.length > 80 ? text.substring(0, 80) + "..." : text;
+                        })()
+                      : "—"}
+                  </span>
+                </CellTooltip>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onViewDetails(invoice)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  {invoice.status === "pendente" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => onMarkReceived(invoice)}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
           ))}
         </TableBody>
       </Table>
