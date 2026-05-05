@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import CellTooltip from "./CellTooltip";
+import InvoiceTableTooltip from "./InvoiceTableTooltip";
 import { formatCNPJ } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -84,33 +85,61 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
         <TableBody>
           {invoices.map((invoice) => (
             <TableRow key={invoice.id} className="group">
-              <TableCell className="font-medium">{getBranchName(invoice.branch_cnpj)}</TableCell>
-              <TableCell className="text-sm">{invoice.supplier_name}</TableCell>
               <TableCell className="font-medium">
-                <div className="text-sm">
-                  <p>{invoice.series ? `${invoice.series}/${invoice.number}` : invoice.number}</p>
-                </div>
+                <InvoiceTableTooltip content={`Destinatário: ${invoice.recipient_name}\nCNPJ: ${formatCNPJ(invoice.recipient_cnpj)}`}>
+                  <span>{getBranchName(invoice.branch_cnpj)}</span>
+                </InvoiceTableTooltip>
+              </TableCell>
+              <TableCell className="text-sm">
+                <InvoiceTableTooltip content={`Fornecedor: ${invoice.supplier_name}\nCNPJ: ${formatCNPJ(invoice.supplier_cnpj)}`}>
+                  <span className="cursor-help">{invoice.supplier_name}</span>
+                </InvoiceTableTooltip>
+              </TableCell>
+              <TableCell className="font-medium">
+                <InvoiceTableTooltip content={`Série: ${invoice.series || "—"}\nNúmero: ${invoice.number}`}>
+                  <div className="text-sm cursor-help">
+                    <p>{invoice.series ? `${invoice.series}/${invoice.number}` : invoice.number}</p>
+                  </div>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell>
-                {invoice.issue_date
-                  ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR })
-                  : "—"}
+                <InvoiceTableTooltip content={`Data de Emissão: ${invoice.issue_date ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}`}>
+                  <span className="cursor-help">
+                    {invoice.issue_date
+                      ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR })
+                      : "—"}
+                  </span>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell>
-                {invoice.due_date
-                  ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })
-                  : "—"}
+                <InvoiceTableTooltip content={`Vencimento: ${invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}\nTodas informações de pagamento`}>
+                  <span className="cursor-help">
+                    {invoice.due_date
+                      ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })
+                      : "—"}
+                  </span>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-right font-semibold">
-                {formatCurrency(invoice.total_value)}
+                <InvoiceTableTooltip content={`Valor com tributação: ${formatCurrency(invoice.total_value)}`}>
+                  <span className="cursor-help">{formatCurrency(invoice.total_value)}</span>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-sm">
-                {invoice.items && invoice.items.length > 0
-                  ? invoice.items.map(item => item.description).join(", ")
-                  : "—"}
+                <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 ? invoice.items.map(item => item.description).join(", ") : "—"}>
+                  <span className="cursor-help">
+                    {invoice.items && invoice.items.length > 0
+                      ? invoice.items.map(item => item.description).join(", ")
+                      : "—"}
+                  </span>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-sm">
-                {invoice.additional_info || "—"}
+                <InvoiceTableTooltip content={invoice.additional_info || "—"}>
+                  <span className="cursor-help">
+                    {invoice.additional_info || "—"}
+                  </span>
+                </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
