@@ -78,17 +78,11 @@ export default function Suppliers() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fornecedores</h1>
-          <p className="text-muted-foreground mt-1">
-            {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Button onClick={() => setShowDialog(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Adicionar Fornecedor
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Fornecedores</h1>
+        <p className="text-muted-foreground mt-1">
+          {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
+        </p>
       </div>
 
       <div className="flex gap-3">
