@@ -175,6 +175,36 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             </div>
           </div>
 
+          {/* DADOS DE PAGAMENTO */}
+          {(invoice.installments?.length > 0 || invoice.payments?.length > 0) && (
+            <div className="border rounded-lg overflow-hidden">
+              <SectionHeader title="DADOS DE PAGAMENTO" />
+              <div className="p-6 space-y-3">
+                {invoice.installments && invoice.installments.length > 0 ? (
+                  invoice.installments.map((inst, idx) => (
+                    <div key={idx} className="flex justify-between items-start pb-3 border-b border-border last:border-b-0">
+                      <div>
+                        <p className="font-medium text-sm">Parcela {String(inst.number || idx + 1).padStart(3, '0')}</p>
+                        <p className="text-xs text-muted-foreground">{inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                      </div>
+                      <p className="font-semibold text-sm">{formatCurrency(inst.value)}</p>
+                    </div>
+                  ))
+                ) : invoice.payments && invoice.payments.length > 0 ? (
+                  invoice.payments.map((payment, idx) => (
+                    <div key={idx} className="flex justify-between items-start pb-3 border-b border-border last:border-b-0">
+                      <div>
+                        <p className="font-medium text-sm">Pagamento {idx + 1}</p>
+                        <p className="text-xs text-muted-foreground">{invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                      </div>
+                      <p className="font-semibold text-sm">{formatCurrency(payment.value)}</p>
+                    </div>
+                  ))
+                ) : null}
+              </div>
+            </div>
+          )}
+
           {/* INFORMAÇÕES COMPLEMENTARES */}
           {invoice.additional_info && (
             <div className="border rounded-lg overflow-hidden">
