@@ -43,6 +43,11 @@
       "format": "date",
       "description": "Data de emiss\u00e3o da nota fiscal"
     },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento da nota fiscal"
+    },
     "status": {
       "type": "string",
       "enum": [
