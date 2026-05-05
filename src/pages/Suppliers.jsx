@@ -165,7 +165,7 @@ export default function Suppliers() {
               </TableRow>
             ) : (
               filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id} className={supplier.hidden ? "opacity-60" : ""}>
+                <TableRow key={supplier.id} className={supplier.hidden ? "bg-red-50" : ""}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
