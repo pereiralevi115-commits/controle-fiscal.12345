@@ -113,6 +113,41 @@ function parseNFe(xmlText) {
     formattedDate = issueDate.substring(0, 10);
   }
 
+  // Payment info
+  const pag = inf.getElementsByTagName("pag")[0];
+  const payments = [];
+  if (pag) {
+    const detPagElements = pag.getElementsByTagName("detPag");
+    for (let i = 0; i < detPagElements.length; i++) {
+      const detPag = detPagElements[i];
+      const tPag = getTagText(detPag, "tPag");
+      const vPag = parseFloat(getTagText(detPag, "vPag")) || 0;
+      
+      const paymentObj = {
+        payment_type: tPag,
+        value: vPag
+      };
+
+      // Card data if available
+      const card = detPag.getElementsByTagName("card")[0];
+      if (card) {
+        paymentObj.card_type = getTagText(card, "tpIntegra");
+        paymentObj.card_network = getTagText(card, "CNPJ");
+        paymentObj.installments = parseInt(getTagText(card, "nParcela")) || 1;
+        paymentObj.authorization_number = getTagText(card, "nAut");
+        paymentObj.network_authorization = getTagText(card, "nAutOrig");
+      }
+
+      // Processing institution CNPJ
+      const cnpjPg = getTagText(detPag, "CNPJ");
+      if (cnpjPg && !paymentObj.card_network) {
+        paymentObj.processing_cnpj = cnpjPg;
+      }
+
+      payments.push(paymentObj);
+    }
+  }
+
   return {
     number,
     series,
@@ -133,6 +168,9 @@ function parseNFe(xmlText) {
     total_products: totalProducts,
     additional_info: complementInfo,
     installments,
+    protocol_number: protocolNumber,
+    protocol_date: protocolDate,
+    payments,
   };
 }
 
