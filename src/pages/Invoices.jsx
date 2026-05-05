@@ -10,6 +10,7 @@ export default function Invoices() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: "issue_date", direction: "desc" });
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices"],
@@ -35,7 +36,7 @@ export default function Invoices() {
   });
 
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
+    let filtered = invoices.filter((inv) => {
       const searchMatch =
         filters.search === "" ||
         inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -44,7 +45,35 @@ export default function Invoices() {
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
       return searchMatch && statusMatch && branchMatch;
     });
-  }, [invoices, filters]);
+
+    // Sort
+    filtered.sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === "string") {
+        return sortConfig.direction === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return sortConfig.direction === "asc"
+        ? aValue - bValue
+        : bValue - aValue;
+    });
+
+    return filtered;
+  }, [invoices, filters, sortConfig]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
 
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
@@ -73,6 +102,8 @@ export default function Invoices() {
           branches={branches}
           onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
           onViewDetails={setSelectedInvoice}
+          sortConfig={sortConfig}
+          onSort={handleSort}
         />
       </div>
 

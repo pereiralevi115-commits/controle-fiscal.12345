@@ -3,12 +3,33 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import CellTooltip from "./CellTooltip";
 import { formatCNPJ } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 
-export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails }) {
+const SortableHeader = ({ label, sortKey, currentSort, onSort }) => (
+  <button
+    onClick={() => onSort(sortKey)}
+    className="flex items-center gap-2 hover:text-foreground transition-colors"
+  >
+    {label}
+    <span className="inline-block">
+      {currentSort.key === sortKey ? (
+        currentSort.direction === "asc" ? (
+          <ArrowUp className="w-4 h-4" />
+        ) : (
+          <ArrowDown className="w-4 h-4" />
+        )
+      ) : (
+        <ArrowUpDown className="w-4 h-4 opacity-30" />
+      )}
+    </span>
+  </button>
+);
+
+export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort }) {
   const getBranchName = (branchCnpj) => {
     const branch = branches.find((b) => b.cnpj === branchCnpj);
     return branch?.name || "—";
@@ -35,12 +56,26 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="font-semibold">Filial</TableHead>
-            <TableHead className="font-semibold">Fornecedor</TableHead>
-            <TableHead className="font-semibold">NF</TableHead>
-            <TableHead className="font-semibold">Emissão</TableHead>
-            <TableHead className="font-semibold">Vencimento</TableHead>
-            <TableHead className="font-semibold text-right">Valor</TableHead>
+            <TableHead className="font-semibold">
+              <SortableHeader label="Filial" sortKey="branch_cnpj" currentSort={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="font-semibold">
+              <SortableHeader label="Fornecedor" sortKey="supplier_name" currentSort={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="font-semibold">
+              <SortableHeader label="NF" sortKey="number" currentSort={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="font-semibold">
+              <SortableHeader label="Emissão" sortKey="issue_date" currentSort={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="font-semibold">
+              <SortableHeader label="Vencimento" sortKey="due_date" currentSort={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="font-semibold text-right">
+              <div className="flex items-center justify-end gap-2">
+                <SortableHeader label="Valor" sortKey="total_value" currentSort={sortConfig} onSort={onSort} />
+              </div>
+            </TableHead>
             <TableHead className="font-semibold">Produto</TableHead>
             <TableHead className="font-semibold">Informações Adicionais</TableHead>
             <TableHead className="font-semibold text-right">Ações</TableHead>
