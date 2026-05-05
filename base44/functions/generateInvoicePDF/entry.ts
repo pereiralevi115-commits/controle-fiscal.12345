@@ -235,7 +235,7 @@ async function generateInvoicePDF(invoice) {
 
    yPosition -= 12;
 
-   // Installments
+   // Installments or single payment
    if (invoice.installments && invoice.installments.length > 0) {
      invoice.installments.forEach((inst, idx) => {
        const paymentType = invoice.payments && invoice.payments[0] ? invoice.payments[0].payment_type : "01";
@@ -255,6 +255,43 @@ async function generateInvoicePDF(invoice) {
        drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
        yPosition -= 12;
      });
+   } else if (invoice.payments && invoice.payments.length > 0) {
+     // Fallback: display payments if no installments
+     invoice.payments.forEach((payment, idx) => {
+       const paymentTypeMap = {
+         "01": "Dinheiro",
+         "02": "Cheque",
+         "03": "Cartão",
+         "04": "Débito",
+         "05": "Crediário",
+         "10": "Vale Alimentação"
+       };
+       const paymentTypeStr = paymentTypeMap[payment.payment_type] || "Boleto";
+
+       drawText(String(idx + 1), payCol1, yPosition, { size: 9 });
+       drawText(formatCurrency(payment.value), payCol2, yPosition, { size: 9 });
+       drawText(invoice.due_date ? formatDate(invoice.due_date) : "—", payCol3, yPosition, { size: 9 });
+       drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
+       yPosition -= 12;
+     });
+   } else {
+     // Fallback: display single row with total value
+     const paymentTypeMap = {
+       "01": "Dinheiro",
+       "02": "Cheque",
+       "03": "Cartão",
+       "04": "Débito",
+       "05": "Crediário",
+       "10": "Vale Alimentação"
+     };
+     const paymentType = invoice.payments && invoice.payments[0] ? invoice.payments[0].payment_type : "01";
+     const paymentTypeStr = paymentTypeMap[paymentType] || "Boleto";
+
+     drawText("1", payCol1, yPosition, { size: 9 });
+     drawText(formatCurrency(invoice.total_value), payCol2, yPosition, { size: 9 });
+     drawText(invoice.due_date ? formatDate(invoice.due_date) : "—", payCol3, yPosition, { size: 9 });
+     drawText(paymentTypeStr, payCol4, yPosition, { size: 9 });
+     yPosition -= 12;
    }
 
    yPosition -= 20;
