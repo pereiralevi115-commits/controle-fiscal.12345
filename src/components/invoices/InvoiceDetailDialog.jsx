@@ -108,7 +108,15 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             <div className="grid grid-cols-3 gap-0">
               <InfoField label="RAZÃO SOCIAL" value={invoice.supplier_name} />
               <InfoField label="CNPJ" value={formatCNPJ(invoice.supplier_cnpj)} />
-              <InfoField label="INSCRIÇÃO ESTADUAL" value="—" />
+              <InfoField label="INSCRIÇÃO ESTADUAL" value={invoice.supplier_ie || "—"} />
+            </div>
+            <div className="grid grid-cols-2 gap-0">
+              <InfoField label="ENDEREÇO" value={invoice.supplier_address ? `${invoice.supplier_address}, ${invoice.supplier_number || ""}` : "—"} />
+              <InfoField label="MUNICÍPIO / UF" value={invoice.supplier_city && invoice.supplier_state ? `${invoice.supplier_city} / ${invoice.supplier_state}` : "—"} />
+            </div>
+            <div className="grid grid-cols-2 gap-0">
+              <InfoField label="TELEFONE" value={invoice.supplier_phone || "—"} />
+              <InfoField label="E-MAIL" value={invoice.supplier_email || "—"} />
             </div>
           </div>
 
