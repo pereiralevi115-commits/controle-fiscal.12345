@@ -39,13 +39,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Visão geral das notas fiscais</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Visão geral das notas fiscais</p>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total de Notas"
           value={invoices.length}
@@ -75,18 +76,18 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="bg-card rounded-xl border border-border">
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-amber-500" />
-            <h2 className="font-semibold text-lg">Últimas Notas Pendentes</h2>
+        <div className="bg-white rounded-xl shadow-lg border-0">
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-slate-800" />
+              <h2 className="font-semibold text-lg text-slate-800">Últimas Notas Pendentes</h2>
+            </div>
+            <Link to="/notas">
+              <Button variant="ghost" size="sm" className="text-slate-600">
+                Ver todas <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
           </div>
-          <Link to="/notas">
-            <Button variant="ghost" size="sm" className="text-primary">
-              Ver todas <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </Link>
-        </div>
         {recentPendentes.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
             <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
@@ -114,7 +115,8 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

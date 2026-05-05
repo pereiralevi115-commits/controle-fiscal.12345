@@ -110,17 +110,18 @@ export default function Invoices() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Notas Fiscais</h1>
-        <p className="text-muted-foreground mt-1">
-          {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Notas Fiscais</h1>
+          <p className="text-slate-500 mt-1">
+            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
+          </p>
+        </div>
 
-      <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} />
 
-      <div className="bg-card rounded-xl border border-border">
+        <div className="bg-white rounded-xl shadow-lg border-0">
         <InvoiceTable
           invoices={filteredInvoices}
           branches={branches}
@@ -129,15 +130,16 @@ export default function Invoices() {
           sortConfig={sortConfig}
           onSort={handleSort}
         />
-      </div>
+        </div>
 
-      <InvoiceDetailDialog
-        invoice={selectedInvoice}
-        open={!!selectedInvoice}
-        onClose={() => setSelectedInvoice(null)}
-        onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
-        branches={branches}
-      />
+        <InvoiceDetailDialog
+          invoice={selectedInvoice}
+          open={!!selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
+          branches={branches}
+        />
+      </div>
     </div>
   );
 }

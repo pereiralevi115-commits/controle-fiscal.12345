@@ -6,15 +6,17 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
-import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Invoices from './pages/Invoices';
 import ImportXml from './pages/ImportXml';
 import Branches from './pages/Branches';
 import Suppliers from './pages/Suppliers';
+import { useLocation } from 'react-router-dom';
+import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -33,17 +35,27 @@ const AuthenticatedApp = () => {
     }
   }
 
+  const renderPage = () => {
+    switch (location.pathname) {
+      case '/':
+        return <Dashboard />;
+      case '/notas':
+        return <Invoices />;
+      case '/importar':
+        return <ImportXml />;
+      case '/filiais':
+        return <Branches />;
+      case '/fornecedores':
+        return <Suppliers />;
+      default:
+        return <PageNotFound />;
+    }
+  };
+
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/notas" element={<Invoices />} />
-        <Route path="/importar" element={<ImportXml />} />
-        <Route path="/filiais" element={<Branches />} />
-        <Route path="/fornecedores" element={<Suppliers />} />
-      </Route>
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <AppHeaderLayout currentPath={location.pathname}>
+      {renderPage()}
+    </AppHeaderLayout>
   );
 };
 

@@ -88,28 +88,29 @@ export default function Branches() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Filiais</h1>
-          <p className="text-muted-foreground mt-1">Cadastre as filiais da empresa</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Filiais</h1>
+            <p className="text-slate-500 mt-1">Cadastre as filiais da empresa</p>
+          </div>
+          <Button onClick={openNew} className="bg-slate-900 hover:bg-slate-800">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Filial
+          </Button>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Filial
-        </Button>
-      </div>
 
-      {branches.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border py-16 text-center">
-          <Building2 className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-          <p className="font-medium text-muted-foreground">Nenhuma filial cadastrada</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Cadastre suas filiais para vincular automaticamente às notas
-          </p>
-        </div>
-      ) : (
-        <div className="bg-card rounded-xl border border-border">
+        {branches.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-lg border-0 py-16 text-center">
+            <Building2 className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+            <p className="font-medium text-slate-600">Nenhuma filial cadastrada</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Cadastre suas filiais para vincular automaticamente às notas
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg border-0">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -142,10 +143,10 @@ export default function Branches() {
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
+          </div>
+        )}
 
-      <Dialog open={dialogOpen} onOpenChange={closeDialog}>
+        <Dialog open={dialogOpen} onOpenChange={closeDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingBranch ? "Editar Filial" : "Nova Filial"}</DialogTitle>
@@ -167,7 +168,8 @@ export default function Branches() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      </div>
     </div>
   );
 }

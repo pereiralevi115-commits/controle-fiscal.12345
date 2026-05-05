@@ -118,33 +118,34 @@ export default function Suppliers() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fornecedores</h1>
-          <p className="text-muted-foreground mt-1">
-            {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Fornecedores</h1>
+            <p className="text-slate-500 mt-1">
+              {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <Button 
+            onClick={() => extractSuppliersMutation.mutate()}
+            variant="outline"
+            className="gap-2 text-slate-600"
+          >
+            Extrair de Notas Fiscais
+          </Button>
         </div>
-        <Button 
-          onClick={() => extractSuppliersMutation.mutate()}
-          variant="outline"
-          className="gap-2"
-        >
-          Extrair de Notas Fiscais
-        </Button>
-      </div>
 
-      <div className="flex gap-3">
-        <Input
-          placeholder="Buscar por nome ou CNPJ..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 max-w-sm"
-        />
-      </div>
+        <div className="flex gap-3">
+          <Input
+            placeholder="Buscar por nome ou CNPJ..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 max-w-sm"
+          />
+        </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-lg border-0 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -245,7 +246,8 @@ export default function Suppliers() {
             </div>
           </form>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      </div>
     </div>
   );
 }

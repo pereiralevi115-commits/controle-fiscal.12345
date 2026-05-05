@@ -80,13 +80,14 @@ export default function ImportXml() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Importar XML</h1>
-        <p className="text-muted-foreground mt-1">
-          Faça upload dos arquivos XML de notas fiscais (NF-e)
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Importar XML</h1>
+          <p className="text-slate-500 mt-1">
+            Faça upload dos arquivos XML de notas fiscais (NF-e)
+          </p>
+        </div>
 
       {/* Drop Zone */}
       <div
@@ -123,9 +124,9 @@ export default function ImportXml() {
         </div>
       </div>
 
-      {/* File List */}
-      {files.length > 0 && (
-        <div className="bg-card rounded-xl border border-border divide-y divide-border">
+        {/* File List */}
+        {files.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg border-0 divide-y divide-slate-200">
           {files.map((file, index) => (
             <div key={index} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -165,10 +166,10 @@ export default function ImportXml() {
         </div>
       )}
 
-      {/* Results */}
-      {result && (
-        <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-          <h3 className="font-semibold">Resultado da Importação</h3>
+        {/* Results */}
+        {result && (
+          <div className="bg-white rounded-xl shadow-lg border-0 p-6 space-y-4">
+            <h3 className="font-semibold text-slate-800">Resultado da Importação</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-50">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -194,9 +195,10 @@ export default function ImportXml() {
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
