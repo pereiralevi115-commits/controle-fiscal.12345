@@ -1,0 +1,26 @@
+{
+  "name": "Branch",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ da filial"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade da filial"
+    },
+    "state": {
+      "type": "string",
+      "description": "Estado da filial (UF)"
+    }
+  },
+  "required": [
+    "name",
+    "cnpj"
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "number": {
+      "type": "string",
+      "description": "N\u00famero da nota fiscal"
+    },
+    "series": {
+      "type": "string",
+      "description": "S\u00e9rie da nota fiscal"
+    },
+    "access_key": {
+      "type": "string",
+      "description": "Chave de acesso da NF-e (44 d\u00edgitos)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome/Raz\u00e3o social do fornecedor (emitente)"
+    },
+    "supplier_cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor (emitente)"
+    },
+    "recipient_name": {
+      "type": "string",
+      "description": "Nome/Raz\u00e3o social do destinat\u00e1rio"
+    },
+    "recipient_cnpj": {
+      "type": "string",
+      "description": "CNPJ do destinat\u00e1rio (filial)"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "ID da filial destinat\u00e1ria"
+    },
+    "total_value": {
+      "type": "number",
+      "description": "Valor total da nota fiscal"
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de emiss\u00e3o da nota fiscal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "recebida"
+      ],
+      "default": "pendente",
+      "description": "Status de recebimento da nota fiscal"
+    },
+    "received_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que a nota foi recebida"
+    },
+    "items": {
+      "type": "array",
+      "description": "Itens da nota fiscal",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit_value": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "ncm": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "xml_url": {
+      "type": "string",
+      "description": "URL do arquivo XML original"
+    }
+  },
+  "required": [
+    "number",
+    "supplier_name",
+    "supplier_cnpj",
+    "total_value",
+    "status"
+  ]
+}
