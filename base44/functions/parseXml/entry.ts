@@ -63,10 +63,29 @@ function parseNFe(xmlText) {
   const totalCOFINS = parseFloat(getTagText(ICMSTot, "vCOFINS")) || 0;
   const totalProducts = parseFloat(getTagText(ICMSTot, "vProd")) || 0;
 
-  // Due date
+  // Due date and installments
   const cobr = inf.getElementsByTagName("cobr")[0];
-  const dup = cobr?.getElementsByTagName("dup")[0];
-  const dueDate = getTagText(dup, "dVenc") || "";
+  const dupElements = cobr?.getElementsByTagName("dup") || [];
+  const installments = [];
+  let dueDate = "";
+
+  for (let i = 0; i < dupElements.length; i++) {
+    const dup = dupElements[i];
+    const nDup = getTagText(dup, "nDup");
+    const dVenc = getTagText(dup, "dVenc");
+    const vDup = parseFloat(getTagText(dup, "vDup")) || 0;
+    
+    if (dVenc) {
+      installments.push({
+        number: nDup || `${i + 1}`,
+        due_date: dVenc,
+        value: vDup
+      });
+      if (i === 0) {
+        dueDate = dVenc;
+      }
+    }
+  }
 
   // Complement info
   const infAdic = inf.getElementsByTagName("infAdic")[0];
@@ -113,6 +132,7 @@ function parseNFe(xmlText) {
     tax_cofins: totalCOFINS,
     total_products: totalProducts,
     additional_info: complementInfo,
+    installments,
   };
 }
 

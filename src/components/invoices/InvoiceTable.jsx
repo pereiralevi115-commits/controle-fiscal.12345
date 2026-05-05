@@ -112,7 +112,11 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 </InvoiceTableTooltip>
               </TableCell>
               <TableCell>
-                <InvoiceTableTooltip content={`Vencimento: ${invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}\nTodas informações de pagamento`}>
+                <InvoiceTableTooltip content={invoice.installments && invoice.installments.length > 0 
+                  ? `PARCELAS\n\n${invoice.installments.map((inst, idx) => 
+                      `Parcela ${inst.number || idx + 1}\n${inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"} - ${formatCurrency(inst.value)}`
+                    ).join("\n\n")}`
+                  : `Vencimento: ${invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}`}>
                   <span className="cursor-help">
                     {invoice.due_date
                       ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR })
