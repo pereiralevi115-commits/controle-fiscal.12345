@@ -176,14 +176,14 @@ function parseNFe(xmlText) {
   }
 
   // Protocol info
-  let protocolNumber = "";
-  let protocolDate = "";
+  let protNum = "";
+  let protDate = "";
   const protNFe = doc.getElementsByTagName("protNFe")[0];
   if (protNFe) {
-    protocolNumber = getTagText(protNFe, "nProt");
+    protNum = getTagText(protNFe, "nProt");
     const dhRecbto = getTagText(protNFe, "dhRecbto") || getTagText(protNFe, "dRecbto");
     if (dhRecbto) {
-      protocolDate = dhRecbto.substring(0, 10);
+      protDate = dhRecbto.substring(0, 10);
     }
   }
 
@@ -230,8 +230,8 @@ function parseNFe(xmlText) {
     total_other_charges: totalOtherCharges,
     additional_info: complementInfo,
     installments,
-    protocol_number: protocolNumber,
-    protocol_date: protocolDate,
+    protocol_number: protNum,
+    protocol_date: protDate,
     payments,
   };
 }
@@ -277,9 +277,10 @@ Deno.serve(async (req) => {
         const created = await base44.entities.Invoice.create(parsed);
         results.push(created);
 
-        // Small delay to avoid rate limiting
-        if ((i + 1) % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        // Delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if ((i + 1) % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (err) {
         errors.push({ index: i, error: err.message });
