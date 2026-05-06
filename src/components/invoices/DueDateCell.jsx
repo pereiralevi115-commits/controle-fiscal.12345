@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function DueDateCell({ invoice }) {
   const [editing, setEditing] = useState(false);
@@ -93,6 +94,42 @@ export default function DueDateCell({ invoice }) {
     ? format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
     : "—";
 
+  const formatCurrency = (val) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
+
+  const paymentTypeMap = {
+    "01": "Dinheiro", "02": "Cheque", "03": "Cartão Crédito", "04": "Cartão Débito",
+    "05": "Crediário", "10": "Vale Alimentação", "12": "Duplicata", "13": "Boleto Bancário", "99": "Outro"
+  };
+
+  const hasPaymentInfo = invoice.installments?.length > 0 || invoice.payments?.length > 0;
+
+  const tooltipContent = hasPaymentInfo ? (
+    <div className="text-xs space-y-2 min-w-[200px]">
+      <p className="font-bold text-sm border-b pb-1">Dados de Pagamento</p>
+      {invoice.installments?.length > 0 ? (
+        <div className="space-y-1.5">
+          {invoice.installments.map((inst, idx) => (
+            <div key={idx} className="flex justify-between gap-4">
+              <span className="text-slate-400">Parcela {String(inst.number || idx + 1).padStart(3, "0")}</span>
+              <span>{inst.due_date ? format(new Date(inst.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"}</span>
+              <span className="font-semibold">{formatCurrency(inst.value)}</span>
+            </div>
+          ))}
+        </div>
+      ) : invoice.payments?.length > 0 ? (
+        <div className="space-y-1.5">
+          {invoice.payments.map((pay, idx) => (
+            <div key={idx} className="flex justify-between gap-4">
+              <span className="text-slate-400">{paymentTypeMap[pay.payment_type] || "Pagamento"}</span>
+              <span className="font-semibold">{formatCurrency(pay.value)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
   if (editing) {
     return (
       <div className="flex items-center gap-0.5" onKeyDown={handleKeyDown}>
@@ -127,16 +164,28 @@ export default function DueDateCell({ invoice }) {
     );
   }
 
-  return (
+  const trigger = (
     <span
       onClick={handleOpen}
       className={`cursor-pointer group flex items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-100 transition-colors w-fit ${
         isEdited ? "text-red-600 font-semibold" : ""
       }`}
-      title="Clique para editar o vencimento"
     >
       {displayDate}
       <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
     </span>
+  );
+
+  if (!hasPaymentInfo) return trigger;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        <TooltipContent side="top" className="bg-white text-slate-800 border shadow-lg p-3">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
