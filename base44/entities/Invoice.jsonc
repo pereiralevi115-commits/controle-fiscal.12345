@@ -116,6 +116,11 @@
       "format": "date",
       "description": "Data de vencimento da nota fiscal"
     },
+    "due_date_edited": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a data de vencimento foi editada manualmente"
+    },
     "status": {
       "type": "string",
       "enum": [
