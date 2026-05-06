@@ -27,12 +27,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
-      const reason = error?.data?.extra_data?.reason;
-      if (reason === 'user_not_registered') {
-        setAuthError({ type: 'user_not_registered', message: 'Usuário não registrado' });
-      } else {
-        setAuthError({ type: 'auth_required', message: 'Autenticação necessária' });
-      }
+      // App é público, então permite usar sem login
+      setAuthError(null);
     }
     setIsLoadingAuth(false);
     setAuthChecked(true);
