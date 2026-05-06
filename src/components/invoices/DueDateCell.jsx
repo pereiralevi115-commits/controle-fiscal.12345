@@ -166,8 +166,8 @@ export default function DueDateCell({ invoice }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap">
-          {tooltipContent}
+        <TooltipContent side="top" className="max-w-xs">
+          <span className="whitespace-pre-wrap text-xs">{tooltipContent}</span>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
