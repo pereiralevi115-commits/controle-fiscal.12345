@@ -377,7 +377,12 @@ Deno.serve(async (req) => {
     if (!invoice) return Response.json({ error: "invoice é obrigatório" }, { status: 400 });
 
     const pdfBytes = await buildPDF(invoice);
-    const base64 = btoa(String.fromCharCode(...pdfBytes));
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...pdfBytes.slice(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
 
     return Response.json({ pdf_base64: base64, filename: `NF_${invoice.number}.pdf` });
   } catch (error) {
