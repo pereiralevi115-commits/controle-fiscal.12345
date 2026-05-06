@@ -147,9 +147,9 @@ async function buildPDF(invoice) {
   cy -= EM_R1;
 
   const EM_R2 = 26;
-  drawCell(ML,            cy, W * 0.34, EM_R2, "ENDEREÇO",  sAddr || "—",               { bold: true });
-  drawCell(ML + W * 0.34, cy, W * 0.20, EM_R2, "BAIRRO",    v(invoice.supplier_district), { bold: true });
-  drawCell(ML + W * 0.54, cy, W * 0.20, EM_R2, "MUNICÍPIO", v(invoice.supplier_city),     { bold: true });
+  drawCell(ML,            cy, W * 0.30, EM_R2, "ENDEREÇO",  sAddr || "—",                 { bold: true });
+  drawCell(ML + W * 0.30, cy, W * 0.22, EM_R2, "BAIRRO",    v(invoice.supplier_district), { bold: true });
+  drawCell(ML + W * 0.52, cy, W * 0.22, EM_R2, "MUNICÍPIO", v(invoice.supplier_city),     { bold: true });
   drawCell(ML + W * 0.74, cy, W * 0.08, EM_R2, "UF",        v(invoice.supplier_state),    { bold: true });
   drawCell(ML + W * 0.82, cy, W * 0.18, EM_R2, "CEP",       v(invoice.supplier_zip),      { bold: true });
   cy -= EM_R2;
@@ -168,9 +168,9 @@ async function buildPDF(invoice) {
 
   const rAddr = [invoice.recipient_address, invoice.recipient_number].filter(Boolean).join(", ");
   const DE_R2 = 26;
-  drawCell(ML,            cy, W * 0.34, DE_R2, "ENDEREÇO",  rAddr || "—",                { bold: true });
-  drawCell(ML + W * 0.34, cy, W * 0.20, DE_R2, "BAIRRO",    v(invoice.recipient_district), { bold: true });
-  drawCell(ML + W * 0.54, cy, W * 0.20, DE_R2, "MUNICÍPIO", v(invoice.recipient_city),     { bold: true });
+  drawCell(ML,            cy, W * 0.30, DE_R2, "ENDEREÇO",  rAddr || "—",                  { bold: true });
+  drawCell(ML + W * 0.30, cy, W * 0.22, DE_R2, "BAIRRO",    v(invoice.recipient_district), { bold: true });
+  drawCell(ML + W * 0.52, cy, W * 0.22, DE_R2, "MUNICÍPIO", v(invoice.recipient_city),     { bold: true });
   drawCell(ML + W * 0.74, cy, W * 0.08, DE_R2, "UF",        v(invoice.recipient_state),    { bold: true });
   drawCell(ML + W * 0.82, cy, W * 0.18, DE_R2, "CEP",       v(invoice.recipient_zip),      { bold: true });
   cy -= DE_R2;
@@ -183,15 +183,15 @@ async function buildPDF(invoice) {
 
   // Column definitions: label, width fraction, align
   const COLS = [
-    { lbl: "Nº",                         w: 0.04, align: "center" },
-    { lbl: "DESCRIÇÃO DO PRODUTO / SERVIÇO", w: 0.27, align: "left"   },
-    { lbl: "CÓDIGO",                     w: 0.08, align: "center" },
-    { lbl: "NCM",                        w: 0.08, align: "center" },
-    { lbl: "CFOP",                       w: 0.06, align: "center" },
-    { lbl: "UN",                         w: 0.05, align: "center" },
-    { lbl: "QTDE",                       w: 0.08, align: "right"  },
-    { lbl: "VL. UNIT.",                  w: 0.10, align: "right"  },
-    { lbl: "VL. TOTAL",                  w: 0.24, align: "right"  },
+    { lbl: "Nº",                             w: 0.04, align: "center" },
+    { lbl: "DESCRIÇÃO DO PRODUTO / SERVIÇO", w: 0.30, align: "left"   },
+    { lbl: "CÓDIGO",                         w: 0.08, align: "center" },
+    { lbl: "NCM",                            w: 0.08, align: "center" },
+    { lbl: "CFOP",                           w: 0.06, align: "center" },
+    { lbl: "UN",                             w: 0.05, align: "center" },
+    { lbl: "QTDE",                           w: 0.07, align: "right"  },
+    { lbl: "VL. UNIT.",                      w: 0.10, align: "right"  },
+    { lbl: "VL. TOTAL",                      w: 0.22, align: "right"  },
   ];
 
   const COL_HDR_H = 16;
@@ -210,10 +210,10 @@ async function buildPDF(invoice) {
     const rowVals = [
       String(idx + 1),
       v(item.description),
-      v(item.cfop),
+      v(item.code),
       v(item.ncm),
       v(item.cfop),
-      "UN",
+      v(item.unit) !== "—" ? v(item.unit) : "UN",
       item.quantity != null ? Number(item.quantity).toFixed(3) : "—",
       item.unit_value != null ? Number(item.unit_value).toFixed(4) : "—",
       item.total != null ? formatCurrency(item.total) : "—",

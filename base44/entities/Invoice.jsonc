@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Chave de acesso da NF-e (44 d\u00edgitos)"
     },
+    "operation_nature": {
+      "type": "string",
+      "description": "Natureza da opera\u00e7\u00e3o"
+    },
     "supplier_name": {
       "type": "string",
       "description": "Nome/Raz\u00e3o social do fornecedor (emitente)"
@@ -28,11 +32,15 @@
     },
     "supplier_address": {
       "type": "string",
-      "description": "Endere\u00e7o do fornecedor"
+      "description": "Logradouro do fornecedor"
     },
     "supplier_number": {
       "type": "string",
       "description": "N\u00famero do endere\u00e7o do fornecedor"
+    },
+    "supplier_district": {
+      "type": "string",
+      "description": "Bairro do fornecedor"
     },
     "supplier_city": {
       "type": "string",
@@ -41,6 +49,10 @@
     "supplier_state": {
       "type": "string",
       "description": "Estado do fornecedor"
+    },
+    "supplier_zip": {
+      "type": "string",
+      "description": "CEP do fornecedor"
     },
     "supplier_phone": {
       "type": "string",
@@ -64,11 +76,15 @@
     },
     "recipient_address": {
       "type": "string",
-      "description": "Endere\u00e7o do destinat\u00e1rio"
+      "description": "Logradouro do destinat\u00e1rio"
     },
     "recipient_number": {
       "type": "string",
       "description": "N\u00famero do endere\u00e7o do destinat\u00e1rio"
+    },
+    "recipient_district": {
+      "type": "string",
+      "description": "Bairro do destinat\u00e1rio"
     },
     "recipient_city": {
       "type": "string",
@@ -77,6 +93,10 @@
     "recipient_state": {
       "type": "string",
       "description": "Estado do destinat\u00e1rio"
+    },
+    "recipient_zip": {
+      "type": "string",
+      "description": "CEP do destinat\u00e1rio"
     },
     "branch_cnpj": {
       "type": "string",
@@ -130,8 +150,16 @@
       "items": {
         "type": "object",
         "properties": {
+          "code": {
+            "type": "string",
+            "description": "C\u00f3digo do produto"
+          },
           "description": {
             "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidade de medida"
           },
           "quantity": {
             "type": "number"
@@ -231,10 +259,6 @@
         }
       }
     },
-    "operation_nature": {
-      "type": "string",
-      "description": "Natureza da opera\u00e7\u00e3o"
-    },
     "nfc_id": {
       "type": "string",
       "description": "ID da nota fiscal eletr\u00f4nica"
@@ -255,40 +279,31 @@
         "type": "object",
         "properties": {
           "payment_type": {
-            "type": "string",
-            "description": "Tipo de pagamento (01=dinheiro, 02=cheque, 03=cart\u00e3o, 04=cart\u00e3o de d\u00e9bito, 05=credi\u00e1rio, 10=vale alimenta\u00e7\u00e3o, etc.)"
+            "type": "string"
           },
           "value": {
-            "type": "number",
-            "description": "Valor do pagamento"
+            "type": "number"
           },
           "card_type": {
-            "type": "string",
-            "description": "Tipo de integra\u00e7\u00e3o do cart\u00e3o"
+            "type": "string"
           },
           "card_network": {
-            "type": "string",
-            "description": "Bandeira/rede do cart\u00e3o"
+            "type": "string"
           },
           "card_cnpj": {
-            "type": "string",
-            "description": "CNPJ da administradora do cart\u00e3o"
+            "type": "string"
           },
           "installments": {
-            "type": "number",
-            "description": "N\u00famero de parcelas (para pagamento parcelado)"
+            "type": "number"
           },
           "authorization_number": {
-            "type": "string",
-            "description": "N\u00famero de autoriza\u00e7\u00e3o da operadora"
+            "type": "string"
           },
           "network_authorization": {
-            "type": "string",
-            "description": "N\u00famero de autoriza\u00e7\u00e3o da rede"
+            "type": "string"
           },
           "processing_cnpj": {
-            "type": "string",
-            "description": "CNPJ da institui\u00e7\u00e3o processadora"
+            "type": "string"
           }
         }
       }

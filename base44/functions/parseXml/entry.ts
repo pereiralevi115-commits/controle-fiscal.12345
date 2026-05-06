@@ -25,6 +25,7 @@ function parseNFe(xmlText) {
   const number = getTagText(ide, "nNF");
   const series = getTagText(ide, "serie");
   const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
+  const operationNature = getTagText(ide, "natOp");
 
   // Access key
   let accessKey = "";
@@ -47,11 +48,12 @@ function parseNFe(xmlText) {
   const emitEnderEmi = emit?.getElementsByTagName("enderEmit")[0];
   const supplierAddress = emitEnderEmi ? getTagText(emitEnderEmi, "xLgr") : "";
   const supplierNumber = emitEnderEmi ? getTagText(emitEnderEmi, "nro") : "";
+  const supplierDistrict = emitEnderEmi ? getTagText(emitEnderEmi, "xBairro") : "";
   const supplierCity = emitEnderEmi ? getTagText(emitEnderEmi, "xMun") : "";
   const supplierState = emitEnderEmi ? getTagText(emitEnderEmi, "UF") : "";
-  const emitContato = emit?.getElementsByTagName("Ender")[0];
-  const supplierPhone = emitContato ? getTagText(emitContato, "fone") : "";
-  const supplierEmail = emitContato ? getTagText(emitContato, "email") : "";
+  const supplierZip = emitEnderEmi ? getTagText(emitEnderEmi, "CEP") : "";
+  const supplierPhone = emitEnderEmi ? getTagText(emitEnderEmi, "fone") : "";
+  const supplierEmail = emit ? getTagText(emit, "email") : "";
 
   // Destinatário (recipient)
   const dest = inf.getElementsByTagName("dest")[0];
@@ -61,8 +63,10 @@ function parseNFe(xmlText) {
   const destEnder = dest?.getElementsByTagName("enderDest")[0];
   const recipientAddress = destEnder ? getTagText(destEnder, "xLgr") : "";
   const recipientNumber = destEnder ? getTagText(destEnder, "nro") : "";
+  const recipientDistrict = destEnder ? getTagText(destEnder, "xBairro") : "";
   const recipientCity = destEnder ? getTagText(destEnder, "xMun") : "";
   const recipientState = destEnder ? getTagText(destEnder, "UF") : "";
+  const recipientZip = destEnder ? getTagText(destEnder, "CEP") : "";
 
   // Total and taxes
   const total = inf.getElementsByTagName("total")[0];
@@ -73,6 +77,12 @@ function parseNFe(xmlText) {
   const totalPIS = parseFloat(getTagText(ICMSTot, "vPIS")) || 0;
   const totalCOFINS = parseFloat(getTagText(ICMSTot, "vCOFINS")) || 0;
   const totalProducts = parseFloat(getTagText(ICMSTot, "vProd")) || 0;
+  const totalFreight = parseFloat(getTagText(ICMSTot, "vFrete")) || 0;
+  const totalInsurance = parseFloat(getTagText(ICMSTot, "vSeg")) || 0;
+  const totalDiscount = parseFloat(getTagText(ICMSTot, "vDesc")) || 0;
+  const totalOtherCharges = parseFloat(getTagText(ICMSTot, "vOutro")) || 0;
+  const taxIcmsBase = parseFloat(getTagText(ICMSTot, "vBC")) || 0;
+  const taxIpiBase = parseFloat(getTagText(ICMSTot, "vBCIPI")) || 0;
 
   // Due date and installments
   const cobr = inf.getElementsByTagName("cobr")[0];
@@ -109,12 +119,20 @@ function parseNFe(xmlText) {
     const det = detElements[i];
     const prod = det.getElementsByTagName("prod")[0];
     if (prod) {
+      const code = getTagText(prod, "cProd");
       const description = getTagText(prod, "xProd");
+      const unit = getTagText(prod, "uCom");
       const quantity = parseFloat(getTagText(prod, "qCom")) || 0;
       const unitValue = parseFloat(getTagText(prod, "vUnCom")) || 0;
       const itemTotal = parseFloat(getTagText(prod, "vProd")) || 0;
       const ncm = getTagText(prod, "NCM");
-      items.push({ description, quantity, unit_value: unitValue, total: itemTotal, ncm });
+      const cfop = getTagText(prod, "CFOP");
+      const imposto = det.getElementsByTagName("imposto")[0];
+      const icmsEl = imposto?.getElementsByTagName("ICMS")[0];
+      const icmsGroup = icmsEl?.childNodes ? Array.from(icmsEl.childNodes).find(n => n.tagName) : null;
+      const icmsOrigin = icmsGroup ? getTagText(icmsGroup, "orig") : "";
+      const icmsSituation = icmsGroup ? (icmsGroup.tagName || "").replace(/^ICMS/, "") : "";
+      items.push({ code, description, unit, quantity, unit_value: unitValue, total: itemTotal, ncm, cfop, icms_origin: icmsOrigin, icms_situation: icmsSituation });
     }
   }
 
@@ -173,13 +191,16 @@ function parseNFe(xmlText) {
     number,
     series,
     access_key: accessKey,
+    operation_nature: operationNature,
     supplier_name: supplierName,
     supplier_cnpj: supplierCnpj,
     supplier_ie: supplierIe,
     supplier_address: supplierAddress,
     supplier_number: supplierNumber,
+    supplier_district: supplierDistrict,
     supplier_city: supplierCity,
     supplier_state: supplierState,
+    supplier_zip: supplierZip,
     supplier_phone: supplierPhone,
     supplier_email: supplierEmail,
     recipient_name: recipientName,
@@ -187,8 +208,10 @@ function parseNFe(xmlText) {
     recipient_ie: recipientIe,
     recipient_address: recipientAddress,
     recipient_number: recipientNumber,
+    recipient_district: recipientDistrict,
     recipient_city: recipientCity,
     recipient_state: recipientState,
+    recipient_zip: recipientZip,
     total_value: totalValue,
     issue_date: formattedDate,
     due_date: dueDate,
@@ -198,7 +221,13 @@ function parseNFe(xmlText) {
     tax_ipi: totalIPI,
     tax_pis: totalPIS,
     tax_cofins: totalCOFINS,
+    tax_icms_base: taxIcmsBase,
+    tax_ipi_base: taxIpiBase,
     total_products: totalProducts,
+    total_freight: totalFreight,
+    total_insurance: totalInsurance,
+    total_discount: totalDiscount,
+    total_other_charges: totalOtherCharges,
     additional_info: complementInfo,
     installments,
     protocol_number: protocolNumber,
