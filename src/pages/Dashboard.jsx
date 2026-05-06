@@ -1,7 +1,8 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { FileText, CheckSquare, Receipt, BookOpen } from "lucide-react";
+import BranchCard from "@/components/dashboard/BranchCard";
+import { FileText } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -46,11 +47,19 @@ export default function Dashboard() {
     const sigv = invs.filter(i => i.sigv_recorded).length;
     const topcon = invs.filter(i => i.topcon_recorded).length;
     const boleto = invs.filter(i => i.boleto_recorded).length;
-    return { name, total, sigv, topcon, boleto };
+    const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
+    return { name, total, sigv, topcon, boleto, value };
   });
 
   // Sort by branch name
   rows.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Totals across all branches
+  const allTotal  = invoices.length;
+  const allSigv   = invoices.filter(i => i.sigv_recorded).length;
+  const allTopcon = invoices.filter(i => i.topcon_recorded).length;
+  const allBoleto = invoices.filter(i => i.boleto_recorded).length;
+  const allValue  = invoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -61,63 +70,11 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-5">
+          {/* Card consolidado — todas as filiais */}
+          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} highlight />
+
           {rows.map((row) => (
-            <div key={row.name} className="bg-white rounded-xl shadow border border-slate-100">
-              {/* Branch header */}
-              <div className="px-5 py-3 border-b border-slate-100">
-                <h2 className="font-bold text-slate-800 text-base">{row.name}</h2>
-              </div>
-
-              {/* 4 stat cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100">
-                {/* Total */}
-                <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-slate-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-800">{row.total}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Total de Notas</p>
-                  </div>
-                </div>
-
-                {/* SIGV */}
-                <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <CheckSquare className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-700">{row.sigv}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Lançado SIGV</p>
-                    <p className="text-xs text-slate-400">{row.total > 0 ? Math.round(row.sigv/row.total*100) : 0}% do total</p>
-                  </div>
-                </div>
-
-                {/* TOPCON */}
-                <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-emerald-700">{row.topcon}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Lançado TOPCON</p>
-                    <p className="text-xs text-slate-400">{row.total > 0 ? Math.round(row.topcon/row.total*100) : 0}% do total</p>
-                  </div>
-                </div>
-
-                {/* BOLETO */}
-                <div className="flex items-center gap-4 p-5">
-                  <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                    <Receipt className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-amber-700">{row.boleto}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Boleto em Mãos</p>
-                    <p className="text-xs text-slate-400">{row.total > 0 ? Math.round(row.boleto/row.total*100) : 0}% do total</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} />
           ))}
 
           {rows.length === 0 && (
