@@ -7,38 +7,35 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
+  const [isLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [appPublicSettings, setAppPublicSettings] = useState(null);
+  const [appPublicSettings] = useState(null);
 
   useEffect(() => {
     checkUserAuth();
   }, []);
 
   const checkUserAuth = async () => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
     try {
-      setIsLoadingAuth(true);
-      setAuthError(null);
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
+      setAuthError(null);
     } catch (error) {
       setIsAuthenticated(false);
-      if (error.status === 401 || error.status === 403) {
-        const reason = error.data?.extra_data?.reason;
-        if (reason === 'user_not_registered') {
-          setAuthError({ type: 'user_not_registered', message: 'User not registered for this app' });
-        } else {
-          setAuthError({ type: 'auth_required', message: 'Authentication required' });
-        }
+      setUser(null);
+      const reason = error?.data?.extra_data?.reason;
+      if (reason === 'user_not_registered') {
+        setAuthError({ type: 'user_not_registered', message: 'Usuário não registrado' });
       } else {
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
+        setAuthError({ type: 'auth_required', message: 'Autenticação necessária' });
       }
-    } finally {
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
     }
+    setIsLoadingAuth(false);
+    setAuthChecked(true);
   };
 
   const logout = () => {
