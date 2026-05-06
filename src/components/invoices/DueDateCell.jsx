@@ -104,31 +104,15 @@ export default function DueDateCell({ invoice }) {
 
   const hasPaymentInfo = invoice.installments?.length > 0 || invoice.payments?.length > 0;
 
-  const tooltipContent = hasPaymentInfo ? (
-    <div className="text-xs space-y-2 min-w-[200px]">
-      <p className="font-bold text-sm border-b pb-1">Dados de Pagamento</p>
-      {invoice.installments?.length > 0 ? (
-        <div className="space-y-1.5">
-          {invoice.installments.map((inst, idx) => (
-            <div key={idx} className="flex justify-between gap-4">
-              <span className="text-slate-400">Parcela {String(inst.number || idx + 1).padStart(3, "0")}</span>
-              <span>{inst.due_date ? format(new Date(inst.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"}</span>
-              <span className="font-semibold">{formatCurrency(inst.value)}</span>
-            </div>
-          ))}
-        </div>
-      ) : invoice.payments?.length > 0 ? (
-        <div className="space-y-1.5">
-          {invoice.payments.map((pay, idx) => (
-            <div key={idx} className="flex justify-between gap-4">
-              <span className="text-slate-400">{paymentTypeMap[pay.payment_type] || "Pagamento"}</span>
-              <span className="font-semibold">{formatCurrency(pay.value)}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  ) : null;
+  const tooltipContent = hasPaymentInfo
+    ? invoice.installments?.length > 0
+      ? `DADOS DE PAGAMENTO\n\n${invoice.installments.map((inst, idx) =>
+          `Parcela ${String(inst.number || idx + 1).padStart(3, "0")}\n${inst.due_date ? format(new Date(inst.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} - ${formatCurrency(inst.value)}`
+        ).join("\n\n")}`
+      : `DADOS DE PAGAMENTO\n\n${invoice.payments.map((pay) =>
+          `${paymentTypeMap[pay.payment_type] || "Pagamento"}\n${formatCurrency(pay.value)}`
+        ).join("\n\n")}`
+    : null;
 
   if (editing) {
     return (
@@ -182,7 +166,7 @@ export default function DueDateCell({ invoice }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-        <TooltipContent side="top" className="bg-white text-slate-800 border shadow-lg p-3">
+        <TooltipContent side="top" className="max-w-xs whitespace-pre-wrap">
           {tooltipContent}
         </TooltipContent>
       </Tooltip>
