@@ -36,19 +36,24 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
     try {
       setIsDownloading(true);
       const response = await base44.functions.invoke("generateInvoicePDF", { invoice });
-      
-      // Handle both ArrayBuffer and direct data
-      const data = response.data instanceof ArrayBuffer ? response.data : response.data.buffer;
-      const blob = new Blob([new Uint8Array(data)], { type: "application/pdf" });
+      const { pdf_base64, filename } = response.data;
+
+      // Decode base64 to binary
+      const binary = atob(pdf_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `NF_${invoice.number}.pdf`;
+      link.download = filename || `NF_${invoice.number}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success("PDF baixado com sucesso!");
     } catch (error) {
       toast.error("Erro ao gerar PDF");

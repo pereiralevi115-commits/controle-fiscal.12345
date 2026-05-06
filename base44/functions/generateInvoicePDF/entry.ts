@@ -326,14 +326,10 @@ Deno.serve(async (req) => {
 
     const pdfBytes = await generateInvoicePDF(invoice);
 
-    return new Response(pdfBytes.buffer || pdfBytes, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="NF_${invoice.number}.pdf"`,
-        "Content-Length": pdfBytes.length.toString()
-      }
-    });
+    // Convert to base64 to avoid binary corruption through axios
+    const base64 = btoa(String.fromCharCode(...pdfBytes));
+
+    return Response.json({ pdf_base64: base64, filename: `NF_${invoice.number}.pdf` });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
