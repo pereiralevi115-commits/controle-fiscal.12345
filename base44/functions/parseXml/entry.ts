@@ -97,13 +97,15 @@ function parseNFe(xmlText) {
     const vDup = parseFloat(getTagText(dup, "vDup")) || 0;
     
     if (dVenc) {
+      // Normaliza: pega só YYYY-MM-DD sem timezone para evitar offset
+      const normalizedDVenc = dVenc.substring(0, 10);
       installments.push({
         number: nDup || `${i + 1}`,
-        due_date: dVenc,
+        due_date: normalizedDVenc,
         value: vDup
       });
       if (i === 0) {
-        dueDate = dVenc;
+        dueDate = normalizedDVenc;
       }
     }
   }
