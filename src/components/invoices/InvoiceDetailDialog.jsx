@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, X, Download, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { appParams } from "@/lib/app-params";
 import { toast } from "sonner";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import { formatCNPJ } from "@/lib/formatters";
@@ -35,20 +36,32 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
   const handleDownloadPDF = async () => {
     try {
       setIsDownloading(true);
-      const response = await base44.functions.invoke("generateInvoicePDF", { invoice });
-      
-      // Handle both ArrayBuffer and direct data
-      const data = response.data instanceof ArrayBuffer ? response.data : response.data.buffer;
-      const blob = new Blob([new Uint8Array(data)], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+      const { appId, token, appBaseUrl, functionsVersion } = appParams;
+      const baseUrl = appBaseUrl || "";
+      const version = functionsVersion || "v1";
+      const url = `${baseUrl}/api/apps/${appId}/functions/${version}/generateInvoicePDF`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ invoice }),
+      });
+
+      if (!res.ok) throw new Error(`Erro ${res.status}`);
+
+      const blob = await res.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = objectUrl;
       link.download = `NF_${invoice.number}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+      window.URL.revokeObjectURL(objectUrl);
+
       toast.success("PDF baixado com sucesso!");
     } catch (error) {
       toast.error("Erro ao gerar PDF");
