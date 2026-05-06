@@ -59,6 +59,45 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, show
           </SelectContent>
         </Select>
       )}
+      <Select
+        value={filters.sigv || "all"}
+        onValueChange={(val) => onFilterChange({ ...filters, sigv: val })}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="SIGV" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">SIGV: Todos</SelectItem>
+          <SelectItem value="sim">SIGV: Sim</SelectItem>
+          <SelectItem value="nao">SIGV: Não</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.topcon || "all"}
+        onValueChange={(val) => onFilterChange({ ...filters, topcon: val })}
+      >
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="TOPCON" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">TOPCON: Todos</SelectItem>
+          <SelectItem value="sim">TOPCON: Sim</SelectItem>
+          <SelectItem value="nao">TOPCON: Não</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.boleto || "all"}
+        onValueChange={(val) => onFilterChange({ ...filters, boleto: val })}
+      >
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="BOLETO" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">BOLETO: Todos</SelectItem>
+          <SelectItem value="sim">BOLETO: Sim</SelectItem>
+          <SelectItem value="nao">BOLETO: Não</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
