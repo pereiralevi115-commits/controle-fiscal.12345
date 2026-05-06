@@ -11,8 +11,8 @@ const navItems = [
   { name: 'Dashboard', path: '/' },
   { name: 'Notas Fiscais', path: '/notas' },
   { name: 'Importar XML', path: '/importar' },
-  { name: 'Filiais', path: '/filiais' },
   { name: 'Fornecedores', path: '/fornecedores' },
+  { name: 'Filiais', path: '/filiais' },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
