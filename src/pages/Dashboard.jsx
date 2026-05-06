@@ -18,7 +18,12 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Branch.list(),
   });
 
-  const isLoading = loadingInvoices || loadingBranches;
+  const { data: suppliers = [], isLoading: loadingSuppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => base44.entities.Supplier.list(),
+  });
+
+  const isLoading = loadingInvoices || loadingBranches || loadingSuppliers;
 
   if (isLoading) {
     return (
@@ -32,9 +37,13 @@ export default function Dashboard() {
   const branchMap = {};
   branches.forEach(b => { branchMap[b.cnpj] = b.name; });
 
+  // Same filter as Notas Fiscais page: exclude cancelled and hidden suppliers
+  const hiddenCnpjs = new Set(suppliers.filter(s => s.hidden).map(s => s.cnpj));
+  const visibleInvoices = invoices.filter(inv => !inv.cancelled && !hiddenCnpjs.has(inv.supplier_cnpj));
+
   // Group invoices by branch
   const grouped = {};
-  invoices.forEach(inv => {
+  visibleInvoices.forEach(inv => {
     const key = inv.branch_cnpj || "__sem_filial__";
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(inv);
@@ -55,11 +64,11 @@ export default function Dashboard() {
   rows.sort((a, b) => a.name.localeCompare(b.name));
 
   // Totals across all branches
-  const allTotal  = invoices.length;
-  const allSigv   = invoices.filter(i => i.sigv_recorded).length;
-  const allTopcon = invoices.filter(i => i.topcon_recorded).length;
-  const allBoleto = invoices.filter(i => i.boleto_recorded).length;
-  const allValue  = invoices.reduce((s, i) => s + (i.total_value || 0), 0);
+  const allTotal  = visibleInvoices.length;
+  const allSigv   = visibleInvoices.filter(i => i.sigv_recorded).length;
+  const allTopcon = visibleInvoices.filter(i => i.topcon_recorded).length;
+  const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
+  const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
