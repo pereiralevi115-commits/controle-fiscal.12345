@@ -1,4 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 
 const formatCurrency = (value) =>
@@ -369,10 +368,6 @@ async function buildPDF(invoice) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
     const { invoice } = await req.json();
     if (!invoice) return Response.json({ error: "invoice é obrigatório" }, { status: 400 });
 
