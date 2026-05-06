@@ -20,8 +20,11 @@ const v = (val) => (val != null && val !== "") ? String(val) : "—";
 
 async function buildPDF(invoice) {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 portrait
-  const { width, height } = page.getSize();
+  const PAGE_W = 595;
+  const PAGE_H = 842;
+  const ML = 18;
+  const W  = PAGE_W - ML * 2;
+  const BOTTOM_MARGIN = 30;
 
   const fR = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fB = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -33,11 +36,19 @@ async function buildPDF(invoice) {
   const RED   = rgb(0.82, 0.08, 0.08);
   const GREEN = rgb(0.05, 0.55, 0.05);
 
-  const ML = 18;
-  const W  = width - ML * 2;
+  // State: current page and current Y
+  let page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+  let cy = PAGE_H - ML;
+
+  // Ensure there's enough space; if not, add a new page
+  const ensureSpace = (needed) => {
+    if (cy - needed < BOTTOM_MARGIN) {
+      page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+      cy = PAGE_H - ML;
+    }
+  };
 
   // ── primitives ──────────────────────────────────────────────────
-  // Draw a rectangle (y is TOP of the box, we convert to bottom-left)
   const drawBox = (x, yTop, w, h, fillColor) => {
     if (fillColor) {
       page.drawRectangle({ x, y: yTop - h, width: w, height: h, color: fillColor });
@@ -45,7 +56,6 @@ async function buildPDF(invoice) {
     page.drawRectangle({ x, y: yTop - h, width: w, height: h, borderColor: rgb(0.65, 0.65, 0.65), borderWidth: 0.4 });
   };
 
-  // Draw text: x, yTop are top-left reference, dy offsets DOWN from yTop
   const drawText = (text, x, yTop, { size = 7.5, font = fR, color = BLACK, maxW, dy = 0 } = {}) => {
     let s = String(text ?? "—");
     if (maxW && font.widthOfTextAtSize(s, size) > maxW) {
@@ -55,30 +65,23 @@ async function buildPDF(invoice) {
     page.drawText(s, { x, y: yTop - dy, size, font, color });
   };
 
-  // A labeled cell: draws box, label at top, value below
   const drawCell = (x, yTop, w, h, label, value, opts = {}) => {
     drawBox(x, yTop, w, h, opts.fill);
-    // label: small, gray, top-left
     drawText(label, x + 2, yTop, { size: 5.5, color: GRAY, dy: 7 });
-    // value: below label
     drawText(value, x + 3, yTop, { size: opts.valSize || 8.5, font: opts.bold ? fB : fR, color: opts.color || BLACK, maxW: w - 6, dy: opts.bold ? 18 : 17 });
   };
 
-  // Centered text within a horizontal span
   const drawCenter = (text, x, yTop, w, { size = 8, font = fR, color = BLACK, dy = 0 } = {}) => {
     const tw = font.widthOfTextAtSize(text, size);
     page.drawText(text, { x: x + (w - tw) / 2, y: yTop - dy, size, font, color });
   };
 
-  // Section header bar (gray bg, centered bold label)
   const drawSectionHeader = (label, x, yTop, w, h = 15, fill = LGRAY) => {
     drawBox(x, yTop, w, h, fill);
     drawCenter(label, x, yTop, w, { size: 7.5, font: fB, dy: (h - 7.5) / 2 + 7.5 });
   };
 
   // ── LAYOUT (cy = current top, draws downward) ──────────────────
-  let cy = height - ML;
-
   // ══════════════════════════════════════════════════════════════
   // 1. HEADER: Supplier | DANFE | Access Key
   // ══════════════════════════════════════════════════════════════
@@ -205,6 +208,7 @@ async function buildPDF(invoice) {
   const items = invoice.items || [];
   items.forEach((item, idx) => {
     const ROW_H = 18;
+    ensureSpace(ROW_H);
     drawBox(ML, cy, W, ROW_H);
     const rowVals = [
       String(idx + 1),
@@ -241,6 +245,7 @@ async function buildPDF(invoice) {
   // ══════════════════════════════════════════════════════════════
   // 6. CÁLCULO DO IMPOSTO / TOTAIS
   // ══════════════════════════════════════════════════════════════
+  ensureSpace(56);
   drawSectionHeader("CÁLCULO DO IMPOSTO / TOTAIS", ML, cy, W);
   cy -= 15;
 
@@ -267,6 +272,7 @@ async function buildPDF(invoice) {
   // 7. FATURA / DUPLICATA
   // ══════════════════════════════════════════════════════════════
   if (invoice.installments && invoice.installments.length > 0) {
+    ensureSpace(60);
     drawSectionHeader("FATURA / DUPLICATA", ML, cy, W);
     cy -= 15;
 
@@ -282,6 +288,7 @@ async function buildPDF(invoice) {
 
     invoice.installments.forEach(inst => {
       const INST_H = 20;
+      ensureSpace(INST_H);
       drawBox(ML,           cy, W / 3, INST_H);
       drawBox(ML + W / 3,   cy, W / 3, INST_H);
       drawBox(ML + W * 2/3, cy, W / 3, INST_H);
@@ -309,6 +316,7 @@ async function buildPDF(invoice) {
   // 8. INFORMAÇÕES COMPLEMENTARES
   // ══════════════════════════════════════════════════════════════
   if (invoice.additional_info) {
+    ensureSpace(80);
     drawSectionHeader("INFORMAÇÕES COMPLEMENTARES", ML, cy, W);
     cy -= 15;
 
@@ -339,6 +347,7 @@ async function buildPDF(invoice) {
   // 9. CONTROLE INTERNO DE LANÇAMENTOS
   // ══════════════════════════════════════════════════════════════
   cy -= 12;
+  ensureSpace(60);
   const CTRL_HDR_H = 18;
   drawBox(ML, cy, W, CTRL_HDR_H, AMBER);
   drawCenter("CONTROLE INTERNO DE LANÇAMENTOS", ML, cy, W, { size: 9, font: fB, dy: (CTRL_HDR_H + 9) / 2 });
