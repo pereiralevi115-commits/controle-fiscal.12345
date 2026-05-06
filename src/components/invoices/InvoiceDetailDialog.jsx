@@ -86,9 +86,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
               )}
               Baixar PDF
             </Button>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-              <X className="w-5 h-5" />
-            </button>
+
           </div>
         </div>
 
