@@ -15,19 +15,7 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, show
           className="pl-9"
         />
       </div>
-      <Select
-        value={filters.status}
-        onValueChange={(val) => onFilterChange({ ...filters, status: val })}
-      >
-        <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="pendente">Pendente</SelectItem>
-          <SelectItem value="recebida">Recebida</SelectItem>
-        </SelectContent>
-      </Select>
+
       <Select
         value={filters.branch}
         onValueChange={(val) => onFilterChange({ ...filters, branch: val })}
@@ -44,21 +32,7 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, show
           ))}
         </SelectContent>
       </Select>
-      {showCancelledFilter && (
-        <Select
-          value={filters.cancelled || "ativas"}
-          onValueChange={(val) => onFilterChange({ ...filters, cancelled: val })}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Cancelamento" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ativas">Ativas</SelectItem>
-            <SelectItem value="canceladas">Canceladas</SelectItem>
-            <SelectItem value="todas">Todas</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
+
       <Select
         value={filters.sigv || "all"}
         onValueChange={(val) => onFilterChange({ ...filters, sigv: val })}
