@@ -239,10 +239,6 @@ function parseNFe(xmlText) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { xml_contents } = await req.json();
 
@@ -260,10 +256,10 @@ Deno.serve(async (req) => {
 
         let existing = [];
         if (parsed.access_key) {
-          existing = await base44.entities.Invoice.filter({ access_key: parsed.access_key });
+          existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
         }
         if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
-          existing = await base44.entities.Invoice.filter({
+          existing = await base44.asServiceRole.entities.Invoice.filter({
             number: parsed.number,
             supplier_cnpj: parsed.supplier_cnpj,
           });
@@ -274,7 +270,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const created = await base44.entities.Invoice.create(parsed);
+        const created = await base44.asServiceRole.entities.Invoice.create(parsed);
         results.push(created);
 
         // Delay to avoid rate limiting
