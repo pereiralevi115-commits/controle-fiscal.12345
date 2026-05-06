@@ -68,7 +68,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <div className="sticky top-0 bg-white border-b border-border p-6 flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold">NF-e #{invoice.number} <span className="text-lg font-normal">(Série {invoice.series || "—"})</span></h2>
+            <h2 className="text-2xl font-bold">NF-e {invoice.number} <span className="text-lg font-normal">(Série {invoice.series || "—"})</span></h2>
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
           <div className="flex items-center gap-2">
