@@ -7,7 +7,8 @@ const formatCurrency = (value) =>
 const formatCNPJ = (cnpj) => {
   if (!cnpj) return "—";
   const c = cnpj.replace(/\D/g, "");
-  return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  if (c.length === 14) return c.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  return cnpj;
 };
 
 const formatDate = (dateStr) => {
@@ -16,360 +17,330 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString("pt-BR");
 };
 
+const v = (val) => val || "—";
+
 async function buildPDF(invoice) {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([842, 595]); // A4 landscape
+  // A4 portrait
+  const page = pdfDoc.addPage([595, 842]);
   const { width, height } = page.getSize();
 
-  const fontR = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontB = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fR = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fB = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  const BLACK = rgb(0, 0, 0);
-  const GRAY_LIGHT = rgb(0.88, 0.88, 0.88);
-  const GRAY_MED = rgb(0.5, 0.5, 0.5);
-  const AMBER = rgb(0.992, 0.722, 0.075);
-  const WHITE = rgb(1, 1, 1);
-  const RED = rgb(0.85, 0.1, 0.1);
+  const BLACK  = rgb(0,0,0);
+  const GRAY   = rgb(0.55,0.55,0.55);
+  const LGRAY  = rgb(0.88,0.88,0.88);
+  const AMBER  = rgb(0.992,0.722,0.075);
+  const RED    = rgb(0.82,0.08,0.08);
+  const WHITE  = rgb(1,1,1);
 
-  const M = 20; // margin
-  const W = width - 2 * M;
+  const ML = 20, MR = 20;
+  const W = width - ML - MR;
 
-  // ---- helpers ----
-  const rect = (x, y, w, h, color, border = false) => {
-    page.drawRectangle({ x, y, width: w, height: h, color });
-    if (border) {
-      page.drawRectangle({ x, y, width: w, height: h, color: rgb(0.6,0.6,0.6), borderWidth: 0.5, borderColor: rgb(0.6,0.6,0.6) });
+  // ── draw helpers ──────────────────────────────────────────────
+  const box = (x, y, w, h, fill, strokeColor = rgb(0.7,0.7,0.7), strokeW = 0.5) => {
+    if (fill) page.drawRectangle({ x, y: y - h, width: w, height: h, color: fill });
+    page.drawRectangle({ x, y: y - h, width: w, height: h, borderColor: strokeColor, borderWidth: strokeW });
+  };
+
+  const t = (text, x, y, { size = 7, font = fR, color = BLACK, maxW } = {}) => {
+    let s = String(text ?? "—");
+    if (maxW && font.widthOfTextAtSize(s, size) > maxW) {
+      while (s.length > 1 && font.widthOfTextAtSize(s + "…", size) > maxW) s = s.slice(0,-1);
+      s += "…";
     }
+    page.drawText(s, { x, y, size, font, color });
   };
 
-  const border = (x, y, w, h) => {
-    page.drawRectangle({ x, y, width: w, height: h, borderWidth: 0.5, borderColor: rgb(0.6,0.6,0.6), color: rgb(1,1,1) });
+  // small label above value
+  const lbl = (text, x, y) => t(text, x+2, y-6, { size: 5.5, color: GRAY });
+  const val = (text, x, y, opts = {}) => t(text, x+2, y - (opts.offset||18), { ...opts });
+
+  // full labeled cell
+  const cell = (x, y, w, h, label, value, opts = {}) => {
+    box(x, y, w, h, opts.fill);
+    lbl(label, x, y);
+    val(value, x, y, { size: opts.valSize || 8, font: opts.bold ? fB : fR, color: opts.color || BLACK, maxW: w-4, offset: opts.offset || 18 });
   };
 
-  const txt = (text, x, y, { size = 7, font = fontR, color = BLACK, maxWidth } = {}) => {
-    let str = String(text ?? "—");
-    if (maxWidth && font.widthOfTextAtSize(str, size) > maxWidth) {
-      while (str.length > 1 && font.widthOfTextAtSize(str + "…", size) > maxWidth) str = str.slice(0, -1);
-      str += "…";
-    }
-    page.drawText(str, { x, y, size, font, color });
+  // centered text in a box
+  const center = (text, x, y, w, { size = 7, font = fR, color = BLACK } = {}) => {
+    const tw = font.widthOfTextAtSize(text, size);
+    t(text, x + (w - tw) / 2, y, { size, font, color });
   };
 
-  const label = (text, x, y, w) => {
-    txt(text, x + 2, y + 2, { size: 5.5, font: fontR, color: GRAY_MED });
+  // section header bar (gray bg, centered bold label)
+  const sectionHeader = (label, x, y, w, h = 16, fill = LGRAY) => {
+    box(x, y, w, h, fill);
+    const tw = fB.widthOfTextAtSize(label, 7.5);
+    t(label, x + (w - tw) / 2, y - 5, { size: 7.5, font: fB });
   };
 
-  const cell = (x, y, w, h, labelText, valueText, opts = {}) => {
-    border(x, y, w, h);
-    label(labelText, x, y + h - 10, w);
-    txt(valueText, x + 2, y + 4, { size: opts.valueSize || 7.5, font: opts.bold ? fontB : fontR, color: opts.color || BLACK, maxWidth: w - 4 });
-  };
+  // horizontal divider line inside a box
+  const hline = (x, y, w) => page.drawLine({ start:{x,y}, end:{x:x+w,y}, thickness:0.4, color:rgb(0.7,0.7,0.7) });
 
-  // ======= HEADER =======
-  let y = height - M;
-  const headerH = 80;
+  // ── LAYOUT ───────────────────────────────────────────────────
+  let cy = height - ML; // current top y (draws downward)
 
-  // Recebimento bar
-  border(M, y - 30, W, 30);
-  txt("RECEBEMOS DE ", M + 4, y - 12, { size: 7, font: fontR });
-  txt(invoice.supplier_name || "—", M + 55, y - 12, { size: 7, font: fontB, maxWidth: 280 });
-  txt("OS PRODUTOS CONSTANTES NA NOTA FISCAL INDICADA AO LADO", M + 4, y - 22, { size: 6.5 });
+  // ── 1. TOP HEADER ──────────────────────────────────────────
+  const hdrH = 90;
+  box(ML, cy, W, hdrH, WHITE);
 
-  const nfBoxX = width - M - 160;
-  txt("NF-e", nfBoxX + 80, y - 10, { size: 9, font: fontB });
-  txt("Nº", nfBoxX + 2, y - 22, { size: 6 });
-  txt(invoice.number || "—", nfBoxX + 15, y - 22, { size: 12, font: fontB });
-  txt("SÉRIE", nfBoxX + 100, y - 22, { size: 6 });
-  txt(invoice.series || "1", nfBoxX + 125, y - 22, { size: 12, font: fontB });
+  // Left third: supplier info
+  const c1w = W * 0.30;
+  box(ML, cy, c1w, hdrH, WHITE);
+  t(v(invoice.supplier_name), ML+4, cy-12, { size:8, font:fB, maxW: c1w-8 });
+  const sAddr = [invoice.supplier_address, invoice.supplier_number].filter(Boolean).join(", ");
+  const sCityState = [invoice.supplier_city, invoice.supplier_state].filter(Boolean).join(" - ");
+  t(sAddr || "—", ML+4, cy-22, { size: 7, maxW: c1w-8 });
+  t(sCityState || "—", ML+4, cy-31, { size: 7, maxW: c1w-8 });
+  if (invoice.supplier_city) t(`CEP: ${v(invoice.supplier_zip)}`, ML+4, cy-40, { size:7 });
+  if (invoice.supplier_phone) t(`Fone: ${invoice.supplier_phone}`, ML+4, cy-49, { size:7 });
 
-  // Data recebimento / assinatura / valor
-  border(M, y - 50, W * 0.4, 20);
-  txt("DATA DE RECEBIMENTO", M + 2, y - 40, { size: 5.5, color: GRAY_MED });
-  border(M + W * 0.4, y - 50, W * 0.35, 20);
-  txt("IDENTIFICAÇÃO E ASSINATURA DO RECEBEDOR", M + W * 0.4 + 2, y - 40, { size: 5.5, color: GRAY_MED });
-  border(M + W * 0.75, y - 50, W * 0.25, 20);
-  txt("VALOR DA NOTA:", M + W * 0.75 + 2, y - 40, { size: 6 });
-  txt(formatCurrency(invoice.total_value), M + W * 0.75 + 2, y - 47, { size: 8, font: fontB });
+  // Center third: DANFE
+  const c2x = ML + c1w;
+  const c2w = W * 0.38;
+  box(c2x, cy, c2w, hdrH, WHITE);
+  center("DANFE", c2x, cy-14, c2w, { size:22, font:fB });
+  center("Documento Auxiliar da", c2x, cy-34, c2w, { size:7 });
+  center("Nota Fiscal Eletrônica", c2x, cy-43, c2w, { size:7 });
+  center(`Nº ${v(invoice.number)}   Série: ${v(invoice.series)}`, c2x, cy-57, c2w, { size:10, font:fB });
+  center(`Emissão: ${formatDate(invoice.issue_date)}`, c2x, cy-70, c2w, { size:8 });
 
-  y -= 55;
+  // Right third: access key + CNPJ/IE
+  const c3x = c2x + c2w;
+  const c3w = W - c1w - c2w;
+  box(c3x, cy, c3w, hdrH, WHITE);
+  t("CHAVE DE ACESSO", c3x+4, cy-10, { size:6, color:GRAY });
+  const chave = (invoice.access_key || "").replace(/(\d{4})/g,"$1 ").trim();
+  t(chave, c3x+4, cy-20, { size:6.5, font:fB, maxW: c3w-8 });
+  t(`CNPJ: ${formatCNPJ(invoice.supplier_cnpj)}`, c3x+4, cy-50, { size:7 });
+  t(`IE: ${v(invoice.supplier_ie)}`, c3x+4, cy-62, { size:7 });
 
-  // ======= EMITENTE / DANFE BOX =======
-  const emitH = 85;
-  border(M, y - emitH, W * 0.38, emitH);
-  // Emitente info
-  txt(invoice.supplier_name || "—", M + 4, y - 14, { size: 8, font: fontB, maxWidth: W * 0.38 - 8 });
-  const addr = [invoice.supplier_address, invoice.supplier_number].filter(Boolean).join(", ");
-  const cityState = [invoice.supplier_city, invoice.supplier_state].filter(Boolean).join(" - ");
-  txt(addr || "—", M + 4, y - 26, { size: 7, maxWidth: W * 0.38 - 8 });
-  txt(cityState || "—", M + 4, y - 36, { size: 7, maxWidth: W * 0.38 - 8 });
-  if (invoice.supplier_phone) txt(`FONE: ${invoice.supplier_phone}`, M + 4, y - 46, { size: 6.5 });
+  cy -= hdrH;
 
-  // DANFE center box
-  const danfeX = M + W * 0.38;
-  const danfeW = W * 0.25;
-  border(danfeX, y - emitH, danfeW, emitH);
-  txt("DANFE", danfeX + danfeW / 2 - 18, y - 16, { size: 16, font: fontB });
-  txt("Documento Auxiliar da", danfeX + 10, y - 32, { size: 7 });
-  txt("Nota Fiscal Eletrônica", danfeX + 10, y - 41, { size: 7 });
-  txt("0 - ENTRADA", danfeX + 10, y - 54, { size: 7 });
-  txt("1 - SAÍDA", danfeX + 10, y - 63, { size: 7 });
-  txt(`Nº ${invoice.number || "—"}`, danfeX + 10, y - 74, { size: 8, font: fontB });
-  txt(`SÉRIE ${invoice.series || "1"}`, danfeX + 80, y - 74, { size: 8, font: fontB });
+  // ── 2. NATUREZA / PROTOCOLO ────────────────────────────────
+  const natH = 32;
+  box(ML, cy, W * 0.55, natH, WHITE);
+  lbl("NATUREZA DA OPERAÇÃO", ML, cy);
+  t(v(invoice.operation_nature), ML+4, cy-12, { size:8, font:fB, maxW: W*0.55-8 });
 
-  // Chave de acesso box
-  const chaveX = danfeX + danfeW;
-  const chaveW = W - W * 0.38 - danfeW;
-  border(chaveX, y - emitH, chaveW, emitH);
-  txt("CHAVE DE ACESSO", chaveX + 4, y - 10, { size: 5.5, color: GRAY_MED });
-  const chave = invoice.access_key || "";
-  // Format chave in groups of 4
-  const chaveFormatted = chave.replace(/(\d{4})/g, "$1 ").trim();
-  txt(chaveFormatted, chaveX + 4, y - 22, { size: 6, font: fontB, maxWidth: chaveW - 8 });
-  txt("CONSULTA DE AUTENTICIDADE NO PORTAL NACIONAL DA NF-E", chaveX + 4, y - 38, { size: 5.5 });
-  txt("WWW.NFE.FAZENDA.GOV.BR/PORTAL", chaveX + 4, y - 46, { size: 5.5 });
-  txt("OU NO SITE DA SEFAZ AUTORIZADORA", chaveX + 4, y - 54, { size: 5.5 });
+  box(ML + W*0.55, cy, W*0.45, natH, WHITE);
+  lbl("PROTOCOLO DE AUTORIZAÇÃO", ML+W*0.55, cy);
+  t(invoice.protocol_number ? invoice.protocol_number : "NF-e Autorizada", ML+W*0.55+4, cy-12, { size:8, font:fB, maxW: W*0.45-8 });
+  cy -= natH;
 
-  y -= emitH + 2;
+  // ── 3. EMITENTE ────────────────────────────────────────────
+  sectionHeader("EMITENTE", ML, cy, W, 16, LGRAY);
+  cy -= 16;
 
-  // ======= NATUREZA / CRT / IE / CNPJ row =======
-  const row1H = 20;
-  cell(M, y - row1H, W * 0.35, row1H, "NATUREZA DA OPERAÇÃO", invoice.operation_nature || "VENDA", { valueSize: 7.5, bold: false });
-  cell(M + W * 0.35, y - row1H, W * 0.1, row1H, "CRT", "3 - Regime Normal", { valueSize: 6 });
-  cell(M + W * 0.45, y - row1H, W * 0.2, row1H, "INSCRIÇÃO ESTADUAL", invoice.supplier_ie || "—");
-  cell(M + W * 0.65, y - row1H, W * 0.15, row1H, "INSC. EST. SUBST. TRIB.", "—");
-  cell(M + W * 0.8, y - row1H, W * 0.2, row1H, "CNPJ", formatCNPJ(invoice.supplier_cnpj), { bold: true });
-  y -= row1H;
+  // Row: nome | cnpj | ie
+  const emR1H = 26;
+  cell(ML, cy, W*0.5, emR1H, "NOME / RAZÃO SOCIAL", v(invoice.supplier_name), { bold:true, valSize:9 });
+  cell(ML+W*0.5, cy, W*0.25, emR1H, "CNPJ", formatCNPJ(invoice.supplier_cnpj), { bold:true, valSize:9 });
+  cell(ML+W*0.75, cy, W*0.25, emR1H, "INSCRIÇÃO ESTADUAL", v(invoice.supplier_ie), { bold:true, valSize:9 });
+  cy -= emR1H;
 
-  // PROT. AUTORIZAÇÃO row
-  const row2H = 16;
-  cell(M, y - row2H, W * 0.35, row2H, "PROT. DE AUTORIZAÇÃO", invoice.protocol_number || "—");
-  cell(M + W * 0.35, y - row2H, W * 0.65, row2H, "", "");
-  y -= row2H;
+  // Row: endereço | bairro | municipio | uf | cep
+  const emR2H = 26;
+  cell(ML, cy, W*0.35, emR2H, "ENDEREÇO", sAddr || "—", { bold:true, valSize:9 });
+  cell(ML+W*0.35, cy, W*0.2, emR2H, "BAIRRO", v(invoice.supplier_district), { bold:true, valSize:9 });
+  cell(ML+W*0.55, cy, W*0.2, emR2H, "MUNICÍPIO", v(invoice.supplier_city), { bold:true, valSize:9 });
+  cell(ML+W*0.75, cy, W*0.1, emR2H, "UF", v(invoice.supplier_state), { bold:true, valSize:9 });
+  cell(ML+W*0.85, cy, W*0.15, emR2H, "CEP", v(invoice.supplier_zip), { bold:true, valSize:9 });
+  cy -= emR2H;
 
-  // ======= DESTINATÁRIO =======
-  const destHeaderH = 14;
-  rect(M, y - destHeaderH, W, destHeaderH, GRAY_LIGHT);
-  border(M, y - destHeaderH, W, destHeaderH);
-  txt("DESTINATÁRIO/REMETENTE", M + 4, y - destHeaderH + 4, { size: 7, font: fontB });
-  y -= destHeaderH;
+  // ── 4. DESTINATÁRIO ────────────────────────────────────────
+  sectionHeader("DESTINATÁRIO / REMETENTE", ML, cy, W, 16, LGRAY);
+  cy -= 16;
 
-  const destRow1H = 20;
-  cell(M, y - destRow1H, W * 0.5, destRow1H, "NOME / RAZÃO SOCIAL", invoice.recipient_name || "—", { maxWidth: W * 0.5 - 4 });
-  cell(M + W * 0.5, y - destRow1H, W * 0.25, destRow1H, "CNPJ/CPF", formatCNPJ(invoice.recipient_cnpj), { bold: true });
-  cell(M + W * 0.75, y - destRow1H, W * 0.25, destRow1H, "DATA DE EMISSÃO", formatDate(invoice.issue_date));
-  y -= destRow1H;
+  const dR1H = 26;
+  cell(ML, cy, W*0.5, dR1H, "NOME / RAZÃO SOCIAL", v(invoice.recipient_name), { bold:true, valSize:9 });
+  cell(ML+W*0.5, cy, W*0.25, dR1H, "CNPJ / CPF", formatCNPJ(invoice.recipient_cnpj), { bold:true, valSize:9 });
+  cell(ML+W*0.75, cy, W*0.25, dR1H, "INSCRIÇÃO ESTADUAL", v(invoice.recipient_ie), { bold:true, valSize:9 });
+  cy -= dR1H;
 
-  const destRow2H = 18;
-  const recipientAddr = [invoice.recipient_address, invoice.recipient_number].filter(Boolean).join(", ");
-  cell(M, y - destRow2H, W * 0.45, destRow2H, "ENDEREÇO", recipientAddr || "—");
-  cell(M + W * 0.45, y - destRow2H, W * 0.2, destRow2H, "BAIRRO", invoice.recipient_city || "—");
-  cell(M + W * 0.65, y - destRow2H, W * 0.1, destRow2H, "CEP", "—");
-  cell(M + W * 0.75, y - destRow2H, W * 0.25, destRow2H, "DATA DE ENTRADA/SAÍDA", formatDate(invoice.issue_date));
-  y -= destRow2H;
+  const dR2H = 26;
+  const rAddr = [invoice.recipient_address, invoice.recipient_number].filter(Boolean).join(", ");
+  cell(ML, cy, W*0.35, dR2H, "ENDEREÇO", rAddr || "—", { bold:true, valSize:9 });
+  cell(ML+W*0.35, cy, W*0.2, dR2H, "BAIRRO", v(invoice.recipient_district), { bold:true, valSize:9 });
+  cell(ML+W*0.55, cy, W*0.2, dR2H, "MUNICÍPIO", v(invoice.recipient_city), { bold:true, valSize:9 });
+  cell(ML+W*0.75, cy, W*0.1, dR2H, "UF", v(invoice.recipient_state), { bold:true, valSize:9 });
+  cell(ML+W*0.85, cy, W*0.15, dR2H, "CEP", v(invoice.recipient_zip), { bold:true, valSize:9 });
+  cy -= dR2H;
 
-  const destRow3H = 18;
-  cell(M, y - destRow3H, W * 0.35, destRow3H, "MUNICÍPIO", invoice.recipient_city || "—");
-  cell(M + W * 0.35, y - destRow3H, W * 0.05, destRow3H, "UF", invoice.recipient_state || "—");
-  cell(M + W * 0.4, y - destRow3H, W * 0.05, destRow3H, "PAÍS", "BRASIL");
-  cell(M + W * 0.45, y - destRow3H, W * 0.2, destRow3H, "FONE/FAX", invoice.supplier_phone || "—");
-  cell(M + W * 0.65, y - destRow3H, W * 0.15, destRow3H, "INSCRIÇÃO ESTADUAL", invoice.recipient_ie || "—");
-  cell(M + W * 0.8, y - destRow3H, W * 0.2, destRow3H, "HORA DE ENTRADA/SAÍDA", "—");
-  y -= destRow3H;
+  // ── 5. PRODUTOS / SERVIÇOS ─────────────────────────────────
+  sectionHeader("DADOS DOS PRODUTOS / SERVIÇOS", ML, cy, W, 16, LGRAY);
+  cy -= 16;
 
-  // ======= FATURA/DUPLICATA =======
-  if (invoice.installments && invoice.installments.length > 0) {
-    const fatHeaderH = 12;
-    rect(M, y - fatHeaderH, W, fatHeaderH, GRAY_LIGHT);
-    border(M, y - fatHeaderH, W, fatHeaderH);
-    txt("FATURA / DUPLICATA", M + 4, y - fatHeaderH + 3, { size: 6.5, font: fontB });
-    y -= fatHeaderH;
-
-    const fatRowH = 16;
-    border(M, y - fatRowH, W, fatRowH);
-    const colW = Math.min(W / invoice.installments.length, 120);
-    invoice.installments.forEach((inst, idx) => {
-      const cx = M + idx * colW;
-      const num = String(inst.number || idx + 1).padStart(3, "0");
-      txt("NÚMERO", cx + 2, y - 5, { size: 5, color: GRAY_MED });
-      txt(num, cx + 2, y - 12, { size: 7 });
-      txt("VENCIMENTO", cx + 25, y - 5, { size: 5, color: GRAY_MED });
-      txt(formatDate(inst.due_date), cx + 25, y - 12, { size: 7 });
-      txt("VALOR", cx + 70, y - 5, { size: 5, color: GRAY_MED });
-      txt(formatCurrency(inst.value), cx + 70, y - 12, { size: 7, font: fontB });
-    });
-    y -= fatRowH;
-  }
-
-  // ======= CÁLCULO IMPOSTO =======
-  const calcHeaderH = 12;
-  rect(M, y - calcHeaderH, W, calcHeaderH, GRAY_LIGHT);
-  border(M, y - calcHeaderH, W, calcHeaderH);
-  txt("CÁLCULO IMPOSTO", M + 4, y - calcHeaderH + 3, { size: 6.5, font: fontB });
-  y -= calcHeaderH;
-
-  const calcRowH = 16;
-  const calcCols = [
-    { label: "BASE DE CÁLCULO DO ICMS", value: formatCurrency(invoice.tax_icms_base || invoice.total_products || invoice.total_value), w: W * 0.14 },
-    { label: "VALOR DO ICMS", value: formatCurrency(invoice.tax_icms || 0), w: W * 0.11 },
-    { label: "BASE DE CÁLCULO ICMS ST", value: formatCurrency(0), w: W * 0.14 },
-    { label: "VALOR DO ICMS ST", value: formatCurrency(0), w: W * 0.11 },
-    { label: "VALOR TOTAL DOS PRODUTOS", value: formatCurrency(invoice.total_products || invoice.total_value), w: W * 0.5 },
-  ];
-  let cx2 = M;
-  calcCols.forEach(c => {
-    cell(cx2, y - calcRowH, c.w, calcRowH, c.label, c.value, { bold: true });
-    cx2 += c.w;
-  });
-  y -= calcRowH;
-
-  const calcRow2H = 16;
-  const calcCols2 = [
-    { label: "VALOR DO FRETE", value: formatCurrency(invoice.total_freight || 0), w: W * 0.11 },
-    { label: "VALOR DO SEGURO", value: formatCurrency(invoice.total_insurance || 0), w: W * 0.11 },
-    { label: "DESCONTO", value: formatCurrency(invoice.total_discount || 0), w: W * 0.11 },
-    { label: "OUTRAS DESPESAS", value: formatCurrency(invoice.total_other_charges || 0), w: W * 0.11 },
-    { label: "VALOR TOTAL DO IPI", value: formatCurrency(invoice.tax_ipi || 0), w: W * 0.11 },
-    { label: "VLR APROX DOS TRIBUTOS", value: formatCurrency(invoice.tax_pis || 0 + (invoice.tax_cofins || 0)), w: W * 0.14 },
-    { label: "VALOR TOTAL DA NOTA", value: formatCurrency(invoice.total_value), w: W * 0.31 },
-  ];
-  let cx3 = M;
-  calcCols2.forEach(c => {
-    cell(cx3, y - calcRow2H, c.w, calcRow2H, c.label, c.value, { bold: c.label === "VALOR TOTAL DA NOTA" });
-    cx3 += c.w;
-  });
-  y -= calcRow2H;
-
-  // ======= TRANSPORTADOR =======
-  const transHeaderH = 12;
-  rect(M, y - transHeaderH, W, transHeaderH, GRAY_LIGHT);
-  border(M, y - transHeaderH, W, transHeaderH);
-  txt("TRANSPORTADOR/VOLUMES TRANSPORTADOS", M + 4, y - transHeaderH + 3, { size: 6.5, font: fontB });
-  y -= transHeaderH;
-
-  const transRowH = 16;
-  cell(M, y - transRowH, W * 0.3, transRowH, "RAZÃO SOCIAL", invoice.recipient_name || "—");
-  cell(M + W * 0.3, y - transRowH, W * 0.1, transRowH, "FRETE POR CONTA", "9 - SEM FRETE");
-  cell(M + W * 0.4, y - transRowH, W * 0.1, transRowH, "CÓDIGO ANTT", "—");
-  cell(M + W * 0.5, y - transRowH, W * 0.12, transRowH, "PLACA DO VEÍCULO", "—");
-  cell(M + W * 0.62, y - transRowH, W * 0.08, transRowH, "UF", "—");
-  cell(M + W * 0.7, y - transRowH, W * 0.3, transRowH, "CNPJ", formatCNPJ(invoice.recipient_cnpj));
-  y -= transRowH;
-
-  const transRow2H = 16;
-  const recipAddr = [invoice.recipient_address, invoice.recipient_number].filter(Boolean).join(", ");
-  cell(M, y - transRow2H, W * 0.4, transRow2H, "ENDEREÇO", recipAddr || "—");
-  cell(M + W * 0.4, y - transRow2H, W * 0.2, transRow2H, "MUNICÍPIO", invoice.recipient_city || "—");
-  cell(M + W * 0.6, y - transRow2H, W * 0.05, transRow2H, "UF", invoice.recipient_state || "—");
-  cell(M + W * 0.65, y - transRow2H, W * 0.35, transRow2H, "INSCRIÇÃO ESTADUAL", "—");
-  y -= transRow2H;
-
-  // ======= PRODUTOS =======
-  const prodHeaderH = 12;
-  rect(M, y - prodHeaderH, W, prodHeaderH, GRAY_LIGHT);
-  border(M, y - prodHeaderH, W, prodHeaderH);
-  txt("DADOS DO PRODUTO/SERVIÇOS", M + 4, y - prodHeaderH + 3, { size: 6.5, font: fontB });
-  y -= prodHeaderH;
-
-  // Products header row
-  const prodColsConfig = [
-    { label: "CÓDIGO", w: W * 0.06 },
-    { label: "DESCRIÇÃO DO PRODUTO", w: W * 0.24 },
-    { label: "NCM/SH", w: W * 0.07 },
-    { label: "CFOP", w: W * 0.05 },
-    { label: "UNID", w: W * 0.05 },
-    { label: "QTDE", w: W * 0.06 },
-    { label: "VLR UNIT", w: W * 0.07 },
-    { label: "VLR TOTAL", w: W * 0.08 },
-    { label: "BC ICMS", w: W * 0.07 },
-    { label: "VLR ICMS", w: W * 0.07 },
-    { label: "ALIQ ICMS", w: W * 0.07 },
-    { label: "VLR IPI", w: W * 0.11 },
+  // Column config (widths as fraction of W)
+  const cols = [
+    { lbl:"Nº",      w:0.04 },
+    { lbl:"DESCRIÇÃO DO PRODUTO / SERVIÇO", w:0.26 },
+    { lbl:"CÓDIGO",  w:0.08 },
+    { lbl:"NCM",     w:0.08 },
+    { lbl:"CFOP",    w:0.06 },
+    { lbl:"UN",      w:0.05 },
+    { lbl:"QTDE",    w:0.07 },
+    { lbl:"VL. UNIT.",  w:0.10 },
+    { lbl:"VL. TOTAL",  w:0.26 },
   ];
 
-  const prodHeaderRowH = 14;
-  border(M, y - prodHeaderRowH, W, prodHeaderRowH);
-  let px = M;
-  prodColsConfig.forEach(c => {
-    txt(c.label, px + 2, y - prodHeaderRowH + 4, { size: 5.5, color: GRAY_MED });
-    px += c.w;
+  // header row
+  const tHdrH = 18;
+  box(ML, cy, W, tHdrH, LGRAY);
+  let px = ML;
+  cols.forEach(c => {
+    center(c.lbl, px, cy-5, c.w*W, { size:6, font:fB });
+    px += c.w * W;
   });
-  y -= prodHeaderRowH;
+  cy -= tHdrH;
 
-  // Products rows
+  // item rows
   const items = invoice.items || [];
-  const maxItems = Math.min(items.length, 6);
-  for (let i = 0; i < maxItems; i++) {
-    const item = items[i];
-    const prodRowH = 14;
-    border(M, y - prodRowH, W, prodRowH);
-    let ipx = M;
-    const prodVals = [
-      item.cfop || "—",
-      item.description || "—",
-      item.ncm || "—",
-      item.cfop || "—",
+  items.forEach((item, idx) => {
+    const rowH = 20;
+    box(ML, cy, W, rowH, WHITE);
+    const vals = [
+      String(idx+1),
+      v(item.description),
+      v(item.cfop),
+      v(item.ncm),
+      v(item.cfop),
       "UN",
-      String(item.quantity ?? "—"),
-      formatCurrency(item.unit_value),
-      formatCurrency(item.total),
-      formatCurrency(item.total),
-      "—",
-      "—",
-      "—",
+      item.quantity != null ? Number(item.quantity).toFixed(3) : "—",
+      item.unit_value != null ? Number(item.unit_value).toFixed(4) : "—",
+      item.total != null ? formatCurrency(item.total) : "—",
     ];
-    prodColsConfig.forEach((c, ci) => {
-      txt(prodVals[ci], ipx + 2, y - prodRowH + 4, { size: 6.5, maxWidth: c.w - 4 });
-      ipx += c.w;
+    let ipx = ML;
+    cols.forEach((c, ci) => {
+      const isNum = ci >= 6;
+      const isDesc = ci === 1;
+      const tx = isNum ? ipx + c.w*W - 4 - fR.widthOfTextAtSize(vals[ci], 7.5) : ipx + 3;
+      t(vals[ci], Math.max(ipx+2, tx), cy-13, { size:7.5, maxW: c.w*W - 4 });
+      ipx += c.w * W;
     });
-    y -= prodRowH;
+    cy -= rowH;
+  });
+
+  // ── 6. CÁLCULO DO IMPOSTO / TOTAIS ─────────────────────────
+  sectionHeader("CÁLCULO DO IMPOSTO / TOTAIS", ML, cy, W, 16, LGRAY);
+  cy -= 16;
+
+  const taxCols = [
+    { lbl:"BASE CÁLC. ICMS",  val: formatCurrency(invoice.tax_icms_base || invoice.total_products || invoice.total_value) },
+    { lbl:"VALOR ICMS",       val: formatCurrency(invoice.tax_icms) },
+    { lbl:"VALOR IPI",        val: formatCurrency(invoice.tax_ipi) },
+    { lbl:"VALOR PIS",        val: formatCurrency(invoice.tax_pis) },
+    { lbl:"VALOR COFINS",     val: formatCurrency(invoice.tax_cofins) },
+    { lbl:"DESCONTO",         val: formatCurrency(invoice.total_discount) },
+    { lbl:"FRETE",            val: formatCurrency(invoice.total_freight) },
+    { lbl:"TOTAL NF",         val: formatCurrency(invoice.total_value), amber:true },
+  ];
+  const taxW = W / taxCols.length;
+  const taxH = 28;
+  taxCols.forEach((c, i) => {
+    const fill = c.amber ? AMBER : WHITE;
+    box(ML + i*taxW, cy, taxW, taxH, fill);
+    lbl(c.lbl, ML+i*taxW, cy);
+    t(c.val, ML+i*taxW+2, cy-17, { size:8, font:fB, maxW: taxW-4 });
+  });
+  cy -= taxH;
+
+  // ── 7. FATURA / DUPLICATA ──────────────────────────────────
+  if (invoice.installments && invoice.installments.length > 0) {
+    sectionHeader("FATURA / DUPLICATA", ML, cy, W, 16, LGRAY);
+    cy -= 16;
+
+    // header
+    const fatHdrH = 16;
+    box(ML, cy, W/3, fatHdrH, LGRAY);
+    center("NÚMERO", ML, cy-5, W/3, { size:7, font:fB });
+    box(ML+W/3, cy, W/3, fatHdrH, LGRAY);
+    center("VENCIMENTO", ML+W/3, cy-5, W/3, { size:7, font:fB });
+    box(ML+W*2/3, cy, W/3, fatHdrH, LGRAY);
+    center("VALOR", ML+W*2/3, cy-5, W/3, { size:7, font:fB });
+    cy -= fatHdrH;
+
+    invoice.installments.forEach(inst => {
+      const instH = 20;
+      const num = String(inst.number || "001").padStart(3,"0");
+      box(ML, cy, W/3, instH, WHITE);
+      center(num, ML, cy-7, W/3, { size:9, font:fB });
+      box(ML+W/3, cy, W/3, instH, WHITE);
+      center(formatDate(inst.due_date), ML+W/3, cy-7, W/3, { size:9, font:fB });
+      box(ML+W*2/3, cy, W/3, instH, WHITE);
+      center(formatCurrency(inst.value), ML+W*2/3, cy-7, W/3, { size:9, font:fB });
+      cy -= instH;
+    });
+
+    // payment info
+    const payH = 22;
+    box(ML, cy, W/2, payH, WHITE);
+    lbl("FORMA DE PAGAMENTO", ML, cy);
+    const paymentTypeMap = {"01":"Dinheiro","02":"Cheque","03":"Cartão Crédito","04":"Cartão Débito","05":"Crediário","10":"Vale Alimentação","12":"Duplicata","13":"Boleto Bancário","99":"Outro"};
+    const pt = invoice.payments?.[0]?.payment_type || "13";
+    t(paymentTypeMap[pt] || "Boleto Bancário", ML+4, cy-14, { size:9, font:fB });
+    box(ML+W/2, cy, W/2, payH, WHITE);
+    lbl("VALOR DO PAGAMENTO", ML+W/2, cy);
+    t(formatCurrency(invoice.total_value), ML+W/2+4, cy-14, { size:9, font:fB });
+    cy -= payH;
   }
 
-  // ======= DADOS ADICIONAIS =======
-  const addHeaderH = 12;
-  y -= 4;
-  rect(M, y - addHeaderH, W, addHeaderH, GRAY_LIGHT);
-  border(M, y - addHeaderH, W, addHeaderH);
-  txt("DADOS ADICIONAIS", M + 4, y - addHeaderH + 3, { size: 6.5, font: fontB });
-  y -= addHeaderH;
+  // ── 8. INFORMAÇÕES COMPLEMENTARES ─────────────────────────
+  if (invoice.additional_info) {
+    sectionHeader("INFORMAÇÕES COMPLEMENTARES", ML, cy, W, 16, LGRAY);
+    cy -= 16;
 
-  const addRowH = 50;
-  border(M, y - addRowH, W * 0.65, addRowH);
-  txt("INFORMAÇÕES COMPLEMENTARES", M + 2, y - 8, { size: 5.5, color: GRAY_MED });
-  const infoText = invoice.additional_info || "";
-  // Word wrap
-  const words = infoText.split(" ");
-  let line = ""; let lineY = y - 16;
-  words.forEach(word => {
-    const test = line ? line + " " + word : word;
-    if (fontR.widthOfTextAtSize(test, 6.5) > W * 0.65 - 8) {
-      txt(line, M + 4, lineY, { size: 6.5 });
-      line = word;
-      lineY -= 9;
-    } else { line = test; }
-  });
-  if (line) txt(line, M + 4, lineY, { size: 6.5 });
+    const maxInfoH = 60;
+    box(ML, cy, W, maxInfoH, WHITE);
 
-  border(M + W * 0.65, y - addRowH, W * 0.35, addRowH);
-  txt("RESERVADO AO FISCO", M + W * 0.65 + 4, y - 8, { size: 5.5, color: GRAY_MED });
+    // word-wrap
+    const words = (invoice.additional_info || "").split(" ");
+    const maxLineW = W - 8;
+    let line = "";
+    let lineY = cy - 10;
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (fR.widthOfTextAtSize(test, 7.5) > maxLineW) {
+        t(line, ML+4, lineY, { size:7.5 });
+        line = word;
+        lineY -= 11;
+        if (lineY < cy - maxInfoH + 5) break;
+      } else {
+        line = test;
+      }
+    }
+    if (line && lineY > cy - maxInfoH + 5) t(line, ML+4, lineY, { size:7.5 });
+    cy -= maxInfoH;
+  }
 
-  y -= addRowH + 4;
+  // ── 9. CONTROLE INTERNO ────────────────────────────────────
+  cy -= 10;
+  const ctrlHdrH = 18;
+  box(ML, cy, W, ctrlHdrH, AMBER);
+  center("CONTROLE INTERNO DE LANÇAMENTOS", ML, cy-5, W, { size:9, font:fB });
+  cy -= ctrlHdrH;
 
-  // ======= CONTROLE INTERNO =======
-  const ctrlHeaderH = 16;
-  rect(M, y - ctrlHeaderH, W, ctrlHeaderH, AMBER);
-  border(M, y - ctrlHeaderH, W, ctrlHeaderH);
-  txt("CONTROLE INTERNO DE LANÇAMENTOS", M + 4, y - ctrlHeaderH + 5, { size: 8, font: fontB });
-  y -= ctrlHeaderH;
+  const ctrlRowH = 30;
+  const cw = W / 3;
+  box(ML,      cy, cw, ctrlRowH, WHITE);
+  box(ML+cw,   cy, cw, ctrlRowH, WHITE);
+  box(ML+cw*2, cy, cw, ctrlRowH, WHITE);
 
-  const ctrlRowH = 22;
-  border(M, y - ctrlRowH, W, ctrlRowH);
-  const ctrlW = W / 3;
-  txt("LANÇADO SIGV", M + 4, y - 8, { size: 6, color: GRAY_MED });
-  txt(invoice.sigv_recorded ? "SIM" : "NÃO", M + 4, y - 18, { size: 11, font: fontB, color: RED });
-  txt("LANÇADO TOPCON", M + ctrlW + 4, y - 8, { size: 6, color: GRAY_MED });
-  txt(invoice.topcon_recorded ? "SIM" : "NÃO", M + ctrlW + 4, y - 18, { size: 11, font: fontB, color: RED });
-  txt("BOLETO EM MÃOS", M + ctrlW * 2 + 4, y - 8, { size: 6, color: GRAY_MED });
-  txt(invoice.boleto_recorded ? "SIM" : "NÃO", M + ctrlW * 2 + 4, y - 18, { size: 11, font: fontB, color: RED });
+  lbl("LANÇADO SIGV",    ML,      cy);
+  lbl("LANÇADO TOPCON",  ML+cw,   cy);
+  lbl("BOLETO EM MÃOS",  ML+cw*2, cy);
+
+  const sigvTxt   = invoice.sigv_recorded   ? "SIM" : "NÃO";
+  const topconTxt = invoice.topcon_recorded ? "SIM" : "NÃO";
+  const boletoTxt = invoice.boleto_recorded ? "SIM" : "NÃO";
+  const ctrlColor = (val) => (val === "SIM" ? rgb(0.05,0.55,0.05) : RED);
+
+  center(sigvTxt,   ML,      cy-20, cw,  { size:14, font:fB, color: ctrlColor(sigvTxt) });
+  center(topconTxt, ML+cw,   cy-20, cw,  { size:14, font:fB, color: ctrlColor(topconTxt) });
+  center(boletoTxt, ML+cw*2, cy-20, cw,  { size:14, font:fB, color: ctrlColor(boletoTxt) });
 
   return await pdfDoc.save();
 }
