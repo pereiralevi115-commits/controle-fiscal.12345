@@ -82,10 +82,12 @@ export default function Suppliers() {
         }
       }
 
-      await Promise.all([
-        toCreate.length > 0 ? base44.entities.Supplier.bulkCreate(toCreate) : Promise.resolve(),
-        ...toUpdate.map(({ id, data }) => base44.entities.Supplier.update(id, data)),
-      ]);
+      if (toCreate.length > 0) {
+        await base44.entities.Supplier.bulkCreate(toCreate);
+      }
+      for (const { id, data } of toUpdate) {
+        await base44.entities.Supplier.update(id, data);
+      }
 
       if (toCreate.length === 0 && toUpdate.length === 0) {
         toast.info("Nenhuma alteração encontrada");
