@@ -55,7 +55,7 @@ export default function GestaodeFrota() {
       if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
       else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
-      const supplierNotHidden = !supplier || !supplier.hidden;
+      const supplierNotHidden = supplier && supplier.gestao_frota === true;
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);

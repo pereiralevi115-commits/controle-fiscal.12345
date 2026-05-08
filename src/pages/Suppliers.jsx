@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Layers } from "lucide-react";
+import { Layers, ShoppingCart, Truck, BarChart2 } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 
 export default function Suppliers() {
@@ -44,8 +44,8 @@ export default function Suppliers() {
     },
   });
 
-  const toggleMateriaPrimaMutation = useMutation({
-    mutationFn: ({ id, value }) => base44.entities.Supplier.update(id, { materia_prima: value }),
+  const toggleFieldMutation = useMutation({
+    mutationFn: ({ id, field, value }) => base44.entities.Supplier.update(id, { [field]: value }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       toast.success("Fornecedor atualizado!");
@@ -143,7 +143,7 @@ export default function Suppliers() {
               <TableHead className="font-semibold">CNPJ</TableHead>
               <TableHead className="font-semibold">Telefone</TableHead>
               <TableHead className="font-semibold">Email</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">Categorias</TableHead>
               <TableHead className="font-semibold text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -156,28 +156,61 @@ export default function Suppliers() {
               </TableRow>
             ) : (
               filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id} className={supplier.materia_prima ? "bg-orange-50" : ""}>
+                <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
                   <TableCell className="text-sm">{supplier.email || "—"}</TableCell>
                   <TableCell className="text-sm">
-                    {supplier.materia_prima ? (
-                      <span className="text-orange-600 font-medium">Matéria Prima</span>
-                    ) : (
-                      <span className="text-green-600 font-medium">Ativo</span>
-                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {supplier.materia_prima && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Mat. Prima</span>}
+                      {supplier.gestao_compras && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">Gest. Compras</span>}
+                      {supplier.gestao_frota && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Gest. Frota</span>}
+                      {supplier.controladoria && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Controladoria</span>}
+                      {!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria && (
+                        <span className="text-slate-400 text-xs">Nenhuma</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-8 w-8 ${supplier.materia_prima ? "text-orange-500" : "text-muted-foreground"}`}
-                      title={supplier.materia_prima ? "Remover de Matéria Prima" : "Marcar como Matéria Prima"}
-                      onClick={() => toggleMateriaPrimaMutation.mutate({ id: supplier.id, value: !supplier.materia_prima })}
-                    >
-                      <Layers className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${supplier.materia_prima ? "text-orange-500" : "text-muted-foreground"}`}
+                        title={supplier.materia_prima ? "Remover de Matéria Prima" : "Marcar como Matéria Prima"}
+                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "materia_prima", value: !supplier.materia_prima })}
+                      >
+                        <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${supplier.gestao_compras ? "text-blue-500" : "text-muted-foreground"}`}
+                        title={supplier.gestao_compras ? "Remover de Gestão de Compras" : "Marcar como Gestão de Compras"}
+                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "gestao_compras", value: !supplier.gestao_compras })}
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${supplier.gestao_frota ? "text-green-500" : "text-muted-foreground"}`}
+                        title={supplier.gestao_frota ? "Remover de Gestão de Frota" : "Marcar como Gestão de Frota"}
+                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "gestao_frota", value: !supplier.gestao_frota })}
+                      >
+                        <Truck className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${supplier.controladoria ? "text-purple-500" : "text-muted-foreground"}`}
+                        title={supplier.controladoria ? "Remover de Controladoria" : "Marcar como Controladoria"}
+                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "controladoria", value: !supplier.controladoria })}
+                      >
+                        <BarChart2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

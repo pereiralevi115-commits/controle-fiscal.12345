@@ -26,7 +26,22 @@
     "materia_prima": {
       "type": "boolean",
       "default": false,
-      "description": "Indica se o fornecedor \u00e9 de Mat\u00e9ria Prima (suas NFs aparecem somente na tela Mat\u00e9ria Prima)"
+      "description": "Indica se o fornecedor \u00e9 de Mat\u00e9ria Prima"
+    },
+    "gestao_compras": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o fornecedor aparece na tela Gest\u00e3o de Compras"
+    },
+    "gestao_frota": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o fornecedor aparece na tela Gest\u00e3o de Frota"
+    },
+    "controladoria": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o fornecedor aparece na tela Controladoria"
     }
   },
   "required": [
