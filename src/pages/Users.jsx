@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, Users } from "lucide-react";
+import ProfilesTab from "@/components/users/ProfilesTab";
 
 export default function UsersPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -42,64 +44,82 @@ export default function UsersPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Usuários</h1>
-            <p className="text-slate-500 mt-1">{users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}</p>
-          </div>
-          <Button onClick={() => setInviteOpen(true)} className="bg-slate-900 hover:bg-slate-800 gap-2">
-            <UserPlus className="w-4 h-4" />
-            Convidar Usuário
-          </Button>
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Usuários</h1>
+          <p className="text-slate-500 mt-1">Gerencie usuários e perfis de acesso</p>
         </div>
 
-        {users.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-lg border-0 py-16 text-center">
-            <Users className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-            <p className="font-medium text-slate-600">Nenhum usuário cadastrado</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-lg border-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-semibold">Nome</TableHead>
-                  <TableHead className="font-semibold">Email</TableHead>
-                  <TableHead className="font-semibold">Perfil</TableHead>
-                  <TableHead className="font-semibold">Cadastrado em</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                        {user.role === "admin" ? "Admin" : "Usuário"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.created_date ? new Date(user.created_date).toLocaleDateString("pt-BR") : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <Tabs defaultValue="users">
+          <TabsList className="mb-4">
+            <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="profiles">Perfis de Acesso</TabsTrigger>
+          </TabsList>
 
+          {/* ─── ABA USUÁRIOS ─── */}
+          <TabsContent value="users">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-slate-500 text-sm">
+                  {users.length} usuário{users.length !== 1 ? "s" : ""} cadastrado{users.length !== 1 ? "s" : ""}
+                </p>
+                <Button onClick={() => setInviteOpen(true)} className="bg-slate-900 hover:bg-slate-800 gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Convidar Usuário
+                </Button>
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                </div>
+              ) : users.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-lg border-0 py-16 text-center">
+                  <Users className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                  <p className="font-medium text-slate-600">Nenhum usuário cadastrado</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-lg border-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold">Nome</TableHead>
+                        <TableHead className="font-semibold">Email</TableHead>
+                        <TableHead className="font-semibold">Perfil</TableHead>
+                        <TableHead className="font-semibold">Cadastrado em</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                              {user.role === "admin" ? "Admin" : "Usuário"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {user.created_date ? new Date(user.created_date).toLocaleDateString("pt-BR") : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* ─── ABA PERFIS ─── */}
+          <TabsContent value="profiles">
+            <ProfilesTab />
+          </TabsContent>
+        </Tabs>
+
+        {/* ─── DIALOG CONVIDAR ─── */}
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogContent>
             <DialogHeader>
