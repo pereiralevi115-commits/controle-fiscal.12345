@@ -8,7 +8,7 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 
 export default function Controladoria() {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", month: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -59,8 +59,13 @@ export default function Controladoria() {
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-      const monthMatch = filters.month === "all" || (inv.issue_date && new Date(inv.issue_date).getMonth() + 1 === parseInt(filters.month));
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthMatch;
+      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
+        const date = new Date(inv.issue_date + "T12:00:00");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${month}-${year}` === filters.monthYear;
+      })());
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch;
     });
 
     filtered.sort((a, b) => {
@@ -104,7 +109,7 @@ export default function Controladoria() {
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
 
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable

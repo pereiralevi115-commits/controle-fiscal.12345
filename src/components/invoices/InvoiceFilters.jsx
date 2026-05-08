@@ -3,7 +3,37 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Calendar } from "lucide-react";
 
-export default function InvoiceFilters({ filters, onFilterChange, branches, showCancelledFilter }) {
+const months = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
+const getAvailableMonthsAndYears = (invoices) => {
+  const monthYears = new Set();
+  invoices.forEach((inv) => {
+    if (inv.issue_date) {
+      const date = new Date(inv.issue_date + "T12:00:00");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      monthYears.add(`${month}-${year}`);
+    }
+  });
+  return Array.from(monthYears).sort().reverse();
+};
+
+export default function InvoiceFilters({ filters, onFilterChange, branches, invoices = [], showCancelledFilter }) {
+  const availableMonthsAndYears = getAvailableMonthsAndYears(invoices);
+
   return (
     <div className="flex flex-wrap gap-3">
       <div className="relative flex-1 min-w-[220px]">
@@ -30,6 +60,28 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, show
               {branch.name}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.monthYear || "all"}
+        onValueChange={(val) => onFilterChange({ ...filters, monthYear: val })}
+      >
+        <SelectTrigger className="w-[160px]">
+          <Calendar className="w-4 h-4 mr-2" />
+          <SelectValue placeholder="Mês/Ano" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos os meses</SelectItem>
+          {availableMonthsAndYears.map((monthYear) => {
+            const [month, year] = monthYear.split("-");
+            const monthName = months.find((m) => m.value === month)?.label || "";
+            return (
+              <SelectItem key={monthYear} value={monthYear}>
+                {monthName} {year}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
 
@@ -70,31 +122,6 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, show
           <SelectItem value="all">BOLETO: Todos</SelectItem>
           <SelectItem value="sim">BOLETO: Sim</SelectItem>
           <SelectItem value="nao">BOLETO: Não</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.month || "all"}
-        onValueChange={(val) => onFilterChange({ ...filters, month: val })}
-      >
-        <SelectTrigger className="w-[140px]">
-          <Calendar className="w-4 h-4 mr-2" />
-          <SelectValue placeholder="Mês" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os meses</SelectItem>
-          <SelectItem value="01">Janeiro</SelectItem>
-          <SelectItem value="02">Fevereiro</SelectItem>
-          <SelectItem value="03">Março</SelectItem>
-          <SelectItem value="04">Abril</SelectItem>
-          <SelectItem value="05">Maio</SelectItem>
-          <SelectItem value="06">Junho</SelectItem>
-          <SelectItem value="07">Julho</SelectItem>
-          <SelectItem value="08">Agosto</SelectItem>
-          <SelectItem value="09">Setembro</SelectItem>
-          <SelectItem value="10">Outubro</SelectItem>
-          <SelectItem value="11">Novembro</SelectItem>
-          <SelectItem value="12">Dezembro</SelectItem>
         </SelectContent>
       </Select>
     </div>
