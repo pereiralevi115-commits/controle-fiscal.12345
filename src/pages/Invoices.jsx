@@ -60,17 +60,17 @@ export default function Invoices() {
         cancelledMatch = inv.cancelled;
       }
       
-      // Filter out invoices from hidden suppliers and gestao_frota suppliers
+      // Filter out invoices from hidden suppliers and show only suppliers with NO category
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
-      const supplierNotFrota = !supplier || !supplier.gestao_frota;
+      const supplierHasNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
       
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
       const monthMatch = filters.month === "all" || (inv.issue_date && new Date(inv.issue_date).getMonth() + 1 === parseInt(filters.month));
 
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierNotFrota && sigvMatch && topconMatch && boletoMatch && monthMatch;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierHasNoCategory && sigvMatch && topconMatch && boletoMatch && monthMatch;
     });
 
     // Sort by multiple criteria
