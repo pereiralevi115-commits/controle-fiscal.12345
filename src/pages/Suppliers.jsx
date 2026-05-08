@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Layers, ShoppingCart, Truck, BarChart2, Loader2 } from "lucide-react";
 import { formatCNPJ, formatPhone } from "@/lib/formatters";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function Suppliers() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [formData, setFormData] = useState({ name: "", cnpj: "", phone: "", email: "" });
+  const [sortConfig, setSortConfig] = useState([]);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -121,10 +123,53 @@ export default function Suppliers() {
 
 
 
-  const filteredSuppliers = suppliers.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.cnpj.includes(search)
-  );
+  const sortedAndFilteredSuppliers = suppliers
+    .filter((s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.cnpj.includes(search)
+    )
+    .sort((a, b) => {
+      for (let config of sortConfig) {
+        const aValue = a[config.key];
+        const bValue = b[config.key];
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        let comparison = typeof aValue === "string" ? aValue.localeCompare(bValue) : aValue - bValue;
+        if (comparison !== 0) return config.direction === "asc" ? comparison : -comparison;
+      }
+      return 0;
+    });
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      const existing = prev.find((s) => s.key === key);
+      if (existing) return prev.map((s) => s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s);
+      return [{ key, direction: "asc" }, ...prev];
+    });
+  };
+
+  const SortableHeader = ({ label, sortKey }) => {
+    const sortConfig_ = sortConfig.find((s) => s.key === sortKey);
+    return (
+      <button
+        onClick={() => handleSort(sortKey)}
+        className="flex items-center gap-2 hover:text-foreground transition-colors"
+      >
+        {label}
+        <span className="inline-block">
+          {sortConfig_ ? (
+            sortConfig_.direction === "asc" ? (
+              <ArrowUp className="w-4 h-4" />
+            ) : (
+              <ArrowDown className="w-4 h-4" />
+            )
+          ) : (
+            <ArrowUpDown className="w-4 h-4 opacity-30" />
+          )}
+        </span>
+      </button>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -141,7 +186,7 @@ export default function Suppliers() {
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Fornecedores</h1>
             <p className="text-slate-500 mt-1">
-              {filteredSuppliers.length} fornecedor{filteredSuppliers.length !== 1 ? "es" : ""} cadastrado{filteredSuppliers.length !== 1 ? "s" : ""}
+              {sortedAndFilteredSuppliers.length} fornecedor{sortedAndFilteredSuppliers.length !== 1 ? "es" : ""} cadastrado{sortedAndFilteredSuppliers.length !== 1 ? "s" : ""}
             </p>
           </div>
           <Button 
@@ -168,23 +213,31 @@ export default function Suppliers() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">Fornecedor</TableHead>
-              <TableHead className="font-semibold">CNPJ</TableHead>
-              <TableHead className="font-semibold">Telefone</TableHead>
-              <TableHead className="font-semibold">Email</TableHead>
+              <TableHead className="font-semibold">
+                <SortableHeader label="Fornecedor" sortKey="name" />
+              </TableHead>
+              <TableHead className="font-semibold">
+                <SortableHeader label="CNPJ" sortKey="cnpj" />
+              </TableHead>
+              <TableHead className="font-semibold">
+                <SortableHeader label="Telefone" sortKey="phone" />
+              </TableHead>
+              <TableHead className="font-semibold">
+                <SortableHeader label="Email" sortKey="email" />
+              </TableHead>
               <TableHead className="font-semibold">Categorias</TableHead>
               <TableHead className="font-semibold text-right">Categoria</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSuppliers.length === 0 ? (
+            {sortedAndFilteredSuppliers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan="5" className="text-center py-8 text-muted-foreground">
                   Nenhum fornecedor encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSuppliers.map((supplier) => {
+              sortedAndFilteredSuppliers.map((supplier) => {
                 const rowColor = supplier.materia_prima
                   ? "bg-orange-50"
                   : supplier.gestao_compras
