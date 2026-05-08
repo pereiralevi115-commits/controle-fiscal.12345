@@ -61,6 +61,8 @@ export default function Suppliers() {
           uniqueSuppliers.set(key, {
             name: inv.supplier_name,
             cnpj: inv.supplier_cnpj,
+            phone: inv.supplier_phone || "",
+            email: inv.supplier_email || "",
           });
         }
       });
