@@ -11,6 +11,10 @@ import Invoices from './pages/Invoices';
 import ImportXml from './pages/ImportXml';
 import Branches from './pages/Branches';
 import Suppliers from './pages/Suppliers';
+import MateriaPrima from './pages/MateriaPrima';
+import GestaodeCompras from './pages/GestaodeCompras';
+import GestaodeFrota from './pages/GestaodeFrota';
+import Controladoria from './pages/Controladoria';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -34,6 +38,14 @@ const AuthenticatedApp = () => {
         return <Dashboard />;
       case '/notas':
         return <Invoices />;
+      case '/materia-prima':
+        return <MateriaPrima />;
+      case '/gestao-compras':
+        return <GestaodeCompras />;
+      case '/gestao-frota':
+        return <GestaodeFrota />;
+      case '/controladoria':
+        return <Controladoria />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':
