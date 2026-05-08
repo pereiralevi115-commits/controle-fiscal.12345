@@ -242,7 +242,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Perfil</Label>
+                <Label>Função</Label>
                 <Select value={inviteRole} onValueChange={setInviteRole}>
                   <SelectTrigger>
                     <SelectValue />
