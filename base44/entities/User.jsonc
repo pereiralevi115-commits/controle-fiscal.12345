@@ -1,0 +1,19 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user",
+      "description": "Papel do usu\u00e1rio no sistema"
+    },
+    "profile_id": {
+      "type": "string",
+      "description": "ID do perfil de acesso atribu\u00eddo ao usu\u00e1rio"
+    }
+  }
+}

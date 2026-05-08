@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,26 @@ export default function UsersPage() {
   const [inviteRole, setInviteRole] = useState("user");
   const [isInviting, setIsInviting] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: () => base44.entities.User.list(),
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["userProfiles"],
+    queryFn: () => base44.entities.UserProfile.list(),
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: ({ userId, profileId }) =>
+      base44.entities.User.update(userId, { profile_id: profileId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Perfil atualizado!");
+    },
+    onError: () => toast.error("Erro ao atualizar perfil"),
   });
 
   const handleInvite = async () => {
@@ -97,9 +114,27 @@ export default function UsersPage() {
                           <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
-                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                              {user.role === "admin" ? "Admin" : "Usuário"}
-                            </Badge>
+                            <Select
+                              value={user.profile_id || "__none__"}
+                              onValueChange={(val) =>
+                                updateProfileMutation.mutate({
+                                  userId: user.id,
+                                  profileId: val === "__none__" ? null : val,
+                                })
+                              }
+                            >
+                              <SelectTrigger className="w-[160px] h-8 text-sm">
+                                <SelectValue placeholder="Sem perfil" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Sem perfil</SelectItem>
+                                {profiles.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {user.created_date ? new Date(user.created_date).toLocaleDateString("pt-BR") : "—"}
