@@ -21,7 +21,7 @@ import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -32,7 +32,10 @@ const AuthenticatedApp = () => {
     );
   }
 
-
+  if (!isAuthenticated) {
+    navigateToLogin();
+    return null;
+  }
 
   const renderPage = () => {
     switch (location.pathname) {
