@@ -56,7 +56,7 @@ export default function Suppliers() {
     mutationFn: async () => {
       const uniqueSuppliers = new Map();
       invoices.forEach((inv) => {
-        const key = `${inv.supplier_cnpj}`;
+        const key = inv.supplier_cnpj;
         if (!uniqueSuppliers.has(key)) {
           uniqueSuppliers.set(key, {
             name: inv.supplier_name,
@@ -67,21 +67,34 @@ export default function Suppliers() {
         }
       });
 
-      const existingCNPJs = suppliers.map((s) => s.cnpj);
-      const newSuppliers = Array.from(uniqueSuppliers.values()).filter(
-        (s) => !existingCNPJs.includes(s.cnpj)
-      );
+      const existingMap = new Map(suppliers.map((s) => [s.cnpj, s]));
+      const toCreate = [];
+      const toUpdate = [];
 
-      if (newSuppliers.length === 0) {
-        toast.info("Nenhum fornecedor novo para adicionar");
-        return;
+      for (const [cnpj, data] of uniqueSuppliers.entries()) {
+        if (existingMap.has(cnpj)) {
+          const existing = existingMap.get(cnpj);
+          if ((data.phone && data.phone !== existing.phone) || (data.email && data.email !== existing.email)) {
+            toUpdate.push({ id: existing.id, data: { phone: data.phone, email: data.email } });
+          }
+        } else {
+          toCreate.push(data);
+        }
       }
 
-      await base44.entities.Supplier.bulkCreate(newSuppliers);
+      await Promise.all([
+        toCreate.length > 0 ? base44.entities.Supplier.bulkCreate(toCreate) : Promise.resolve(),
+        ...toUpdate.map(({ id, data }) => base44.entities.Supplier.update(id, data)),
+      ]);
+
+      if (toCreate.length === 0 && toUpdate.length === 0) {
+        toast.info("Nenhuma alteração encontrada");
+        return;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      toast.success("Fornecedores extraídos!");
+      toast.success("Fornecedores atualizados!");
     },
   });
 
