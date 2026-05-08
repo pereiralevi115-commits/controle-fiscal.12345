@@ -61,8 +61,10 @@ export default function Invoices() {
       }
       
       // Filter out invoices from hidden suppliers and suppliers with a category
-      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
+      const normCnpj = (cnpj) => (cnpj || "").replace(/\D/g, "");
+      const supplier = suppliers.find((s) => normCnpj(s.cnpj) === normCnpj(inv.supplier_cnpj));
       const supplierNotHidden = !supplier || !supplier.hidden;
+      // If supplier exists and has any category, exclude from Notas Fiscais
       const supplierNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
       
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
