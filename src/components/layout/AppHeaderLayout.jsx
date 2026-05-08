@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 
@@ -8,15 +8,15 @@ const APP_NAME = 'Controle Fiscal';
 const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697370b851ff4a130adcda27/17b9d331c_Designsemnome57.png';
 
 const navItems = [
-  { name: 'Dashboard', path: '/' },
-  { name: 'Notas Fiscais', path: '/notas' },
-  { name: 'Matéria Prima', path: '/materia-prima' },
-  { name: 'Gestão de Compras', path: '/gestao-compras' },
-  { name: 'Gestão de Frota', path: '/gestao-frota' },
-  { name: 'Controladoria', path: '/controladoria' },
-  { name: 'Importar XML', path: '/importar' },
-  { name: 'Fornecedores', path: '/fornecedores' },
-  { name: 'Filiais', path: '/filiais' },
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { name: 'Notas Fiscais', path: '/notas', icon: FileText },
+  { name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
+  { name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
+  { name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
+  { name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
+  { name: 'Importar XML', path: '/importar', icon: Upload },
+  { name: 'Fornecedores', path: '/fornecedores', icon: Users },
+  { name: 'Filiais', path: '/filiais', icon: Building2 },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
@@ -41,16 +41,18 @@ export default function AppHeaderLayout({ children, currentPath }) {
               <nav className="flex items-center gap-1">
                 {navItems.map(item => {
                   const isActive = currentPath === item.path;
+                  const Icon = item.icon;
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                         isActive
                           ? 'bg-[#FDB913] text-slate-900'
                           : 'text-slate-600 hover:bg-slate-100'
                       }`}
                     >
+                      {Icon && <Icon className="w-4 h-4 shrink-0" />}
                       <span className="hidden sm:block">{item.name}</span>
                     </Link>
                   );
