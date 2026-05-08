@@ -32,11 +32,6 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    navigateToLogin();
-    return null;
-  }
-
   const renderPage = () => {
     switch (location.pathname) {
       case '/':
