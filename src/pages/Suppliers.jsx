@@ -123,6 +123,14 @@ export default function Suppliers() {
 
 
 
+  const getCategoryName = (supplier) => {
+    if (supplier.materia_prima) return "Matéria Prima";
+    if (supplier.gestao_compras) return "Gestão de Compras";
+    if (supplier.gestao_frota) return "Gestão de Frota";
+    if (supplier.controladoria) return "Controladoria";
+    return "Nenhuma";
+  };
+
   const sortedAndFilteredSuppliers = suppliers
     .filter((s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -130,8 +138,14 @@ export default function Suppliers() {
     )
     .sort((a, b) => {
       for (let config of sortConfig) {
-        const aValue = a[config.key];
-        const bValue = b[config.key];
+        let aValue, bValue;
+        if (config.key === "category") {
+          aValue = getCategoryName(a);
+          bValue = getCategoryName(b);
+        } else {
+          aValue = a[config.key];
+          bValue = b[config.key];
+        }
         if (aValue === null || aValue === undefined) return 1;
         if (bValue === null || bValue === undefined) return -1;
         let comparison = typeof aValue === "string" ? aValue.localeCompare(bValue) : aValue - bValue;
@@ -225,7 +239,9 @@ export default function Suppliers() {
               <TableHead className="font-semibold">
                 <SortableHeader label="Email" sortKey="email" />
               </TableHead>
-              <TableHead className="font-semibold">Categorias</TableHead>
+              <TableHead className="font-semibold">
+                <SortableHeader label="Categorias" sortKey="category" />
+              </TableHead>
               <TableHead className="font-semibold text-right">Categoria</TableHead>
             </TableRow>
           </TableHeader>
