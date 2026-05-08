@@ -54,7 +54,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
               invoice[btn.field]
                 ? `${btn.activeBg} text-white border-2`
                 : `${btn.textColor} hover:${btn.bgColor}`
-            } ${!canEdit ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+            } ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
           >
             {btn.label}
           </Button>
