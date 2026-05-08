@@ -15,6 +15,7 @@ import MateriaPrima from './pages/MateriaPrima';
 import GestaodeCompras from './pages/GestaodeCompras';
 import GestaodeFrota from './pages/GestaodeFrota';
 import Controladoria from './pages/Controladoria';
+import NF from './pages/NF';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -36,6 +37,8 @@ const AuthenticatedApp = () => {
     switch (location.pathname) {
       case '/':
         return <Dashboard />;
+      case '/nf':
+        return <NF />;
       case '/notas':
         return <Invoices />;
       case '/materia-prima':

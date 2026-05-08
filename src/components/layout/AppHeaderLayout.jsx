@@ -9,6 +9,7 @@ const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/pub
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { name: 'NF', path: '/nf', icon: FileText },
   { name: 'Notas Fiscais', path: '/notas', icon: FileText },
   { name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
   { name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
