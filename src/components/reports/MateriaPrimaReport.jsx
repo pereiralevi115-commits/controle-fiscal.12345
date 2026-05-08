@@ -76,9 +76,12 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
             .text-right { text-align: right; }
             .nf-link { color: #0369a1; font-weight: 600; text-decoration: none; }
             .value-col { font-weight: 700; color: #0f172a; }
-            .grand-total { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 14px 16px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            .grand-total .label { font-size: 12px; letter-spacing: 0.3px; }
-            .grand-total .value { font-size: 18px; font-weight: 800; }
+            .supplier-total { background: #f1f5f9; padding: 8px 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-weight: 700; font-size: 10px; }
+            .supplier-total .label { color: #334155; }
+            .supplier-total .value { color: #0f172a; }
+            .grand-total { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 16px 18px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 800; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+            .grand-total .label { font-size: 13px; letter-spacing: 0.5px; font-weight: 700; }
+            .grand-total .value { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
             @page { size: A4; margin: 10mm; }
             @media print { 
               html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
@@ -111,7 +114,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           </Button>
         </div>
 
-        <div ref={printRef} className="p-6 space-y-4">
+        <div ref={printRef} className="p-6 space-y-4 text-sm">
           {/* Cabeçalho */}
           <div className="border-b-2 border-slate-800 pb-3">
             <h1 className="text-2xl font-semibold text-slate-800">Relatório — Matéria Prima</h1>
@@ -133,7 +136,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
             return (
               <div key={branchName} className="bg-white border border-slate-200 rounded overflow-hidden">
                 {/* Cabeçalho da Filial */}
-                <div className="bg-slate-800 text-white px-4 py-3 font-semibold text-sm uppercase tracking-wide">
+                <div className="bg-slate-800 text-white px-4 py-3 font-bold text-sm uppercase tracking-widest shadow-md">
                   {branchName}
                 </div>
 
@@ -141,11 +144,12 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
                 <div>
                   {sortedSuppliers.map((supplierName, supplierIndex) => {
                     const invList = supplierMap[supplierName];
+                    const supplierTotal = invList.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
                     return (
                       <div key={supplierName} className={supplierIndex > 0 ? "border-t border-slate-200" : ""}>
                         {/* Nome do Fornecedor */}
-                        <div className="bg-slate-50 px-4 py-2.5 border-l-4 border-slate-300 font-semibold text-xs text-slate-800">
+                        <div className="bg-gradient-to-r from-slate-100 to-slate-50 px-4 py-3 border-l-4 border-slate-700 font-bold text-sm text-slate-900 shadow-sm">
                           {supplierName}
                         </div>
 
@@ -185,6 +189,12 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
                               ))}
                             </tbody>
                           </table>
+                        </div>
+
+                        {/* Subtotal do Fornecedor */}
+                        <div className="bg-slate-100 px-4 py-2.5 flex justify-between items-center border-t border-slate-200 font-semibold text-xs">
+                          <span className="text-slate-700">Subtotal — {invList.length} nota(s)</span>
+                          <span className="text-slate-900">{formatCurrency(supplierTotal)}</span>
                         </div>
                       </div>
                     );
