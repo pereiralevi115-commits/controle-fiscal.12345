@@ -16,6 +16,7 @@ import GestaodeCompras from './pages/GestaodeCompras';
 import GestaodeFrota from './pages/GestaodeFrota';
 import Controladoria from './pages/Controladoria';
 import NF from './pages/NF';
+import UsersPage from './pages/Users';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -53,6 +54,8 @@ const AuthenticatedApp = () => {
         return <ImportXml />;
       case '/filiais':
         return <Branches />;
+      case '/usuarios':
+        return <UsersPage />;
       case '/fornecedores':
         return <Suppliers />;
       default:

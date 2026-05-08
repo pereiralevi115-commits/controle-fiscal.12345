@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 
@@ -18,6 +18,7 @@ const navItems = [
   { name: 'Importar XML', path: '/importar', icon: Upload },
   { name: 'Fornecedores', path: '/fornecedores', icon: Users },
   { name: 'Filiais', path: '/filiais', icon: Building2 },
+  { name: 'Usuários', path: '/usuarios', icon: UserCog },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
