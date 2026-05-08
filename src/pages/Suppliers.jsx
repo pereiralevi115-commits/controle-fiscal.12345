@@ -176,42 +176,35 @@ export default function Suppliers() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${supplier.materia_prima ? "text-orange-500" : "text-muted-foreground"}`}
-                        title={supplier.materia_prima ? "Remover de Matéria Prima" : "Marcar como Matéria Prima"}
-                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "materia_prima", value: !supplier.materia_prima })}
-                      >
-                        <Layers className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${supplier.gestao_compras ? "text-blue-500" : "text-muted-foreground"}`}
-                        title={supplier.gestao_compras ? "Remover de Gestão de Compras" : "Marcar como Gestão de Compras"}
-                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "gestao_compras", value: !supplier.gestao_compras })}
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${supplier.gestao_frota ? "text-green-500" : "text-muted-foreground"}`}
-                        title={supplier.gestao_frota ? "Remover de Gestão de Frota" : "Marcar como Gestão de Frota"}
-                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "gestao_frota", value: !supplier.gestao_frota })}
-                      >
-                        <Truck className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${supplier.controladoria ? "text-purple-500" : "text-muted-foreground"}`}
-                        title={supplier.controladoria ? "Remover de Controladoria" : "Marcar como Controladoria"}
-                        onClick={() => toggleFieldMutation.mutate({ id: supplier.id, field: "controladoria", value: !supplier.controladoria })}
-                      >
-                        <BarChart2 className="w-4 h-4" />
-                      </Button>
+                      {[
+                        { field: "materia_prima", icon: <Layers className="w-4 h-4" />, color: "text-orange-500", title: "Matéria Prima" },
+                        { field: "gestao_compras", icon: <ShoppingCart className="w-4 h-4" />, color: "text-blue-500", title: "Gestão de Compras" },
+                        { field: "gestao_frota", icon: <Truck className="w-4 h-4" />, color: "text-green-500", title: "Gestão de Frota" },
+                        { field: "controladoria", icon: <BarChart2 className="w-4 h-4" />, color: "text-purple-500", title: "Controladoria" },
+                      ].map(({ field, icon, color, title }) => {
+                        const isActive = supplier[field];
+                        return (
+                          <Button
+                            key={field}
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${isActive ? color : "text-muted-foreground"}`}
+                            title={isActive ? `Remover de ${title}` : `Marcar como ${title}`}
+                            onClick={() => {
+                              const update = {
+                                materia_prima: false,
+                                gestao_compras: false,
+                                gestao_frota: false,
+                                controladoria: false,
+                                [field]: !isActive,
+                              };
+                              updateMutation.mutate({ id: supplier.id, data: update });
+                            }}
+                          >
+                            {icon}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </TableCell>
                 </TableRow>
