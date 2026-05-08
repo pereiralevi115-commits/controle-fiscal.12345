@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Layers, ShoppingCart, Truck, BarChart2 } from "lucide-react";
+import { Layers, ShoppingCart, Truck, BarChart2, Loader2 } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 
 export default function Suppliers() {
@@ -54,10 +54,12 @@ export default function Suppliers() {
 
   const extractSuppliersMutation = useMutation({
     mutationFn: async () => {
+      const normalize = (cnpj) => (cnpj || "").replace(/\D/g, "");
+
       const uniqueSuppliers = new Map();
       invoices.forEach((inv) => {
-        const key = inv.supplier_cnpj;
-        if (!uniqueSuppliers.has(key)) {
+        const key = normalize(inv.supplier_cnpj);
+        if (key && !uniqueSuppliers.has(key)) {
           uniqueSuppliers.set(key, {
             name: inv.supplier_name,
             cnpj: inv.supplier_cnpj,
@@ -67,7 +69,7 @@ export default function Suppliers() {
         }
       });
 
-      const existingMap = new Map(suppliers.map((s) => [s.cnpj, s]));
+      const existingMap = new Map(suppliers.map((s) => [normalize(s.cnpj), s]));
       const toCreate = [];
       const toUpdate = [];
 
@@ -82,6 +84,10 @@ export default function Suppliers() {
         }
       }
 
+      if (toCreate.length === 0 && toUpdate.length === 0) {
+        return { noop: true };
+      }
+
       if (toCreate.length > 0) {
         await base44.entities.Supplier.bulkCreate(toCreate);
       }
@@ -89,14 +95,18 @@ export default function Suppliers() {
         await base44.entities.Supplier.update(id, data);
       }
 
-      if (toCreate.length === 0 && toUpdate.length === 0) {
+      return { created: toCreate.length, updated: toUpdate.length };
+    },
+    onSuccess: (result) => {
+      if (result?.noop) {
         toast.info("Nenhuma alteração encontrada");
         return;
       }
-    },
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      toast.success("Fornecedores atualizados!");
+      toast.success(`Fornecedores atualizados! (${result.created} criados, ${result.updated} atualizados)`);
+    },
+    onError: () => {
+      toast.error("Erro ao extrair fornecedores");
     },
   });
 
@@ -138,7 +148,9 @@ export default function Suppliers() {
             onClick={() => extractSuppliersMutation.mutate()}
             variant="outline"
             className="gap-2 text-slate-600"
+            disabled={extractSuppliersMutation.isPending}
           >
+            {extractSuppliersMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             Extrair de Notas Fiscais
           </Button>
         </div>
