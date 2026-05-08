@@ -56,28 +56,35 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           <title>Relatório - Matéria Prima</title>
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; font-size: 11px; color: #1e293b; line-height: 1.5; }
-            .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-            .header { border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px; }
-            .header h1 { font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px; }
-            .subtitle { font-size: 10px; color: #64748b; }
-            .info-bar { background: #f1f5f9; border-left: 4px solid #1e293b; padding: 8px 12px; margin-bottom: 16px; font-size: 11px; color: #475569; }
-            .branch-section { margin-bottom: 20px; page-break-inside: avoid; }
-            .branch-header { background: #1e293b; color: white; padding: 10px 12px; font-size: 12px; font-weight: 600; margin-bottom: 0; }
-            .supplier-group { background: white; }
-            .supplier-name { background: #f8fafc; padding: 8px 12px; font-size: 11px; font-weight: 600; color: #1e293b; border-left: 3px solid #cbd5e1; }
+            html { width: 100%; height: 100%; }
+            body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif; font-size: 11px; color: #1e293b; line-height: 1.6; background: #fff; }
+            .container { width: 210mm; height: 297mm; margin: 0 auto; padding: 15mm; background: white; }
+            .header { border-bottom: 3px solid #1e293b; padding-bottom: 10px; margin-bottom: 15px; }
+            .header h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 5px; letter-spacing: -0.5px; }
+            .subtitle { font-size: 9px; color: #64748b; font-weight: 500; }
+            .info-bar { background: linear-gradient(to right, #f1f5f9, #ffffff); border-left: 5px solid #1e293b; padding: 10px 14px; margin-bottom: 15px; font-size: 10px; color: #334155; font-weight: 500; }
+            .branch-section { margin-bottom: 18px; page-break-inside: avoid; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; }
+            .branch-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 12px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+            .supplier-name { background: #f8fafc; padding: 9px 14px; font-size: 11px; font-weight: 600; color: #1e293b; border-left: 4px solid #64748b; }
             table { width: 100%; border-collapse: collapse; font-size: 10px; }
-            thead tr { background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
-            th { padding: 6px 10px; text-align: left; font-weight: 600; color: #475569; font-size: 10px; }
-            td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
+            thead tr { background: #f1f5f9; border-bottom: 2px solid #cbd5e1; }
+            th { padding: 7px 10px; text-align: left; font-weight: 700; color: #334155; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+            td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+            tbody tr { background: white; }
+            tbody tr:hover { background: #f8fafc; }
             tbody tr:last-child td { border-bottom: none; }
             .text-right { text-align: right; }
-            .nf-col { font-weight: 500; color: #1e293b; }
-            .value-col { font-weight: 600; color: #1e293b; }
-            .grand-total { background: #1e293b; color: white; padding: 12px 16px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-            .grand-total .label { font-size: 12px; }
-            .grand-total .value { font-size: 14px; font-weight: 700; }
-            @media print { body { padding: 0; font-size: 10px; } .container { padding: 15px; } }
+            .nf-link { color: #0369a1; font-weight: 600; text-decoration: none; }
+            .value-col { font-weight: 700; color: #0f172a; }
+            .grand-total { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 14px 16px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .grand-total .label { font-size: 12px; letter-spacing: 0.3px; }
+            .grand-total .value { font-size: 18px; font-weight: 800; }
+            @page { size: A4; margin: 10mm; }
+            @media print { 
+              html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+              .container { width: 100%; height: auto; margin: 0; padding: 10mm; }
+              body { font-size: 10px; }
+            }
           </style>
         </head>
         <body>
