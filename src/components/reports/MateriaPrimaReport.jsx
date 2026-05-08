@@ -76,42 +76,47 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 15;
       const contentWidth = pageWidth - margin * 2;
+      const lineHeight = 6;
       let yPosition = margin;
 
-      // Função auxiliar para adicionar texto com quebra de linha
-      const addText = (text, fontSize, fontWeight, color = [0, 0, 0]) => {
-        pdf.setFontSize(fontSize);
-        pdf.setTextColor(...color);
-        pdf.setFont(undefined, fontWeight);
-        const lines = pdf.splitTextToSize(text, contentWidth - 10);
-        pdf.text(lines, margin, yPosition);
-        yPosition += lines.length * (fontSize / 2.5) + 2;
-        return yPosition;
-      };
+      // Cabeçalho com Logo
+      try {
+        pdf.addImage("https://media.base44.com/images/public/69fa46185be2e7353b027550/d40900812_image.png", "PNG", pageWidth - margin - 20, yPosition, 20, 10);
+      } catch (e) {
+        console.log("Logo não disponível");
+      }
 
-      // Cabeçalho
-      addText("Relatório — Matéria Prima", 16, "bold", [0, 0, 0]);
-      yPosition += 2;
-      addText(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 8, "normal", [100, 100, 100]);
-      yPosition += 8;
+      // Título
+      pdf.setFontSize(18);
+      pdf.setTextColor(15, 23, 42);
+      pdf.setFont(undefined, "bold");
+      pdf.text("Relatório — Matéria Prima", margin, yPosition + 8);
+      
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 110, 120);
+      pdf.setFont(undefined, "normal");
+      pdf.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition + 14);
+      
+      yPosition += 20;
 
       // Linha divisória
       pdf.setDrawColor(30, 41, 59);
+      pdf.setLineWidth(0.8);
       pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 6;
+      yPosition += 8;
 
       // Resumo
       pdf.setFillColor(240, 244, 248);
-      pdf.rect(margin, yPosition, contentWidth, 10, "F");
-      pdf.setFontSize(9);
+      pdf.rect(margin, yPosition, contentWidth, 8, "F");
+      pdf.setFontSize(10);
       pdf.setTextColor(71, 85, 105);
       pdf.setFont(undefined, "normal");
-      pdf.text(`${invoices.length} nota(s) · ${sortedBranches.length} filial(is)`, margin + 3, yPosition + 6);
-      yPosition += 14;
+      pdf.text(`${invoices.length} nota(s) · ${sortedBranches.length} filial(is)`, margin + 3, yPosition + 5);
+      yPosition += 12;
 
       // Por cada filial
       sortedBranches.forEach((branchName, branchIndex) => {
-        // Quebra de página para nova filial (exceto a primeira)
+        // Quebra de página para nova filial
         if (branchIndex > 0) {
           pdf.addPage();
           yPosition = margin;
@@ -122,11 +127,11 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
 
         // Cabeçalho da filial
         pdf.setFillColor(30, 41, 59);
-        pdf.rect(margin, yPosition, contentWidth, 9, "F");
-        pdf.setFontSize(11);
+        pdf.rect(margin, yPosition, contentWidth, 10, "F");
+        pdf.setFontSize(12);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont(undefined, "bold");
-        pdf.text(branchName, margin + 3, yPosition + 6);
+        pdf.text(branchName, margin + 3, yPosition + 7);
         yPosition += 13;
 
         // Fornecedores
@@ -135,82 +140,83 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           const supplierTotal = invList.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
           // Verificar se precisa de nova página
-          if (yPosition > pageHeight - margin - 40) {
+          if (yPosition > pageHeight - margin - 50) {
             pdf.addPage();
             yPosition = margin;
           }
 
           // Nome do fornecedor
           pdf.setFillColor(248, 250, 252);
-          pdf.rect(margin, yPosition, contentWidth, 7, "F");
+          pdf.rect(margin, yPosition, contentWidth, 8, "F");
           pdf.setFontSize(10);
           pdf.setTextColor(15, 23, 42);
           pdf.setFont(undefined, "bold");
-          pdf.text(supplierName, margin + 2, yPosition + 5);
-          yPosition += 9;
+          pdf.text(supplierName, margin + 2, yPosition + 5.5);
+          yPosition += 10;
 
           // Cabeçalho da tabela
           pdf.setFillColor(241, 245, 249);
-          pdf.setFontSize(8);
+          pdf.setFontSize(9);
           pdf.setTextColor(51, 65, 85);
           pdf.setFont(undefined, "bold");
           
           const tableY = yPosition;
-          pdf.rect(margin, tableY, contentWidth, 5, "F");
-          pdf.text("NF", margin + 2, tableY + 3.5);
-          pdf.text("Emissão", margin + 20, tableY + 3.5);
-          pdf.text("Vencimento", margin + 40, tableY + 3.5);
-          pdf.text("Produtos", margin + 65, tableY + 3.5);
-          pdf.text("Valor", pageWidth - margin - 15, tableY + 3.5, { align: "right" });
-          yPosition += 7;
+          pdf.rect(margin, tableY, contentWidth, 6, "F");
+          pdf.text("NF", margin + 2, tableY + 4);
+          pdf.text("Emissão", margin + 18, tableY + 4);
+          pdf.text("Vencimento", margin + 38, tableY + 4);
+          pdf.text("Produtos", margin + 62, tableY + 4);
+          pdf.text("Valor", pageWidth - margin - 5, tableY + 4, { align: "right" });
+          yPosition += 8;
 
           // Linhas da tabela
           invList.forEach((inv) => {
-            if (yPosition > pageHeight - margin - 15) {
+            if (yPosition > pageHeight - margin - 25) {
               pdf.addPage();
               yPosition = margin;
             }
 
-            pdf.setFontSize(8);
+            pdf.setFontSize(9);
             pdf.setTextColor(15, 23, 42);
             pdf.setFont(undefined, "normal");
 
             const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
             const products = inv.items && inv.items.length > 0
-              ? inv.items.map(item => item.description).join(", ")
+              ? inv.items.map(item => item.description).join(" | ")
               : "—";
 
-            pdf.text(nf, margin + 2, yPosition + 3);
-            pdf.text(formatDate(inv.issue_date), margin + 20, yPosition + 3);
-            pdf.text(formatDate(inv.due_date), margin + 40, yPosition + 3);
-            
-            const productLines = pdf.splitTextToSize(products, 20);
-            pdf.text(productLines, margin + 65, yPosition + 3);
-            
-            pdf.text(formatCurrency(inv.total_value), pageWidth - margin - 2, yPosition + 3, { align: "right" });
+            // Truncar produtos se muito longo
+            const productsFormatted = products.length > 45 ? products.substring(0, 42) + "..." : products;
 
-            yPosition += 5;
+            pdf.text(nf, margin + 2, yPosition + 3.5);
+            pdf.text(formatDate(inv.issue_date), margin + 18, yPosition + 3.5);
+            pdf.text(formatDate(inv.due_date), margin + 38, yPosition + 3.5);
+            pdf.text(productsFormatted, margin + 62, yPosition + 3.5);
+            pdf.text(formatCurrency(inv.total_value), pageWidth - margin - 5, yPosition + 3.5, { align: "right" });
+
+            yPosition += lineHeight;
           });
 
           // Subtotal do fornecedor
           pdf.setFillColor(241, 245, 249);
-          pdf.setFontSize(8);
+          pdf.setFontSize(9);
           pdf.setTextColor(15, 23, 42);
           pdf.setFont(undefined, "bold");
-          pdf.rect(margin, yPosition, contentWidth, 5, "F");
-          pdf.text("Subtotal:", pageWidth - margin - 40, yPosition + 3.5);
-          pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 2, yPosition + 3.5, { align: "right" });
-          yPosition += 7;
+          pdf.rect(margin, yPosition, contentWidth, 6, "F");
+          pdf.text("Subtotal:", pageWidth - margin - 38, yPosition + 4);
+          pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 5, yPosition + 4, { align: "right" });
+          yPosition += 8;
         });
 
         // Total da filial
         pdf.setFillColor(71, 85, 105);
-        pdf.setFontSize(9);
+        pdf.setFontSize(10);
         pdf.setTextColor(255, 255, 255);
         pdf.setFont(undefined, "bold");
-        pdf.rect(margin, yPosition, contentWidth, 7, "F");
-        pdf.text(`TOTAL ${branchName.toUpperCase()} — ${formatCurrency(branchTotals[branchName])}`, margin + 2, yPosition + 5);
-        yPosition += 10;
+        pdf.rect(margin, yPosition, contentWidth, 8, "F");
+        const branchTotalText = `TOTAL ${branchName.toUpperCase()} — ${formatCurrency(branchTotals[branchName])}`;
+        pdf.text(branchTotalText, margin + 2, yPosition + 5.5);
+        yPosition += 11;
       });
 
       // Total geral
@@ -220,12 +226,12 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
       }
 
       pdf.setFillColor(30, 41, 59);
-      pdf.setFontSize(10);
+      pdf.setFontSize(11);
       pdf.setTextColor(255, 255, 255);
       pdf.setFont(undefined, "bold");
       pdf.rect(margin, yPosition, contentWidth, 8, "F");
       pdf.text(`TOTAL GERAL — ${invoices.length} nota(s)`, margin + 2, yPosition + 5.5);
-      pdf.text(formatCurrency(grandTotal), pageWidth - margin - 2, yPosition + 5.5, { align: "right" });
+      pdf.text(formatCurrency(grandTotal), pageWidth - margin - 5, yPosition + 5.5, { align: "right" });
 
       pdf.save("Relatorio-Materia-Prima.pdf");
     } catch (error) {
