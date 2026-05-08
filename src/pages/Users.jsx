@@ -67,13 +67,19 @@ export default function UsersPage() {
     setEditOpen(true);
   };
 
+  const isLiderProfile = (profileId) => {
+    if (profileId === "__none__") return false;
+    const profile = profiles.find((p) => p.id === profileId);
+    return profile?.name?.toLowerCase() === "líder" || profile?.name?.toLowerCase() === "lider";
+  };
+
   const handleEditSave = () => {
     updateUserMutation.mutate({
       userId: editUser.id,
       data: {
         role: editForm.role,
         profile_id: editForm.profile_id === "__none__" ? null : editForm.profile_id,
-        branch_ids: editForm.role === "lider" ? editForm.branch_ids : [],
+        branch_ids: isLiderProfile(editForm.profile_id) ? editForm.branch_ids : [],
       },
     });
   };
@@ -154,7 +160,7 @@ export default function UsersPage() {
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                              {user.role === "admin" ? "Admin" : user.role === "lider" ? "Líder" : "Usuário"}
+                              {user.role === "admin" ? "Admin" : "Usuário"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -203,16 +209,29 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">Usuário</SelectItem>
-                      <SelectItem value="lider">Líder</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {editForm.role === "lider" && (
+                <div className="space-y-2">
+                  <Label>Perfil de Acesso</Label>
+                  <Select value={editForm.profile_id} onValueChange={(val) => setEditForm({ ...editForm, profile_id: val, branch_ids: [] })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sem perfil</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {isLiderProfile(editForm.profile_id) && (
                   <div className="space-y-2">
                     <Label>Filiais com acesso</Label>
                     <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                      {profiles.length === 0 && branches.length === 0 ? (
+                      {branches.length === 0 ? (
                         <p className="text-sm text-muted-foreground px-4 py-3">Nenhuma filial cadastrada</p>
                       ) : (
                         branches.map((branch) => (
@@ -236,20 +255,6 @@ export default function UsersPage() {
                     </div>
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label>Perfil de Acesso</Label>
-                  <Select value={editForm.profile_id} onValueChange={(val) => setEditForm({ ...editForm, profile_id: val })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sem perfil" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Sem perfil</SelectItem>
-                      {profiles.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             )}
             <DialogFooter className="mt-4">
