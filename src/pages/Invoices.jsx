@@ -8,7 +8,7 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 
 export default function Invoices() {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", month: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -60,18 +60,16 @@ export default function Invoices() {
         cancelledMatch = inv.cancelled;
       }
       
-      // Filter out invoices from hidden suppliers and suppliers with a category
-      const normCnpj = (cnpj) => (cnpj || "").replace(/\D/g, "");
-      const supplier = suppliers.find((s) => normCnpj(s.cnpj) === normCnpj(inv.supplier_cnpj));
+      // Filter out invoices from hidden suppliers
+      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
-      // If supplier exists and has any category, exclude from Notas Fiscais
-      const supplierNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
       
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
+      const monthMatch = filters.month === "all" || (inv.issue_date && new Date(inv.issue_date).getMonth() + 1 === parseInt(filters.month));
 
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierNoCategory && sigvMatch && topconMatch && boletoMatch;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthMatch;
     });
 
     // Sort by multiple criteria
