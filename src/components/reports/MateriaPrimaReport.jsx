@@ -47,6 +47,17 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
 
   const grandTotal = invoices.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
+  // Calcular total por filial
+  const branchTotals = useMemo(() => {
+    const totals = {};
+    sortedBranches.forEach((branchName) => {
+      totals[branchName] = Object.keys(groupedData[branchName]).reduce((sum, supplierName) => {
+        return sum + groupedData[branchName][supplierName].reduce((s, inv) => s + (inv.total_value || 0), 0);
+      }, 0);
+    });
+    return totals;
+  }, [groupedData, sortedBranches]);
+
   const handlePrint = () => {
     const content = printRef.current.innerHTML;
     const win = window.open("", "_blank");
@@ -76,9 +87,10 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
             .text-right { text-align: right; }
             .nf-link { color: #0369a1; font-weight: 600; text-decoration: none; }
             .value-col { font-weight: 700; color: #0f172a; }
-            .supplier-total { background: #f1f5f9; padding: 8px 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-weight: 700; font-size: 10px; }
-            .supplier-total .label { color: #334155; }
-            .supplier-total .value { color: #0f172a; }
+            .supplier-total { background: #f1f5f9; padding: 8px 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: flex-end; font-weight: 700; font-size: 10px; }
+            .supplier-total .label { color: #334155; margin-right: 16px; }
+            .supplier-total .value { color: #0f172a; font-size: 11px; font-weight: 800; }
+            .branch-total { background: linear-gradient(135deg, #334155 0%, #1e293b 100%); color: white; padding: 12px 16px; text-align: center; font-weight: 800; font-size: 13px; border-top: 2px solid #cbd5e1; letter-spacing: 0.5px; }
             .grand-total { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 16px 18px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 800; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
             .grand-total .label { font-size: 13px; letter-spacing: 0.5px; font-weight: 700; }
             .grand-total .value { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
@@ -115,12 +127,18 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
         </div>
 
         <div ref={printRef} className="p-6 space-y-4 text-sm">
-          {/* Cabeçalho */}
-          <div className="border-b-2 border-slate-800 pb-3">
-            <h1 className="text-2xl font-semibold text-slate-800">Relatório — Matéria Prima</h1>
-            <p className="text-xs text-slate-500 mt-2">
-              Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-            </p>
+          {/* Cabeçalho com Logo */}
+          <div className="flex items-start justify-between border-b-2 border-slate-800 pb-3 mb-2">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-slate-800">Relatório — Matéria Prima</h1>
+              <p className="text-xs text-slate-500 mt-2">
+                Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-xl font-bold text-slate-800">CONCRETAR</div>
+              <div className="text-xs text-slate-500">Matéria Prima</div>
+            </div>
           </div>
 
           {/* Resumo */}
@@ -136,7 +154,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
             return (
               <div key={branchName} className="bg-white border border-slate-200 rounded overflow-hidden">
                 {/* Cabeçalho da Filial */}
-                <div className="bg-slate-800 text-white px-4 py-3 font-bold text-sm uppercase tracking-widest shadow-md">
+                <div className="bg-slate-800 text-white px-4 py-4 font-bold text-lg uppercase tracking-widest shadow-md">
                   {branchName}
                 </div>
 
@@ -149,7 +167,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
                     return (
                       <div key={supplierName} className={supplierIndex > 0 ? "border-t border-slate-200" : ""}>
                         {/* Nome do Fornecedor */}
-                        <div className="bg-gradient-to-r from-slate-100 to-slate-50 px-4 py-3 border-l-4 border-slate-700 font-bold text-sm text-slate-900 shadow-sm">
+                        <div className="bg-gradient-to-r from-slate-100 to-slate-50 px-4 py-3 border-l-4 border-slate-700 font-black text-base text-slate-900 shadow-sm">
                           {supplierName}
                         </div>
 
@@ -192,13 +210,18 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
                         </div>
 
                         {/* Subtotal do Fornecedor */}
-                        <div className="bg-slate-100 px-4 py-2.5 flex justify-between items-center border-t border-slate-200 font-semibold text-xs">
-                          <span className="text-slate-700">Subtotal — {invList.length} nota(s)</span>
-                          <span className="text-slate-900">{formatCurrency(supplierTotal)}</span>
+                        <div className="bg-slate-100 px-4 py-2.5 flex justify-end items-center border-t border-slate-200 font-bold text-xs">
+                          <span className="text-slate-700 mr-4">Subtotal:</span>
+                          <span className="text-slate-900 font-bold text-sm">{formatCurrency(supplierTotal)}</span>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Total da Filial */}
+                <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-4 py-4 text-center font-bold text-lg border-t border-slate-300">
+                  TOTAL {branchName.toUpperCase()} — {formatCurrency(branchTotals[branchName])}
                 </div>
               </div>
             );
