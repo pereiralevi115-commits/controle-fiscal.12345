@@ -41,22 +41,25 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {buttons.filter(btn => hasPermission(btn.permission)).map((btn) => (
-        <Button
-          key={btn.id}
-          variant="outline"
-          size="sm"
-          onClick={() => handleButtonClick(btn.id)}
-          disabled={recordMutation.isPending}
-          className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
-            invoice[btn.field]
-              ? `${btn.activeBg} text-white border-2`
-              : `${btn.textColor} hover:${btn.bgColor}`
-          }`}
-        >
-          {btn.label}
-        </Button>
-      ))}
+      {buttons.map((btn) => {
+        const canEdit = hasPermission(btn.permission);
+        return (
+          <Button
+            key={btn.id}
+            variant="outline"
+            size="sm"
+            onClick={() => canEdit && handleButtonClick(btn.id)}
+            disabled={recordMutation.isPending || !canEdit}
+            className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
+              invoice[btn.field]
+                ? `${btn.activeBg} text-white border-2`
+                : `${btn.textColor} hover:${btn.bgColor}`
+            } ${!canEdit ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+          >
+            {btn.label}
+          </Button>
+        );
+      })}
     </div>
   );
 }
