@@ -128,16 +128,15 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
 
         <div ref={printRef} className="p-6 space-y-4 text-sm">
           {/* Cabeçalho com Logo */}
-          <div className="flex items-start justify-between border-b-2 border-slate-800 pb-3 mb-2">
+          <div className="flex items-start justify-between border-b-2 border-slate-800 pb-3 mb-2 gap-6">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-slate-800">Relatório — Matéria Prima</h1>
               <p className="text-xs text-slate-500 mt-2">
                 Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-xl font-bold text-slate-800">CONCRETAR</div>
-              <div className="text-xs text-slate-500">Matéria Prima</div>
+            <div className="flex-shrink-0">
+              <img src="https://media.base44.com/images/public/69fa46185be2e7353b027550/e295bd950_MotorVlog13.png" alt="Concretar" className="h-16 w-auto" />
             </div>
           </div>
 
