@@ -64,7 +64,7 @@ export default function AppHeaderLayout({ children, currentPath }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => base44.auth.logout()}
+                onClick={async () => { await base44.auth.logout('/'); }}
                 className="flex items-center gap-2 text-slate-600 hover:text-red-600 hover:border-red-300"
               >
                 <LogOut className="w-4 h-4" />
