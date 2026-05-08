@@ -6,8 +6,11 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function DueDateCell({ invoice }) {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('edit_due_date');
   const [editing, setEditing] = useState(false);
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -150,13 +153,13 @@ export default function DueDateCell({ invoice }) {
 
   const trigger = (
     <span
-      onClick={handleOpen}
-      className={`cursor-pointer group flex items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-100 transition-colors w-fit ${
-        isEdited ? "text-red-600 font-semibold" : ""
-      }`}
+      onClick={canEdit ? handleOpen : undefined}
+      className={`group flex items-center gap-1 rounded px-1 py-0.5 transition-colors w-fit ${
+        canEdit ? "cursor-pointer hover:bg-slate-100" : "cursor-default"
+      } ${isEdited ? "text-red-600 font-semibold" : ""}`}
     >
       {displayDate}
-      <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+      {canEdit && <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />}
     </span>
   );
 

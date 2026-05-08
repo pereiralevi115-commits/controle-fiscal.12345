@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import { formatCNPJ } from "@/lib/formatters";
+import { useAuth } from "@/lib/AuthContext";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -28,6 +29,7 @@ const InfoField = ({ label, value }) => (
 );
 
 export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkReceived, branches }) {
+  const { hasPermission } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
 
   if (!invoice) return null;
@@ -72,20 +74,22 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="gap-2"
-            >
-              {isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              Baixar PDF
-            </Button>
+            {hasPermission('download_pdf') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="gap-2"
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                Baixar PDF
+              </Button>
+            )}
 
           </div>
         </div>

@@ -3,25 +3,30 @@ import { Link } from 'react-router-dom';
 import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/AuthContext';
 
 const APP_NAME = 'Controle Fiscal';
 const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697370b851ff4a130adcda27/17b9d331c_Designsemnome57.png';
 
 const navItems = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'NF', path: '/nf', icon: FileText },
-  { name: 'Notas Fiscais', path: '/notas', icon: FileText },
-  { name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
-  { name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
-  { name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
-  { name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
-  { name: 'Importar XML', path: '/importar', icon: Upload },
-  { name: 'Fornecedores', path: '/fornecedores', icon: Users },
-  { name: 'Filiais', path: '/filiais', icon: Building2 },
-  { name: 'Usuários', path: '/usuarios', icon: UserCog },
+  { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  { key: 'nf', name: 'NF', path: '/nf', icon: FileText },
+  { key: 'notas', name: 'Notas Fiscais', path: '/notas', icon: FileText },
+  { key: 'materia-prima', name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
+  { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
+  { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
+  { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
+  { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
+  { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Users },
+  { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
+  { key: 'usuarios', name: 'Usuários', path: '/usuarios', icon: UserCog },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
+  const { canAccessPage } = useAuth();
+
+  const visibleNavItems = navItems.filter(item => canAccessPage(item.key));
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* ─── HEADER ─── */}
@@ -41,7 +46,7 @@ export default function AppHeaderLayout({ children, currentPath }) {
             {/* Nav + Sair */}
             <div className="flex items-center gap-3">
               <nav className="flex items-center gap-1">
-                {navItems.map(item => {
+                {visibleNavItems.map(item => {
                   const isActive = currentPath === item.path;
                   const Icon = item.icon;
                   return (
