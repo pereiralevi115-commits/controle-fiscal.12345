@@ -60,15 +60,16 @@ export default function Invoices() {
         cancelledMatch = inv.cancelled;
       }
       
-      // Filter out invoices from hidden suppliers
+      // Filter out invoices from hidden suppliers and suppliers with a category
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
+      const supplierNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
       
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
 
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierNoCategory && sigvMatch && topconMatch && boletoMatch;
     });
 
     // Sort by multiple criteria

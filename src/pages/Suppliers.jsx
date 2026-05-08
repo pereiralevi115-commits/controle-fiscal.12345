@@ -159,7 +159,7 @@ export default function Suppliers() {
               <TableHead className="font-semibold">Telefone</TableHead>
               <TableHead className="font-semibold">Email</TableHead>
               <TableHead className="font-semibold">Categorias</TableHead>
-              <TableHead className="font-semibold text-right">Ações</TableHead>
+              <TableHead className="font-semibold text-right">Categoria</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
