@@ -79,25 +79,18 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
       const lineHeight = 6;
       let yPosition = margin;
 
-      // Cabeçalho com Logo
-      try {
-        pdf.addImage("https://media.base44.com/images/public/69fa46185be2e7353b027550/d40900812_image.png", "PNG", pageWidth - margin - 20, yPosition, 20, 10);
-      } catch (e) {
-        console.log("Logo não disponível");
-      }
-
       // Título
       pdf.setFontSize(18);
       pdf.setTextColor(15, 23, 42);
       pdf.setFont(undefined, "bold");
-      pdf.text("Relatório — Matéria Prima", margin, yPosition + 8);
+      pdf.text("Relatório — Matéria Prima", margin, yPosition + 5);
       
       pdf.setFontSize(9);
       pdf.setTextColor(100, 110, 120);
       pdf.setFont(undefined, "normal");
-      pdf.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition + 14);
+      pdf.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition + 11);
       
-      yPosition += 20;
+      yPosition += 15;
 
       // Linha divisória
       pdf.setDrawColor(30, 41, 59);
@@ -112,7 +105,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
       pdf.setTextColor(71, 85, 105);
       pdf.setFont(undefined, "normal");
       pdf.text(`${invoices.length} nota(s) · ${sortedBranches.length} filial(is)`, margin + 3, yPosition + 5);
-      yPosition += 12;
+      yPosition += 9;
 
       // Por cada filial
       sortedBranches.forEach((branchName, branchIndex) => {
@@ -132,7 +125,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
         pdf.setTextColor(255, 255, 255);
         pdf.setFont(undefined, "bold");
         pdf.text(branchName, margin + 3, yPosition + 7);
-        yPosition += 13;
+        yPosition += 11;
 
         // Fornecedores
         sortedSuppliers.forEach((supplierName) => {
@@ -152,7 +145,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           pdf.setTextColor(15, 23, 42);
           pdf.setFont(undefined, "bold");
           pdf.text(supplierName, margin + 2, yPosition + 5.5);
-          yPosition += 10;
+          yPosition += 8;
 
           // Cabeçalho da tabela
           pdf.setFillColor(241, 245, 249);
@@ -203,9 +196,9 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           pdf.setTextColor(15, 23, 42);
           pdf.setFont(undefined, "bold");
           pdf.rect(margin, yPosition, contentWidth, 6, "F");
-          pdf.text("Subtotal:", pageWidth - margin - 38, yPosition + 4);
+          pdf.text("Subtotal: ", pageWidth - margin - 38, yPosition + 4);
           pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 5, yPosition + 4, { align: "right" });
-          yPosition += 8;
+          yPosition += 6;
         });
 
         // Total da filial
@@ -216,7 +209,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
         pdf.rect(margin, yPosition, contentWidth, 8, "F");
         const branchTotalText = `TOTAL ${branchName.toUpperCase()} — ${formatCurrency(branchTotals[branchName])}`;
         pdf.text(branchTotalText, margin + 2, yPosition + 5.5);
-        yPosition += 11;
+        yPosition += 9;
       });
 
       // Total geral
