@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, Users, Pencil } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import ProfilesTab from "@/components/users/ProfilesTab";
 
 export default function UsersPage() {
@@ -35,6 +36,11 @@ export default function UsersPage() {
     queryFn: () => base44.entities.UserProfile.list(),
   });
 
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => base44.entities.Branch.list(),
+  });
+
   const updateProfileMutation = useMutation({
     mutationFn: ({ userId, profileId }) =>
       base44.entities.User.update(userId, { profile_id: profileId }),
@@ -57,7 +63,7 @@ export default function UsersPage() {
 
   const openEdit = (user) => {
     setEditUser(user);
-    setEditForm({ role: user.role || "user", profile_id: user.profile_id || "__none__" });
+    setEditForm({ role: user.role || "user", profile_id: user.profile_id || "__none__", branch_ids: user.branch_ids || [] });
     setEditOpen(true);
   };
 
@@ -67,6 +73,7 @@ export default function UsersPage() {
       data: {
         role: editForm.role,
         profile_id: editForm.profile_id === "__none__" ? null : editForm.profile_id,
+        branch_ids: editForm.role === "lider" ? editForm.branch_ids : [],
       },
     });
   };
@@ -147,7 +154,7 @@ export default function UsersPage() {
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                              {user.role === "admin" ? "Admin" : "Usuário"}
+                              {user.role === "admin" ? "Admin" : user.role === "lider" ? "Líder" : "Usuário"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -196,10 +203,39 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="lider">Líder</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {editForm.role === "lider" && (
+                  <div className="space-y-2">
+                    <Label>Filiais com acesso</Label>
+                    <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                      {profiles.length === 0 && branches.length === 0 ? (
+                        <p className="text-sm text-muted-foreground px-4 py-3">Nenhuma filial cadastrada</p>
+                      ) : (
+                        branches.map((branch) => (
+                          <label key={branch.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50">
+                            <Checkbox
+                              checked={(editForm.branch_ids || []).includes(branch.id)}
+                              onCheckedChange={(checked) => {
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  branch_ids: checked
+                                    ? [...(prev.branch_ids || []), branch.id]
+                                    : (prev.branch_ids || []).filter((id) => id !== branch.id),
+                                }));
+                              }}
+                            />
+                            <span className="text-sm font-medium text-slate-700">{branch.name}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">{branch.cnpj}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Perfil de Acesso</Label>
                   <Select value={editForm.profile_id} onValueChange={(val) => setEditForm({ ...editForm, profile_id: val })}>
@@ -249,6 +285,7 @@ export default function UsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="lider">Líder</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
