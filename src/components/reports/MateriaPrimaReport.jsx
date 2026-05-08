@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,28 +14,36 @@ const formatDate = (date) =>
 export default function MateriaPrimaReport({ open, onClose, invoices, branches }) {
   const printRef = useRef();
 
-  // Agrupar por filial
   const branchMap = {};
   branches.forEach((b) => { branchMap[b.cnpj] = b.name; });
 
-  const byBranch = {};
-  invoices.forEach((inv) => {
-    const branchName = branchMap[inv.branch_cnpj] || inv.branch_cnpj || "Sem Filial";
-    if (!byBranch[branchName]) byBranch[branchName] = [];
-    byBranch[branchName].push(inv);
-  });
-
-  // Resumo por fornecedor dentro de cada filial
-  const supplierSummary = (invList) => {
-    const map = {};
-    invList.forEach((inv) => {
-      const key = inv.supplier_name;
-      if (!map[key]) map[key] = { name: key, count: 0, total: 0 };
-      map[key].count += 1;
-      map[key].total += inv.total_value || 0;
+  // Organizar por filial e depois por fornecedor + data
+  const groupedData = useMemo(() => {
+    const byBranch = {};
+    
+    invoices.forEach((inv) => {
+      const branchName = branchMap[inv.branch_cnpj] || inv.branch_cnpj || "Sem Filial";
+      if (!byBranch[branchName]) byBranch[branchName] = {};
+      
+      const supplierName = inv.supplier_name;
+      if (!byBranch[branchName][supplierName]) byBranch[branchName][supplierName] = [];
+      
+      byBranch[branchName][supplierName].push(inv);
     });
-    return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
-  };
+
+    // Ordenar fornecedores e notas por data
+    Object.keys(byBranch).forEach((branch) => {
+      Object.keys(byBranch[branch]).forEach((supplier) => {
+        byBranch[branch][supplier].sort((a, b) => {
+          const dateA = new Date(a.issue_date || 0);
+          const dateB = new Date(b.issue_date || 0);
+          return dateA - dateB;
+        });
+      });
+    });
+
+    return byBranch;
+  }, [invoices]);
 
   const grandTotal = invoices.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
@@ -48,31 +56,33 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           <title>Relatório - Matéria Prima</title>
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; padding: 20px; }
-            h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-            .subtitle { font-size: 11px; color: #64748b; margin-bottom: 20px; }
-            .branch-section { margin-bottom: 28px; }
-            .branch-title { font-size: 14px; font-weight: bold; background: #1e293b; color: white; padding: 6px 10px; margin-bottom: 0; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-            th { background: #f1f5f9; font-size: 10px; font-weight: 600; text-transform: uppercase; padding: 5px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-            td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 10px; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10px; color: #1e293b; line-height: 1.4; }
+            .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 3px solid #1e293b; padding-bottom: 15px; }
+            .header-left h1 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+            .header-right { text-align: right; font-size: 10px; color: #64748b; }
+            .info-bar { background: #f8fafc; border-left: 4px solid #1e293b; padding: 10px 12px; margin-bottom: 20px; font-size: 10px; color: #475569; }
+            .branch-section { margin-bottom: 30px; page-break-inside: avoid; }
+            .branch-header { background: #1e293b; color: white; padding: 8px 12px; font-size: 11px; font-weight: 700; margin-bottom: 12px; border-radius: 4px; }
+            .supplier-group { margin-bottom: 14px; }
+            .supplier-name { background: #e2e8f0; padding: 6px 10px; font-size: 10px; font-weight: 600; color: #1e293b; border-left: 3px solid #64748b; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 9px; }
+            th { background: #f1f5f9; padding: 5px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; color: #475569; }
+            td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
             tr:last-child td { border-bottom: none; }
+            .text-center { text-align: center; }
             .text-right { text-align: right; }
-            .summary-section { margin-top: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; }
-            .summary-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; padding: 5px 10px; background: #e2e8f0; }
-            .summary-row { display: flex; justify-content: space-between; padding: 3px 10px; font-size: 10px; border-bottom: 1px solid #f1f5f9; }
-            .summary-row:last-child { border-bottom: none; }
-            .summary-row .sup-name { flex: 1; }
-            .summary-row .sup-count { width: 60px; text-align: center; color: #64748b; }
-            .summary-row .sup-total { width: 110px; text-align: right; font-weight: 600; }
-            .branch-subtotal { display: flex; justify-content: space-between; padding: 6px 10px; background: #fef9c3; font-size: 11px; font-weight: 700; border-top: 2px solid #fde047; }
-            .grand-total { margin-top: 20px; background: #1e293b; color: white; border-radius: 6px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
-            .grand-total .label { font-size: 12px; font-weight: 600; }
-            .grand-total .value { font-size: 16px; font-weight: 800; }
-            @media print { body { padding: 10px; } }
+            .supplier-total { background: #fef9c3; padding: 6px 8px; font-weight: 600; font-size: 10px; display: flex; justify-content: space-between; border-top: 1px solid #fde047; }
+            .branch-total { background: #dbeafe; padding: 8px 10px; font-weight: 700; font-size: 10px; display: flex; justify-content: space-between; margin-top: 8px; border-radius: 3px; }
+            .grand-total { background: #1e293b; color: white; padding: 12px 16px; margin-top: 30px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; border-radius: 4px; }
+            .grand-total .label { font-size: 11px; }
+            .grand-total .value { font-size: 16px; }
+            @media print { body { padding: 5px; } .container { padding: 10px; } }
           </style>
         </head>
-        <body>${content}</body>
+        <body>
+          <div class="container">${content}</div>
+        </body>
       </html>
     `);
     win.document.close();
@@ -81,84 +91,126 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
     win.close();
   };
 
-  const sortedBranches = Object.keys(byBranch).sort();
+  const sortedBranches = Object.keys(groupedData).sort();
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between w-full">
             <DialogTitle>Relatório — Matéria Prima</DialogTitle>
-            <Button onClick={handlePrint} className="gap-2 mr-6">
+            <Button onClick={handlePrint} className="gap-2">
               <Printer className="w-4 h-4" />
               Imprimir / Exportar PDF
             </Button>
           </div>
         </DialogHeader>
 
-        <div ref={printRef}>
-          <h1>Relatório — Matéria Prima</h1>
-          <p className="subtitle">
-            Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} · {invoices.length} nota(s)
-          </p>
+        <div ref={printRef} className="space-y-6">
+          {/* Cabeçalho */}
+          <div className="border-b-4 border-slate-800 pb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-800">Relatório — Matéria Prima</h1>
+              </div>
+              <div className="text-right text-sm text-slate-500">
+                <p>Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+              </div>
+            </div>
+          </div>
 
+          {/* Resumo Geral */}
+          <div className="bg-slate-50 border-l-4 border-slate-800 px-4 py-3 text-sm text-slate-600">
+            <strong>{invoices.length}</strong> nota(s) · <strong>{sortedBranches.length}</strong> filial(is)
+          </div>
+
+          {/* Seções por Filial */}
           {sortedBranches.map((branchName) => {
-            const invList = byBranch[branchName];
-            const branchTotal = invList.reduce((s, i) => s + (i.total_value || 0), 0);
-            const suppliers = supplierSummary(invList);
+            const supplierMap = groupedData[branchName];
+            const sortedSuppliers = Object.keys(supplierMap).sort();
+            const branchTotal = Object.values(supplierMap).flat().reduce((s, i) => s + (i.total_value || 0), 0);
 
             return (
-              <div key={branchName} className="branch-section">
-                {/* Título da filial */}
-                <div className="branch-title">{branchName}</div>
+              <div key={branchName} className="border rounded-lg overflow-hidden bg-white">
+                {/* Cabeçalho da Filial */}
+                <div className="bg-slate-800 text-white px-4 py-3 font-bold text-sm">
+                  {branchName}
+                </div>
 
-                {/* Tabela de notas */}
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fornecedor</th>
-                      <th>NF</th>
-                      <th>Emissão</th>
-                      <th>Vencimento</th>
-                      <th className="text-right">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invList.map((inv) => (
-                      <tr key={inv.id}>
-                        <td>{inv.supplier_name}</td>
-                        <td>{inv.series ? `${inv.series}/${inv.number}` : inv.number}</td>
-                        <td>{formatDate(inv.issue_date)}</td>
-                        <td>{formatDate(inv.due_date)}</td>
-                        <td className="text-right">{formatCurrency(inv.total_value)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Fornecedores */}
+                <div className="divide-y">
+                  {sortedSuppliers.map((supplierName) => {
+                    const invList = supplierMap[supplierName];
+                    const supplierTotal = invList.reduce((s, i) => s + (i.total_value || 0), 0);
 
-                {/* Resumo por fornecedor */}
-                <div className="summary-section">
-                  <div className="summary-title">Resumo por Fornecedor</div>
-                  {suppliers.map((sup) => (
-                    <div key={sup.name} className="summary-row">
-                      <span className="sup-name">{sup.name}</span>
-                      <span className="sup-count">{sup.count} NF{sup.count !== 1 ? "s" : ""}</span>
-                      <span className="sup-total">{formatCurrency(sup.total)}</span>
-                    </div>
-                  ))}
-                  <div className="branch-subtotal">
-                    <span>Total {branchName}</span>
-                    <span>{formatCurrency(branchTotal)}</span>
-                  </div>
+                    return (
+                      <div key={supplierName}>
+                        {/* Nome do Fornecedor */}
+                        <div className="bg-slate-100 px-4 py-2 border-l-4 border-slate-400 font-semibold text-sm text-slate-800">
+                          {supplierName}
+                        </div>
+
+                        {/* Tabela de Notas */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-3 py-2 text-left font-semibold">NF</th>
+                                <th className="px-3 py-2 text-left font-semibold">Emissão</th>
+                                <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
+                                <th className="px-3 py-2 text-left font-semibold">Produtos</th>
+                                <th className="px-3 py-2 text-right font-semibold">Valor</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {invList.map((inv) => (
+                                <tr key={inv.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                  <td className="px-3 py-2 font-medium text-slate-700">
+                                    {inv.series ? `${inv.series}/${inv.number}` : inv.number}
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-600">
+                                    {formatDate(inv.issue_date)}
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-600">
+                                    {formatDate(inv.due_date)}
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-600">
+                                    {inv.items && inv.items.length > 0
+                                      ? inv.items.map(item => item.description).join(", ")
+                                      : "—"}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-semibold text-slate-700">
+                                    {formatCurrency(inv.total_value)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Subtotal do Fornecedor */}
+                        <div className="bg-yellow-50 px-4 py-2 flex justify-between items-center border-t border-yellow-200 text-sm font-semibold">
+                          <span>Subtotal {supplierName}</span>
+                          <span className="text-slate-800">{formatCurrency(supplierTotal)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Total da Filial */}
+                <div className="bg-blue-50 px-4 py-3 flex justify-between items-center font-bold text-sm border-t-2 border-blue-200">
+                  <span className="text-slate-800">Total {branchName}</span>
+                  <span className="text-blue-900">{formatCurrency(branchTotal)}</span>
                 </div>
               </div>
             );
           })}
 
           {/* Total Geral */}
-          <div className="grand-total">
-            <span className="label">TOTAL GERAL — {invoices.length} nota(s) em {sortedBranches.length} unidade(s)</span>
-            <span className="value">{formatCurrency(grandTotal)}</span>
+          <div className="bg-slate-800 text-white px-6 py-4 rounded-lg flex justify-between items-center font-bold text-lg">
+            <span>TOTAL GERAL — {invoices.length} nota(s)</span>
+            <span className="text-2xl">{formatCurrency(grandTotal)}</span>
           </div>
         </div>
       </DialogContent>
