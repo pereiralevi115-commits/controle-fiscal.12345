@@ -157,8 +157,18 @@ export default function Suppliers() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id}>
+              filteredSuppliers.map((supplier) => {
+                const rowColor = supplier.materia_prima
+                  ? "bg-orange-50"
+                  : supplier.gestao_compras
+                  ? "bg-blue-50"
+                  : supplier.gestao_frota
+                  ? "bg-green-50"
+                  : supplier.controladoria
+                  ? "bg-purple-50"
+                  : "";
+                return (
+                <TableRow key={supplier.id} className={rowColor}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
@@ -208,7 +218,8 @@ export default function Suppliers() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
