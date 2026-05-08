@@ -118,12 +118,8 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b p-6">
           <DialogTitle className="text-xl">Relatório — Matéria Prima</DialogTitle>
-          <Button onClick={handlePrint} className="gap-2">
-            <Printer className="w-4 h-4" />
-            Imprimir / Exportar PDF
-          </Button>
         </div>
 
         <div ref={printRef} className="p-6 space-y-4 text-sm">
