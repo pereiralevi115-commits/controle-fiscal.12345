@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { Eye, EyeOff, Layers } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 
 export default function Suppliers() {
@@ -44,21 +44,11 @@ export default function Suppliers() {
     },
   });
 
-  const hideMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supplier.update(id, { hidden: true }),
+  const toggleMateriaPrimaMutation = useMutation({
+    mutationFn: ({ id, value }) => base44.entities.Supplier.update(id, { materia_prima: value }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      toast.success("Fornecedor oculto!");
-    },
-  });
-
-  const unhideMutation = useMutation({
-    mutationFn: (id) => base44.entities.Supplier.update(id, { hidden: false }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      toast.success("Fornecedor restaurado!");
+      toast.success("Fornecedor atualizado!");
     },
   });
 
@@ -166,14 +156,14 @@ export default function Suppliers() {
               </TableRow>
             ) : (
               filteredSuppliers.map((supplier) => (
-                <TableRow key={supplier.id} className={supplier.hidden ? "bg-red-50" : ""}>
+                <TableRow key={supplier.id} className={supplier.materia_prima ? "bg-orange-50" : ""}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
                   <TableCell className="text-sm">{supplier.email || "—"}</TableCell>
                   <TableCell className="text-sm">
-                    {supplier.hidden ? (
-                      <span className="text-amber-600 font-medium">Oculto</span>
+                    {supplier.materia_prima ? (
+                      <span className="text-orange-600 font-medium">Matéria Prima</span>
                     ) : (
                       <span className="text-green-600 font-medium">Ativo</span>
                     )}
@@ -182,14 +172,11 @@ export default function Suppliers() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
-                      onClick={() => supplier.hidden ? unhideMutation.mutate(supplier.id) : hideMutation.mutate(supplier.id)}
+                      className={`h-8 w-8 ${supplier.materia_prima ? "text-orange-500" : "text-muted-foreground"}`}
+                      title={supplier.materia_prima ? "Remover de Matéria Prima" : "Marcar como Matéria Prima"}
+                      onClick={() => toggleMateriaPrimaMutation.mutate({ id: supplier.id, value: !supplier.materia_prima })}
                     >
-                      {supplier.hidden ? (
-                        <Eye className="w-4 h-4 text-amber-600" />
-                      ) : (
-                        <EyeOff className="w-4 h-4 text-muted-foreground" />
-                      )}
+                      <Layers className="w-4 h-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
