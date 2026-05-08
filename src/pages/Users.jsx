@@ -149,6 +149,7 @@ export default function UsersPage() {
                         <TableHead className="font-semibold">Email</TableHead>
                         <TableHead className="font-semibold">Função</TableHead>
                         <TableHead className="font-semibold">Perfil de Acesso</TableHead>
+                        <TableHead className="font-semibold">Filiais</TableHead>
                         <TableHead className="font-semibold">Cadastrado em</TableHead>
                         <TableHead className="font-semibold"></TableHead>
                       </TableRow>
@@ -165,6 +166,25 @@ export default function UsersPage() {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {profiles.find((p) => p.id === user.profile_id)?.name || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {(() => {
+                              const profile = profiles.find((p) => p.id === user.profile_id);
+                              const isLider = profile?.name?.toLowerCase() === "líder" || profile?.name?.toLowerCase() === "lider";
+                              if (!isLider || !user.branch_ids?.length) return "—";
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {user.branch_ids.map((bid) => {
+                                    const branch = branches.find((b) => b.id === bid);
+                                    return branch ? (
+                                      <span key={bid} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                                        {branch.name}
+                                      </span>
+                                    ) : null;
+                                  })}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {user.created_date ? new Date(user.created_date).toLocaleDateString("pt-BR") : "—"}
