@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   // Verifica se o usuário tem acesso a uma página específica
   // Admins têm acesso total. Usuários com perfil respeitam as páginas do perfil.
   const canAccessPage = (pageKey) => {
-    if (!user) return false;
+    if (!user) return true; // sem sessão (ex: preview) = mostra tudo
     if (user.role === 'admin') return true;
     if (!userProfile) return true; // sem perfil = acesso total (comportamento legado)
     return (userProfile.pages || []).includes(pageKey);
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   // Verifica se o usuário tem uma permissão específica
   const hasPermission = (permissionKey) => {
-    if (!user) return false;
+    if (!user) return true; // sem sessão (ex: preview) = mostra tudo
     if (user.role === 'admin') return true;
     if (!userProfile) return true; // sem perfil = tudo liberado
     return (userProfile.permissions || []).includes(permissionKey);
