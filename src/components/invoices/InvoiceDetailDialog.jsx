@@ -208,7 +208,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
                           <p className="font-semibold text-sm">{formatCurrency(inst.value)}</p>
                         </div>
                         <div className="flex justify-between items-start">
-                          <p className="text-xs text-muted-foreground">{inst.due_date ? format(new Date(inst.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                          <p className="text-xs text-muted-foreground">{inst.due_date ? format(new Date(inst.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
                           <p className="text-xs text-muted-foreground">{paymentTypeStr}</p>
                         </div>
                       </div>
