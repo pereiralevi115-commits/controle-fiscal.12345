@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Users } from "lucide-react";
+import { UserPlus, Users, Pencil } from "lucide-react";
 import ProfilesTab from "@/components/users/ProfilesTab";
 
 export default function UsersPage() {
@@ -18,6 +18,10 @@ export default function UsersPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
   const [isInviting, setIsInviting] = useState(false);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [editForm, setEditForm] = useState({ role: "user", profile_id: "" });
 
   const queryClient = useQueryClient();
 
@@ -40,6 +44,32 @@ export default function UsersPage() {
     },
     onError: () => toast.error("Erro ao atualizar perfil"),
   });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, data }) => base44.entities.User.update(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Usuário atualizado!");
+      setEditOpen(false);
+    },
+    onError: () => toast.error("Erro ao atualizar usuário"),
+  });
+
+  const openEdit = (user) => {
+    setEditUser(user);
+    setEditForm({ role: user.role || "user", profile_id: user.profile_id || "__none__" });
+    setEditOpen(true);
+  };
+
+  const handleEditSave = () => {
+    updateUserMutation.mutate({
+      userId: editUser.id,
+      data: {
+        role: editForm.role,
+        profile_id: editForm.profile_id === "__none__" ? null : editForm.profile_id,
+      },
+    });
+  };
 
   const handleInvite = async () => {
     if (!inviteEmail) {
@@ -104,8 +134,10 @@ export default function UsersPage() {
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="font-semibold">Nome</TableHead>
                         <TableHead className="font-semibold">Email</TableHead>
-                        <TableHead className="font-semibold">Perfil</TableHead>
+                        <TableHead className="font-semibold">Função</TableHead>
+                        <TableHead className="font-semibold">Perfil de Acesso</TableHead>
                         <TableHead className="font-semibold">Cadastrado em</TableHead>
+                        <TableHead className="font-semibold"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -114,30 +146,20 @@ export default function UsersPage() {
                           <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
-                            <Select
-                              value={user.profile_id || "__none__"}
-                              onValueChange={(val) =>
-                                updateProfileMutation.mutate({
-                                  userId: user.id,
-                                  profileId: val === "__none__" ? null : val,
-                                })
-                              }
-                            >
-                              <SelectTrigger className="w-[160px] h-8 text-sm">
-                                <SelectValue placeholder="Sem perfil" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Sem perfil</SelectItem>
-                                {profiles.map((p) => (
-                                  <SelectItem key={p.id} value={p.id}>
-                                    {p.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                              {user.role === "admin" ? "Admin" : "Usuário"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {profiles.find((p) => p.id === user.profile_id)?.name || "—"}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {user.created_date ? new Date(user.created_date).toLocaleDateString("pt-BR") : "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(user)}>
+                              <Pencil className="w-4 h-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -153,6 +175,55 @@ export default function UsersPage() {
             <ProfilesTab />
           </TabsContent>
         </Tabs>
+
+        {/* ─── DIALOG EDITAR USUÁRIO ─── */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+            </DialogHeader>
+            {editUser && (
+              <div className="space-y-4 mt-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-700">{editUser.full_name || editUser.email}</p>
+                  <p className="text-xs text-muted-foreground">{editUser.email}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Função</Label>
+                  <Select value={editForm.role} onValueChange={(val) => setEditForm({ ...editForm, role: val })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Perfil de Acesso</Label>
+                  <Select value={editForm.profile_id} onValueChange={(val) => setEditForm({ ...editForm, profile_id: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sem perfil</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+              <Button onClick={handleEditSave} disabled={updateUserMutation.isPending}>
+                {updateUserMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ─── DIALOG CONVIDAR ─── */}
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
