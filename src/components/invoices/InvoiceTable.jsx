@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import CellTooltip from "./CellTooltip";
 import InvoiceTableTooltip from "./InvoiceTableTooltip";
@@ -152,14 +153,21 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
                   <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onViewDetails(invoice)}
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onViewDetails(invoice)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ver detalhes</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </TableCell>
             </TableRow>
