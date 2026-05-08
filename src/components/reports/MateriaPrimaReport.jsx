@@ -196,7 +196,7 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
           pdf.setTextColor(15, 23, 42);
           pdf.setFont(undefined, "bold");
           pdf.rect(margin, yPosition, contentWidth, 6, "F");
-          pdf.text("Subtotal: ", pageWidth - margin - 38, yPosition + 4);
+          pdf.text("Subtotal: ", margin + 2, yPosition + 4);
           pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 5, yPosition + 4, { align: "right" });
           yPosition += 6;
         });
