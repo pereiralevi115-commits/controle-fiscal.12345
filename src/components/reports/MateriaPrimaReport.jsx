@@ -45,6 +45,8 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
     return byBranch;
   }, [invoices]);
 
+  const sortedBranches = Object.keys(groupedData).sort();
+
   const grandTotal = invoices.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
   // Calcular total por filial
@@ -112,8 +114,6 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
     win.print();
     win.close();
   };
-
-  const sortedBranches = Object.keys(groupedData).sort();
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
