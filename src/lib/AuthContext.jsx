@@ -38,9 +38,15 @@ export const AuthProvider = ({ children }) => {
         setUserProfile(null);
       }
     } catch (error) {
-      setIsAuthenticated(false);
-      setUser(null);
-      setUserProfile(null);
+      const status = error?.response?.status || error?.status;
+      if (status === 401 || status === 403) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setUserProfile(null);
+      } else {
+        // Erro de rede ou outro - não desloga o usuário
+        setIsAuthenticated(true);
+      }
       setAuthError(null);
     }
     setIsLoadingAuth(false);
