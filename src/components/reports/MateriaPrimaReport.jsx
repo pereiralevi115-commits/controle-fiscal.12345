@@ -79,6 +79,13 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
       const lineHeight = 6;
       let yPosition = margin;
 
+      // Logo
+      try {
+        pdf.addImage("https://media.base44.com/images/public/69fa46185be2e7353b027550/1b30abd51_MotorVlog13.png", "PNG", pageWidth - margin - 25, yPosition, 25, 15);
+      } catch (e) {
+        console.log("Logo não disponível");
+      }
+
       // Título
       pdf.setFontSize(18);
       pdf.setTextColor(15, 23, 42);
