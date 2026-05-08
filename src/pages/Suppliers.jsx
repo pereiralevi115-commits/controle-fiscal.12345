@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Layers, ShoppingCart, Truck, BarChart2, Loader2 } from "lucide-react";
-import { formatCNPJ } from "@/lib/formatters";
+import { formatCNPJ, formatPhone } from "@/lib/formatters";
 
 export default function Suppliers() {
   const queryClient = useQueryClient();
@@ -198,7 +198,7 @@ export default function Suppliers() {
                 <TableRow key={supplier.id} className={rowColor}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
-                  <TableCell className="text-sm">{supplier.phone || "—"}</TableCell>
+                  <TableCell className="text-sm">{formatPhone(supplier.phone) || "—"}</TableCell>
                   <TableCell className="text-sm">{supplier.email || "—"}</TableCell>
                   <TableCell className="text-sm">
                     <div className="flex flex-wrap gap-1">
