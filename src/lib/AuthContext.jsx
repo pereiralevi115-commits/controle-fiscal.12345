@@ -6,15 +6,10 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    const tryAuth = async () => {
-      try {
-        const currentUser = await base44.auth.me();
+    base44.auth.me()
+      .then(async (currentUser) => {
         setUser(currentUser);
         if (currentUser?.profile_id) {
           try {
@@ -24,24 +19,9 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(null);
           }
         }
-        setIsLoadingAuth(false);
-      } catch (err) {
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(tryAuth, 1000);
-        } else {
-          setUser(null);
-          setIsLoadingAuth(false);
-        }
-      }
-    };
-
-    tryAuth();
+      })
+      .catch(() => setUser(null));
   }, []);
-
-  const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
-  };
 
   const canAccessPage = (pageKey) => {
     if (!user) return true;
@@ -62,10 +42,10 @@ export const AuthProvider = ({ children }) => {
       user,
       userProfile,
       isAuthenticated: !!user,
-      isLoadingAuth,
+      isLoadingAuth: false,
       isLoadingPublicSettings: false,
       authError: null,
-      navigateToLogin,
+      navigateToLogin: () => base44.auth.redirectToLogin(window.location.href),
       canAccessPage,
       hasPermission,
     }}>
