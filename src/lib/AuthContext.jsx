@@ -9,8 +9,12 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    base44.auth.me()
-      .then(async (currentUser) => {
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    const tryAuth = async () => {
+      try {
+        const currentUser = await base44.auth.me();
         setUser(currentUser);
         if (currentUser?.profile_id) {
           try {
@@ -20,13 +24,19 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(null);
           }
         }
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => {
         setIsLoadingAuth(false);
-      });
+      } catch (err) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(tryAuth, 1000);
+        } else {
+          setUser(null);
+          setIsLoadingAuth(false);
+        }
+      }
+    };
+
+    tryAuth();
   }, []);
 
   const navigateToLogin = () => {
