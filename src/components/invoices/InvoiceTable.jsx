@@ -112,7 +112,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 <InvoiceTableTooltip content={`Data de Emissão: ${invoice.issue_date ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}`}>
                   <span className="cursor-help">
                     {invoice.issue_date
-                      ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR })
+                      ? format(new Date(invoice.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                       : "—"}
                   </span>
                 </InvoiceTableTooltip>
