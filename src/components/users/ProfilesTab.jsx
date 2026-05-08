@@ -24,7 +24,15 @@ const ALL_PAGES = [
   { key: "usuarios", label: "Usuários", path: "/usuarios" },
 ];
 
-const emptyForm = { name: "", description: "", pages: [] };
+const ALL_PERMISSIONS = [
+  { key: "edit_due_date", label: "Editar data de vencimento", description: "Permite alterar a coluna Vencimento nas tabelas" },
+  { key: "download_pdf", label: "Baixar PDF (Ver Detalhes)", description: "Permite baixar o PDF ao abrir os detalhes de uma NF" },
+  { key: "toggle_sigv", label: "Marcar SIGV", description: "Permite ativar/desativar o botão SIGV" },
+  { key: "toggle_topcon", label: "Marcar TOPCON", description: "Permite ativar/desativar o botão TOPCON" },
+  { key: "toggle_boleto", label: "Marcar BOLETO", description: "Permite ativar/desativar o botão BOLETO" },
+];
+
+const emptyForm = { name: "", description: "", pages: [], permissions: [] };
 
 export default function ProfilesTab() {
   const queryClient = useQueryClient();
@@ -71,7 +79,7 @@ export default function ProfilesTab() {
 
   const openEdit = (profile) => {
     setEditing(profile);
-    setForm({ name: profile.name, description: profile.description || "", pages: profile.pages || [] });
+    setForm({ name: profile.name, description: profile.description || "", pages: profile.pages || [], permissions: profile.permissions || [] });
     setDialogOpen(true);
   };
 
@@ -95,6 +103,23 @@ export default function ProfilesTab() {
       setForm((prev) => ({ ...prev, pages: [] }));
     } else {
       setForm((prev) => ({ ...prev, pages: ALL_PAGES.map((p) => p.key) }));
+    }
+  };
+
+  const togglePermission = (key) => {
+    setForm((prev) => ({
+      ...prev,
+      permissions: prev.permissions.includes(key)
+        ? prev.permissions.filter((p) => p !== key)
+        : [...prev.permissions, key],
+    }));
+  };
+
+  const toggleAllPermissions = () => {
+    if (form.permissions.length === ALL_PERMISSIONS.length) {
+      setForm((prev) => ({ ...prev, permissions: [] }));
+    } else {
+      setForm((prev) => ({ ...prev, permissions: ALL_PERMISSIONS.map((p) => p.key) }));
     }
   };
 
@@ -150,7 +175,7 @@ export default function ProfilesTab() {
                   {(profile.pages || []).length === 0 ? (
                     <span className="text-xs text-slate-400">Nenhuma tela selecionada</span>
                   ) : (profile.pages || []).length === ALL_PAGES.length ? (
-                    <Badge variant="secondary" className="text-xs">Acesso total</Badge>
+                    <Badge variant="secondary" className="text-xs">Acesso total às telas</Badge>
                   ) : (
                     (profile.pages || []).map((key) => {
                       const page = ALL_PAGES.find((p) => p.key === key);
@@ -160,6 +185,16 @@ export default function ProfilesTab() {
                     })
                   )}
                 </div>
+                {(profile.permissions || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {(profile.permissions || []).map((key) => {
+                      const perm = ALL_PERMISSIONS.find((p) => p.key === key);
+                      return perm ? (
+                        <Badge key={key} className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-100">{perm.label}</Badge>
+                      ) : null;
+                    })}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(profile)}>
@@ -180,7 +215,7 @@ export default function ProfilesTab() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Perfil" : "Novo Perfil"}</DialogTitle>
           </DialogHeader>
@@ -224,6 +259,36 @@ export default function ProfilesTab() {
                     />
                     <span className="text-sm font-medium text-slate-700">{page.label}</span>
                     <span className="text-xs text-slate-400 ml-auto">{page.path}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Permissões de ações</Label>
+                <button
+                  type="button"
+                  onClick={toggleAllPermissions}
+                  className="text-xs text-slate-500 hover:text-slate-800 underline"
+                >
+                  {form.permissions.length === ALL_PERMISSIONS.length ? "Desmarcar todas" : "Marcar todas"}
+                </button>
+              </div>
+              <div className="border rounded-lg divide-y">
+                {ALL_PERMISSIONS.map((perm) => (
+                  <label
+                    key={perm.key}
+                    className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                  >
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={form.permissions.includes(perm.key)}
+                      onCheckedChange={() => togglePermission(perm.key)}
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">{perm.label}</p>
+                      <p className="text-xs text-slate-400">{perm.description}</p>
+                    </div>
                   </label>
                 ))}
               </div>
