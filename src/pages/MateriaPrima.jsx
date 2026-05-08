@@ -8,9 +8,11 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import MateriaPrimaReport from "@/components/reports/MateriaPrimaReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
+import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function MateriaPrima() {
   const queryClient = useQueryClient();
+  const { allowedCnpjs } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showReport, setShowReport] = useState(false);
@@ -69,7 +71,8 @@ export default function MateriaPrima() {
         const year = date.getFullYear();
         return `${month}-${year}` === filters.monthYear;
       })());
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch;
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch;
     });
 
     filtered.sort((a, b) => {
@@ -85,7 +88,7 @@ export default function MateriaPrima() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers]);
+  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {

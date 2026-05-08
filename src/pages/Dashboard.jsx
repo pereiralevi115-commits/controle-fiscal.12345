@@ -3,11 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import BranchCard from "@/components/dashboard/BranchCard";
 import { FileText } from "lucide-react";
+import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
 export default function Dashboard() {
+  const { allowedCnpjs } = useBranchFilter();
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
@@ -39,7 +41,11 @@ export default function Dashboard() {
 
   // Same filter as Notas Fiscais page: exclude cancelled and hidden suppliers
   const hiddenCnpjs = new Set(suppliers.filter(s => s.hidden).map(s => s.cnpj));
-  const visibleInvoices = invoices.filter(inv => !inv.cancelled && !hiddenCnpjs.has(inv.supplier_cnpj));
+  const visibleInvoices = invoices.filter(inv =>
+    !inv.cancelled &&
+    !hiddenCnpjs.has(inv.supplier_cnpj) &&
+    (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))
+  );
 
   // Group invoices by branch
   const grouped = {};

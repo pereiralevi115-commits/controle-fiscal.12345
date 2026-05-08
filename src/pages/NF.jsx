@@ -5,9 +5,11 @@ import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function NF() {
   const queryClient = useQueryClient();
+  const { allowedCnpjs } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", month: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
@@ -75,7 +77,8 @@ export default function NF() {
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
 
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch;
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch && liderBranchMatch;
     });
 
     filtered.sort((a, b) => {
@@ -91,7 +94,7 @@ export default function NF() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers]);
+  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {

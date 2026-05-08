@@ -5,9 +5,11 @@ import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function GestaodeFrota() {
   const queryClient = useQueryClient();
+  const { allowedCnpjs } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
@@ -65,7 +67,8 @@ export default function GestaodeFrota() {
         const year = date.getFullYear();
         return `${month}-${year}` === filters.monthYear;
       })());
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch;
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch;
     });
 
     filtered.sort((a, b) => {
@@ -81,7 +84,7 @@ export default function GestaodeFrota() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers]);
+  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {

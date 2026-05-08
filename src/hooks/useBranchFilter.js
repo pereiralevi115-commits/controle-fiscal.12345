@@ -1,0 +1,38 @@
+import { useAuth } from '@/lib/AuthContext';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
+
+/**
+ * Returns the list of branch CNPJs the current user is allowed to see.
+ * If the user is a Líder with branch_ids, returns only their branch CNPJs.
+ * Otherwise returns null (no restriction).
+ */
+export function useBranchFilter() {
+  const { user } = useAuth();
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['userProfiles'],
+    queryFn: () => base44.entities.UserProfile.list(),
+  });
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['branches'],
+    queryFn: () => base44.entities.Branch.list(),
+  });
+
+  if (!user) return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches };
+
+  const profile = profiles.find((p) => p.id === user.profile_id);
+  const isLider = profile?.name?.toLowerCase() === 'líder' || profile?.name?.toLowerCase() === 'lider';
+
+  if (!isLider || !user.branch_ids?.length) {
+    return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches };
+  }
+
+  const allowedBranchIds = user.branch_ids;
+  const allowedCnpjs = branches
+    .filter((b) => allowedBranchIds.includes(b.id))
+    .map((b) => b.cnpj);
+
+  return { allowedCnpjs, allowedBranchIds, isLider: true, branches };
+}
