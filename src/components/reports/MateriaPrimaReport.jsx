@@ -63,16 +63,9 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
     return totals;
   }, [groupedData, sortedBranches]);
 
-  const handleGeneratePDF = async () => {
+  const handleGeneratePDF = () => {
     setIsGenerating(true);
     try {
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -81,21 +74,158 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const margin = 15;
+      const contentWidth = pageWidth - margin * 2;
+      let yPosition = margin;
 
-      let heightLeft = imgHeight;
-      let position = 10;
+      // Função auxiliar para adicionar texto com quebra de linha
+      const addText = (text, fontSize, fontWeight, color = [0, 0, 0]) => {
+        pdf.setFontSize(fontSize);
+        pdf.setTextColor(...color);
+        pdf.setFont(undefined, fontWeight);
+        const lines = pdf.splitTextToSize(text, contentWidth - 10);
+        pdf.text(lines, margin, yPosition);
+        yPosition += lines.length * (fontSize / 2.5) + 2;
+        return yPosition;
+      };
 
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 20;
+      // Cabeçalho
+      addText("Relatório — Matéria Prima", 16, "bold", [0, 0, 0]);
+      yPosition += 2;
+      addText(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 8, "normal", [100, 100, 100]);
+      yPosition += 8;
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+      // Linha divisória
+      pdf.setDrawColor(30, 41, 59);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 6;
+
+      // Resumo
+      pdf.setFillColor(240, 244, 248);
+      pdf.rect(margin, yPosition, contentWidth, 10, "F");
+      pdf.setFontSize(9);
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont(undefined, "normal");
+      pdf.text(`${invoices.length} nota(s) · ${sortedBranches.length} filial(is)`, margin + 3, yPosition + 6);
+      yPosition += 14;
+
+      // Por cada filial
+      sortedBranches.forEach((branchName, branchIndex) => {
+        // Quebra de página para nova filial (exceto a primeira)
+        if (branchIndex > 0) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+
+        const supplierMap = groupedData[branchName];
+        const sortedSuppliers = Object.keys(supplierMap).sort();
+
+        // Cabeçalho da filial
+        pdf.setFillColor(30, 41, 59);
+        pdf.rect(margin, yPosition, contentWidth, 9, "F");
+        pdf.setFontSize(11);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont(undefined, "bold");
+        pdf.text(branchName, margin + 3, yPosition + 6);
+        yPosition += 13;
+
+        // Fornecedores
+        sortedSuppliers.forEach((supplierName) => {
+          const invList = supplierMap[supplierName];
+          const supplierTotal = invList.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
+
+          // Verificar se precisa de nova página
+          if (yPosition > pageHeight - margin - 40) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+
+          // Nome do fornecedor
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(margin, yPosition, contentWidth, 7, "F");
+          pdf.setFontSize(10);
+          pdf.setTextColor(15, 23, 42);
+          pdf.setFont(undefined, "bold");
+          pdf.text(supplierName, margin + 2, yPosition + 5);
+          yPosition += 9;
+
+          // Cabeçalho da tabela
+          pdf.setFillColor(241, 245, 249);
+          pdf.setFontSize(8);
+          pdf.setTextColor(51, 65, 85);
+          pdf.setFont(undefined, "bold");
+          
+          const tableY = yPosition;
+          pdf.rect(margin, tableY, contentWidth, 5, "F");
+          pdf.text("NF", margin + 2, tableY + 3.5);
+          pdf.text("Emissão", margin + 20, tableY + 3.5);
+          pdf.text("Vencimento", margin + 40, tableY + 3.5);
+          pdf.text("Produtos", margin + 65, tableY + 3.5);
+          pdf.text("Valor", pageWidth - margin - 15, tableY + 3.5, { align: "right" });
+          yPosition += 7;
+
+          // Linhas da tabela
+          invList.forEach((inv) => {
+            if (yPosition > pageHeight - margin - 15) {
+              pdf.addPage();
+              yPosition = margin;
+            }
+
+            pdf.setFontSize(8);
+            pdf.setTextColor(15, 23, 42);
+            pdf.setFont(undefined, "normal");
+
+            const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
+            const products = inv.items && inv.items.length > 0
+              ? inv.items.map(item => item.description).join(", ")
+              : "—";
+
+            pdf.text(nf, margin + 2, yPosition + 3);
+            pdf.text(formatDate(inv.issue_date), margin + 20, yPosition + 3);
+            pdf.text(formatDate(inv.due_date), margin + 40, yPosition + 3);
+            
+            const productLines = pdf.splitTextToSize(products, 20);
+            pdf.text(productLines, margin + 65, yPosition + 3);
+            
+            pdf.text(formatCurrency(inv.total_value), pageWidth - margin - 2, yPosition + 3, { align: "right" });
+
+            yPosition += 5;
+          });
+
+          // Subtotal do fornecedor
+          pdf.setFillColor(241, 245, 249);
+          pdf.setFontSize(8);
+          pdf.setTextColor(15, 23, 42);
+          pdf.setFont(undefined, "bold");
+          pdf.rect(margin, yPosition, contentWidth, 5, "F");
+          pdf.text("Subtotal:", pageWidth - margin - 40, yPosition + 3.5);
+          pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 2, yPosition + 3.5, { align: "right" });
+          yPosition += 7;
+        });
+
+        // Total da filial
+        pdf.setFillColor(71, 85, 105);
+        pdf.setFontSize(9);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont(undefined, "bold");
+        pdf.rect(margin, yPosition, contentWidth, 7, "F");
+        pdf.text(`TOTAL ${branchName.toUpperCase()} — ${formatCurrency(branchTotals[branchName])}`, margin + 2, yPosition + 5);
+        yPosition += 10;
+      });
+
+      // Total geral
+      if (yPosition > pageHeight - margin - 20) {
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - 20;
+        yPosition = margin;
       }
+
+      pdf.setFillColor(30, 41, 59);
+      pdf.setFontSize(10);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont(undefined, "bold");
+      pdf.rect(margin, yPosition, contentWidth, 8, "F");
+      pdf.text(`TOTAL GERAL — ${invoices.length} nota(s)`, margin + 2, yPosition + 5.5);
+      pdf.text(formatCurrency(grandTotal), pageWidth - margin - 2, yPosition + 5.5, { align: "right" });
 
       pdf.save("Relatorio-Materia-Prima.pdf");
     } catch (error) {
