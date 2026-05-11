@@ -149,6 +149,11 @@
       "type": "string",
       "description": "Motivo do cancelamento"
     },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a nota foi arquivada manualmente"
+    },
     "items": {
       "type": "array",
       "description": "Itens da nota fiscal",

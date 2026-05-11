@@ -27,8 +27,8 @@ export default function Arquivadas() {
 
   const filteredInvoices = useMemo(() => {
     let filtered = invoices.filter((inv) => {
-      // Apenas notas com os 3 marcados
-      if (!inv.sigv_recorded || !inv.topcon_recorded || !inv.boleto_recorded) return false;
+      // Apenas notas arquivadas manualmente
+      if (!inv.archived) return false;
 
       const searchMatch =
         filters.search === "" ||
@@ -87,7 +87,7 @@ export default function Arquivadas() {
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Arquivadas</h1>
           <p className="text-slate-500 mt-1">
-            Notas com SIGV, TOPCON e BOLETO registrados — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
+            Notas arquivadas — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
           </p>
         </div>
 

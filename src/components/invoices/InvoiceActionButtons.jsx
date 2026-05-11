@@ -47,7 +47,15 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
         <Button
           variant="outline"
           size="sm"
-          className="h-7 px-3 text-xs font-medium border-red-500 text-red-600 hover:bg-red-50"
+          onClick={() => recordMutation.mutate({ archived: !invoice.archived }, {
+            onSuccess: () => toast.success(invoice.archived ? "Nota desarquivada!" : "Nota arquivada!")
+          })}
+          disabled={recordMutation.isPending}
+          className={`h-7 px-3 text-xs font-medium transition-all border-red-500 ${
+            invoice.archived
+              ? "bg-red-600 text-white border-2"
+              : "text-red-600 hover:bg-red-50"
+          }`}
         >
           ARQUIVAR
         </Button>
