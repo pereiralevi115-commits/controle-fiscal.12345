@@ -4,9 +4,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { Link } from "react-router-dom";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user, userProfile } = useAuth();
+  const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras';
   const queryClient = useQueryClient();
 
   const recordMutation = useMutation({
@@ -41,6 +43,15 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   return (
     <div className="flex items-center justify-end gap-2">
+      {showOutrasOperacoes && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-3 text-xs font-medium border-red-500 text-red-600 hover:bg-red-50"
+        >
+          OUTRAS OPERAÇÕES
+        </Button>
+      )}
       {buttons.map((btn) => {
         const canEdit = hasPermission(btn.permission);
         return (
