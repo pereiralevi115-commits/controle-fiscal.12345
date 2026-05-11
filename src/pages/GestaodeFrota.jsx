@@ -68,8 +68,9 @@ export default function GestaodeFrota() {
         return `${month}-${year}` === filters.monthYear;
       })());
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived && !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived;
+      const notArchived = !inv.archived;
+      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived && notCompleted;
     });
 
     filtered.sort((a, b) => {
