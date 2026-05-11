@@ -18,6 +18,13 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     },
   });
 
+  const handleArchive = () => {
+    const newValue = !invoice.archived;
+    recordMutation.mutate({ archived: newValue }, {
+      onSuccess: () => toast.success(newValue ? "Nota arquivada!" : "Nota desarquivada!"),
+    });
+  };
+
   const handleButtonClick = (buttonType) => {
     const fieldMap = {
       SIGV: "sigv_recorded",
@@ -47,9 +54,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => recordMutation.mutate({ archived: !invoice.archived }, {
-            onSuccess: () => toast.success(invoice.archived ? "Nota desarquivada!" : "Nota arquivada!")
-          })}
+          onClick={() => handleArchive()}
           disabled={recordMutation.isPending}
           className={`h-7 px-3 text-xs font-medium transition-all border-red-500 ${
             invoice.archived
