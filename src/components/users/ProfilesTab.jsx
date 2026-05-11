@@ -18,6 +18,7 @@ const ALL_PAGES = [
   { key: "gestao-compras", label: "Gestão de Compras", path: "/gestao-compras" },
   { key: "gestao-frota", label: "Gestão de Frota", path: "/gestao-frota" },
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
+  { key: "arquivadas", label: "Arquivadas", path: "/arquivadas" },
   { key: "importar", label: "Importar XML", path: "/importar" },
   { key: "fornecedores", label: "Fornecedores", path: "/fornecedores" },
   { key: "filiais", label: "Filiais", path: "/filiais" },
