@@ -68,7 +68,8 @@ export default function Controladoria() {
         return `${month}-${year}` === filters.monthYear;
       })());
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch;
+      const notArchived = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived;
     });
 
     filtered.sort((a, b) => {

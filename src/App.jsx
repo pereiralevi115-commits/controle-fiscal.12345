@@ -17,6 +17,7 @@ import GestaodeFrota from './pages/GestaodeFrota';
 import Controladoria from './pages/Controladoria';
 import NF from './pages/NF';
 import UsersPage from './pages/Users';
+import Arquivadas from './pages/Arquivadas';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -39,6 +40,8 @@ const AuthenticatedApp = () => {
         return <GestaodeFrota />;
       case '/controladoria':
         return <Controladoria />;
+      case '/arquivadas':
+        return <Arquivadas />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':

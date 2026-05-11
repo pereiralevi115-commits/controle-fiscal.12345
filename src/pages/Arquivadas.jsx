@@ -1,16 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 
-export default function GestaodeFrota() {
-  const queryClient = useQueryClient();
+export default function Arquivadas() {
   const { allowedCnpjs } = useBranchFilter();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", month: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -27,49 +25,25 @@ export default function GestaodeFrota() {
     queryFn: () => base44.entities.Branch.list(),
   });
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => base44.entities.Supplier.list(),
-  });
-
-  const markReceivedMutation = useMutation({
-    mutationFn: (invoice) =>
-      base44.entities.Invoice.update(invoice.id, {
-        status: "recebida",
-        received_date: new Date().toISOString().split("T")[0],
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      setSelectedInvoice(null);
-      toast.success("Nota marcada como recebida!");
-    },
-  });
-
   const filteredInvoices = useMemo(() => {
     let filtered = invoices.filter((inv) => {
+      // Apenas notas com os 3 marcados
+      if (!inv.sigv_recorded || !inv.topcon_recorded || !inv.boleto_recorded) return false;
+
       const searchMatch =
         filters.search === "" ||
         inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
         inv.number?.includes(filters.search);
-      const statusMatch = filters.status === "all" || inv.status === filters.status;
+
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
+
       let cancelledMatch = true;
       if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
       else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
-      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
-      const supplierNotHidden = supplier && supplier.gestao_frota === true;
-      const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
-      const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
-      const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
-        const date = new Date(inv.issue_date + "T12:00:00");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${month}-${year}` === filters.monthYear;
-      })());
+
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived;
+
+      return searchMatch && branchMatch && cancelledMatch && liderBranchMatch;
     });
 
     filtered.sort((a, b) => {
@@ -85,12 +59,16 @@ export default function GestaodeFrota() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
+  }, [invoices, filters, sortConfig, allowedCnpjs]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
       const existing = prev.find((s) => s.key === key);
-      if (existing) return prev.map((s) => s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s);
+      if (existing) {
+        return prev.map((s) =>
+          s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s
+        );
+      }
       return [{ key, direction: "asc" }, ...prev];
     });
   };
@@ -107,19 +85,19 @@ export default function GestaodeFrota() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Gestão de Frota</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Arquivadas</h1>
           <p className="text-slate-500 mt-1">
-            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
+            Notas com SIGV, TOPCON e BOLETO registrados — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
 
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable
             invoices={filteredInvoices}
             branches={branches}
-            onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
+            onMarkReceived={() => {}}
             onViewDetails={setSelectedInvoice}
             sortConfig={sortConfig}
             onSort={handleSort}
@@ -130,7 +108,6 @@ export default function GestaodeFrota() {
           invoice={selectedInvoice}
           open={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
-          onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
           branches={branches}
         />
       </div>
