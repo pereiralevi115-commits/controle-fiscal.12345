@@ -49,7 +49,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
           size="sm"
           className="h-7 px-3 text-xs font-medium border-red-500 text-red-600 hover:bg-red-50"
         >
-          OUTRAS OPERAÇÕES
+          ARQUIVAR
         </Button>
       )}
       {buttons.map((btn) => {
