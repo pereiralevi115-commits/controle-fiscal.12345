@@ -38,6 +38,8 @@ export default function ImportXml() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+
   const handleImport = async () => {
     if (files.length === 0) return;
     setImporting(true);
@@ -57,18 +59,44 @@ export default function ImportXml() {
         )
       );
 
-      const response = await base44.functions.invoke("parseXml", {
-        xml_contents: xmlContents,
-      });
+      const BATCH_SIZE = 5;
+      const totalBatches = Math.ceil(xmlContents.length / BATCH_SIZE);
+      let totalSuccess = 0;
+      let totalErrors = 0;
+      let allErrorDetails = [];
 
-      setResult(response.data);
+      setProgress({ current: 0, total: xmlContents.length });
+
+      for (let b = 0; b < totalBatches; b++) {
+        const batch = xmlContents.slice(b * BATCH_SIZE, (b + 1) * BATCH_SIZE);
+        const response = await base44.functions.invoke("parseXml", {
+          xml_contents: batch,
+        });
+        totalSuccess += response.data.success || 0;
+        totalErrors += response.data.errors || 0;
+        allErrorDetails = allErrorDetails.concat(
+          (response.data.error_details || []).map(e => ({
+            ...e,
+            index: e.index + b * BATCH_SIZE
+          }))
+        );
+        setProgress({ current: Math.min((b + 1) * BATCH_SIZE, xmlContents.length), total: xmlContents.length });
+
+        // Pause between batches
+        if (b < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      const finalResult = { success: totalSuccess, errors: totalErrors, error_details: allErrorDetails, total: xmlContents.length };
+      setResult(finalResult);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
 
-      if (response.data.success > 0) {
-        toast.success(`${response.data.success} nota(s) importada(s) com sucesso!`);
+      if (totalSuccess > 0) {
+        toast.success(`${totalSuccess} nota(s) importada(s) com sucesso!`);
       }
-      if (response.data.errors > 0) {
-        toast.warning(`${response.data.errors} arquivo(s) com erro`);
+      if (totalErrors > 0) {
+        toast.warning(`${totalErrors} arquivo(s) com erro`);
       }
 
       setFiles([]);
@@ -76,6 +104,7 @@ export default function ImportXml() {
       toast.error("Erro ao importar: " + (error?.response?.data?.error || error.message));
     } finally {
       setImporting(false);
+      setProgress({ current: 0, total: 0 });
     }
   };
 
@@ -153,7 +182,7 @@ export default function ImportXml() {
               {importing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Importando...
+                  {progress.total > 0 ? `Importando ${progress.current}/${progress.total}...` : "Importando..."}
                 </>
               ) : (
                 <>

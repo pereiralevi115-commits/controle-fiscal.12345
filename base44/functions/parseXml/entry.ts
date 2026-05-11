@@ -275,10 +275,10 @@ Deno.serve(async (req) => {
         const created = await base44.asServiceRole.entities.Invoice.create(parsed);
         results.push(created);
 
-        // Delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 150));
+        // Delay between each request to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 400));
         if ((i + 1) % 5 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
       } catch (err) {
         errors.push({ index: i, error: err.message });
