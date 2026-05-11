@@ -1,15 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
-import { Link } from "react-router-dom";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
   const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras' || userProfile?.name === 'Gestor';
   const queryClient = useQueryClient();
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [archiveNotes, setArchiveNotes] = useState("");
 
   const recordMutation = useMutation({
     mutationFn: (data) => base44.entities.Invoice.update(invoiceId, data),
@@ -18,10 +22,24 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     },
   });
 
-  const handleArchive = () => {
-    const newValue = !invoice.archived;
-    recordMutation.mutate({ archived: newValue }, {
-      onSuccess: () => toast.success(newValue ? "Nota arquivada!" : "Nota desarquivada!"),
+  const handleArchiveClick = () => {
+    if (invoice.archived) {
+      // Desarquivar direto, sem dialog
+      recordMutation.mutate({ archived: false, archive_notes: "" }, {
+        onSuccess: () => toast.success("Nota desarquivada!"),
+      });
+    } else {
+      setArchiveNotes("");
+      setShowArchiveDialog(true);
+    }
+  };
+
+  const handleArchiveConfirm = () => {
+    recordMutation.mutate({ archived: true, archive_notes: archiveNotes }, {
+      onSuccess: () => {
+        toast.success("Nota arquivada!");
+        setShowArchiveDialog(false);
+      },
     });
   };
 
@@ -49,12 +67,46 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   ];
 
   return (
+    <>
+      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Arquivar Nota Fiscal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              NF {invoice.series ? `${invoice.series}/` : ""}{invoice.number} — {invoice.supplier_name}
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="archive-notes">Observação</Label>
+              <Textarea
+                id="archive-notes"
+                placeholder="Digite o motivo ou observação para arquivar..."
+                value={archiveNotes}
+                onChange={(e) => setArchiveNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={handleArchiveConfirm}
+              disabled={recordMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Arquivar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     <div className="flex items-center justify-end gap-2">
       {showOutrasOperacoes && (
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleArchive()}
+          onClick={handleArchiveClick}
           disabled={recordMutation.isPending}
           className={`h-7 px-3 text-xs font-medium transition-all border-red-500 ${
             invoice.archived
@@ -85,5 +137,6 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
         );
       })}
     </div>
+    </>
   );
 }
