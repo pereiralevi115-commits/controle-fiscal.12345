@@ -13,7 +13,7 @@ const formatCurrency = (value) =>
 export default function Dashboard() {
   const { allowedCnpjs } = useBranchFilter();
   const { user, userProfile } = useAuth();
-  const isCompras = user?.role === 'admin' ? false : userProfile?.name === 'Compras';
+  const isCompras = user?.role === 'admin' || userProfile?.name === 'Compras';
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
