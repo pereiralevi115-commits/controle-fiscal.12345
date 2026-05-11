@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Users, Pencil } from "lucide-react";
+import { UserPlus, Users, Pencil, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProfilesTab from "@/components/users/ProfilesTab";
 
@@ -23,6 +23,65 @@ export default function UsersPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [editForm, setEditForm] = useState({ role: "user", profile_id: "" });
+
+  const [sortConfig, setSortConfig] = useState([]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      const existing = prev.find((s) => s.key === key);
+      if (existing) {
+        if (existing.direction === "asc") {
+          return [{ key, direction: "desc" }];
+        } else {
+          return [];
+        }
+      } else {
+        return [{ key, direction: "asc" }];
+      }
+    });
+  };
+
+  const sortedUsers = React.useMemo(() => {
+    let result = [...users];
+    if (sortConfig.length > 0) {
+      const { key, direction } = sortConfig[0];
+      result.sort((a, b) => {
+        let aVal = a[key];
+        let bVal = b[key];
+        if (typeof aVal === "string") {
+          aVal = aVal?.toLowerCase() || "";
+          bVal = bVal?.toLowerCase() || "";
+        }
+        if (aVal < bVal) return direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [users, sortConfig]);
+
+  const SortableHeader = ({ label, sortKey }) => {
+    const sortConfig_item = sortConfig.find((s) => s.key === sortKey);
+    return (
+      <button
+        onClick={() => handleSort(sortKey)}
+        className="flex items-center gap-2 hover:text-foreground transition-colors"
+      >
+        {label}
+        <span className="inline-block">
+          {sortConfig_item ? (
+            sortConfig_item.direction === "asc" ? (
+              <ArrowUp className="w-4 h-4" />
+            ) : (
+              <ArrowDown className="w-4 h-4" />
+            )
+          ) : (
+            <ArrowUpDown className="w-4 h-4 opacity-30" />
+          )}
+        </span>
+      </button>
+    );
+  };
 
   const queryClient = useQueryClient();
 
@@ -145,17 +204,25 @@ export default function UsersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold">Nome</TableHead>
-                        <TableHead className="font-semibold">Email</TableHead>
-                        <TableHead className="font-semibold">Função</TableHead>
+                        <TableHead className="font-semibold">
+                          <SortableHeader label="Nome" sortKey="full_name" />
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          <SortableHeader label="Email" sortKey="email" />
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          <SortableHeader label="Função" sortKey="role" />
+                        </TableHead>
                         <TableHead className="font-semibold">Perfil de Acesso</TableHead>
                         <TableHead className="font-semibold">Filiais</TableHead>
-                        <TableHead className="font-semibold">Cadastrado em</TableHead>
+                        <TableHead className="font-semibold">
+                          <SortableHeader label="Cadastrado em" sortKey="created_date" />
+                        </TableHead>
                         <TableHead className="font-semibold"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
+                      {sortedUsers.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
