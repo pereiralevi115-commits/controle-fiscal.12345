@@ -78,7 +78,7 @@ export default function NF() {
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
 
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      const notArchived = !inv.archived && !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
       return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived;
     });
 

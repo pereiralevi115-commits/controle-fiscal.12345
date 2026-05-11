@@ -73,7 +73,7 @@ export default function Invoices() {
       const monthMatch = filters.month === "all" || (inv.issue_date && new Date(inv.issue_date).getMonth() + 1 === parseInt(filters.month));
 
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      const notArchived = !inv.archived && !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
       return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierHasNoCategory && sigvMatch && topconMatch && boletoMatch && monthMatch && liderBranchMatch && notArchived;
     });
 
