@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
-  const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras';
+  const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras' || userProfile?.name === 'Gestor';
   const queryClient = useQueryClient();
 
   const recordMutation = useMutation({
