@@ -86,6 +86,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
             </TableHead>
             <TableHead className="font-semibold">Produto</TableHead>
             <TableHead className="font-semibold">Informações Adicionais</TableHead>
+            <TableHead className="font-semibold">Obs. Arquivamento</TableHead>
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -149,6 +150,17 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                       : "—"}
                   </span>
                 </InvoiceTableTooltip>
+              </TableCell>
+              <TableCell className="text-sm">
+                {invoice.archive_notes ? (
+                  <InvoiceTableTooltip content={invoice.archive_notes}>
+                    <span className="cursor-help text-red-600">
+                      {invoice.archive_notes.length > 30
+                        ? invoice.archive_notes.substring(0, 30) + "..."
+                        : invoice.archive_notes}
+                    </span>
+                  </InvoiceTableTooltip>
+                ) : "—"}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">

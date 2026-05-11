@@ -272,6 +272,16 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             </div>
           )}
 
+          {/* ARQUIVAMENTO */}
+          {invoice.archived && invoice.archive_notes && (
+            <div className="border rounded-lg overflow-hidden bg-red-50">
+              <SectionHeader title="ARQUIVAMENTO" />
+              <div className="p-6">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{invoice.archive_notes}</p>
+              </div>
+            </div>
+          )}
+
           {/* CANCELAMENTO */}
           {invoice.cancelled && (
             <div className="border rounded-lg overflow-hidden bg-red-50">
