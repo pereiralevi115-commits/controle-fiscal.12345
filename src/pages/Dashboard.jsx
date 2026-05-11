@@ -5,7 +5,6 @@ import BranchCard from "@/components/dashboard/BranchCard";
 import { FileText } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useAuth } from "@/lib/AuthContext";
-import { Button } from "@/components/ui/button";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -13,7 +12,6 @@ const formatCurrency = (value) =>
 export default function Dashboard() {
   const { allowedCnpjs } = useBranchFilter();
   const { user, userProfile } = useAuth();
-  const isCompras = user?.role === 'admin' || userProfile?.name === 'Compras';
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
@@ -88,11 +86,7 @@ export default function Dashboard() {
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
             <p className="text-slate-500 mt-1">Controle de lançamentos por filial</p>
           </div>
-          {isCompras && (
-            <Button className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6">
-              OUTRAS OPERAÇÕES
-            </Button>
-          )}
+
         </div>
 
         <div className="space-y-5">
