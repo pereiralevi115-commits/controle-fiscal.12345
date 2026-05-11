@@ -95,6 +95,14 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
         </div>
 
         <div className="p-6 space-y-6">
+          {/* ARQUIVAMENTO */}
+          {invoice.archived && invoice.archive_notes && (
+            <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded">
+              <p className="text-xs text-red-600 font-semibold uppercase tracking-wider mb-1">Observação de Arquivamento</p>
+              <p className="text-sm text-red-700 font-medium">{invoice.archive_notes}</p>
+            </div>
+          )}
+
           {/* IDENTIFICAÇÃO */}
           <div className="border rounded-lg overflow-hidden">
             <SectionHeader title="IDENTIFICAÇÃO" />
@@ -268,16 +276,6 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
               <SectionHeader title="CHAVE DE ACESSO" />
               <div className="p-6">
                 <p className="font-mono text-sm break-all">{invoice.access_key}</p>
-              </div>
-            </div>
-          )}
-
-          {/* ARQUIVAMENTO */}
-          {invoice.archived && invoice.archive_notes && (
-            <div className="border rounded-lg overflow-hidden bg-red-50">
-              <SectionHeader title="ARQUIVAMENTO" />
-              <div className="p-6">
-                <p className="text-sm text-foreground whitespace-pre-wrap">{invoice.archive_notes}</p>
               </div>
             </div>
           )}
