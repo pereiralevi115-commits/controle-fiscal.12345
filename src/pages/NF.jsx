@@ -65,12 +65,12 @@ export default function NF() {
       // (exclui materia_prima, pois tem página própria, e hidden)
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
-      // NF: apenas fornecedores sem nenhuma categoria especial
       const supplierInScope = !supplier || (
-        !supplier.materia_prima &&
-        !supplier.gestao_compras &&
-        !supplier.gestao_frota &&
-        !supplier.controladoria
+        !supplier.materia_prima && (
+          !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria
+            ? true // sem categoria
+            : supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria
+        )
       );
 
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
