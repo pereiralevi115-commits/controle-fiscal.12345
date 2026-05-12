@@ -19,7 +19,7 @@ export default function GestaodeFrota() {
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 500),
+    queryFn: () => base44.entities.Invoice.list("-issue_date", 50000),
   });
 
   const { data: branches = [] } = useQuery({
