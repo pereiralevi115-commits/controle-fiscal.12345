@@ -10,7 +10,7 @@ const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
 export default function Dashboard() {
-  const { allowedCnpjs } = useBranchFilter();
+  const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
@@ -27,7 +27,7 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Supplier.list(),
   });
 
-  const isLoading = loadingInvoices || loadingBranches || loadingSuppliers;
+  const isLoading = loadingInvoices || loadingBranches || loadingSuppliers || branchFilterLoading;
 
   if (isLoading) {
     return (
