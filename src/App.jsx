@@ -27,7 +27,7 @@ const AuthenticatedApp = () => {
   const renderPage = () => {
     switch (location.pathname) {
       case '/':
-        return <Invoices />;
+        return <Dashboard />;
       case '/nf':
         return <NF />;
       case '/notas':
