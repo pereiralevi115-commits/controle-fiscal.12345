@@ -91,20 +91,24 @@ export default function Dashboard() {
   });
 
   // Helper: count invoices by screen category
-  // "notas" = tela Notas Fiscais (/notas): fornecedores sem categoria especial, sem materia_prima
+  // Replica exatamente a lógica de cada tela (mesmos filtros: não cancelada, não arquivada, não 100% concluída)
   // NF (/nf) e Matéria Prima NÃO entram na contagem de telas
+  const isCompleted = (inv) => inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
+
   const countByScreen = (invs, archivedInvs) => {
     let notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
       if (s?.materia_prima) return; // exclui matéria prima
-      if (s?.gestao_compras) { compras++; return; }
-      if (s?.gestao_frota) { frota++; return; }
-      if (s?.controladoria) { controladoria++; return; }
+      // cada tela também exclui notas 100% concluídas
+      const completed = isCompleted(inv);
+      if (s?.gestao_compras) { if (!completed) compras++; return; }
+      if (s?.gestao_frota)   { if (!completed) frota++;   return; }
+      if (s?.controladoria)  { if (!completed) controladoria++; return; }
       // sem categoria especial = tela Notas Fiscais (/notas)
-      notas++;
+      if (!completed) notas++;
     });
-    // arquivadas: notas arquivadas desta filial (de qualquer tela exceto materia_prima)
+    // arquivadas: notas arquivadas desta filial (de qualquer tela exceto materia_prima e NF)
     if (archivedInvs) {
       archivedInvs.forEach(inv => {
         const s = supplierMap[inv.supplier_cnpj];
