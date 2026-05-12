@@ -61,7 +61,8 @@ export default function Dashboard() {
   // Notas arquivadas (para contar na seção de telas)
   const archivedInvoices = invoices.filter(inv => {
     if (inv.cancelled) return false;
-    if (!inv.archived) return false;
+    const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
+    if (!inv.archived && !allRecorded) return false;
     if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
     return true;
