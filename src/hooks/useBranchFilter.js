@@ -22,13 +22,10 @@ export function useBranchFilter() {
 
   const isLoading = isLoadingAuth || profilesLoading || branchesLoading;
 
-  // Enquanto o auth ainda carrega, bloqueia tudo
-  if (isLoadingAuth) return { allowedCnpjs: [], allowedBranchIds: [], isLider: null, branches, isLoading: true };
+  // Enquanto o auth ou os dados ainda carregam, bloqueia com isLoading=true e allowedCnpjs=null
+  if (isLoading) return { allowedCnpjs: null, allowedBranchIds: null, isLider: null, branches, isLoading: true };
 
   if (!user) return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches, isLoading: false };
-
-  // Enquanto carrega, retorna um array vazio para não mostrar dados antes de saber o perfil
-  if (isLoading) return { allowedCnpjs: [], allowedBranchIds: [], isLider: null, branches, isLoading: true };
 
   const profile = profiles.find((p) => p.id === user.profile_id);
   const isLider = profile?.name?.toLowerCase() === 'líder' || profile?.name?.toLowerCase() === 'lider';
