@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, CheckSquare, Receipt, BookOpen, DollarSign, ShoppingCart, Truck, BarChart2, Leaf } from "lucide-react";
+import { FileText, CheckSquare, Receipt, BookOpen, DollarSign, ShoppingCart, Truck, BarChart2 } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -52,11 +52,11 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ];
 
   const screenStats = screens ? [
-    { icon: FileText,    iconBg: "bg-slate-100",  iconColor: "text-slate-600",  value: screens.nf,          label: "NF" },
-    { icon: ShoppingCart, iconBg: "bg-blue-50",   iconColor: "text-blue-600",   value: screens.compras,     label: "Gest. Compras" },
-    { icon: Truck,       iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",   value: screens.frota,       label: "Gest. Frota" },
+    { icon: FileText,    iconBg: "bg-slate-100",  iconColor: "text-slate-600",  value: screens.notas,         label: "Notas Fiscais" },
+    { icon: ShoppingCart, iconBg: "bg-blue-50",   iconColor: "text-blue-600",   value: screens.compras,       label: "Gest. Compras" },
+    { icon: Truck,       iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",   value: screens.frota,         label: "Gest. Frota" },
     { icon: BarChart2,   iconBg: "bg-indigo-50",  iconColor: "text-indigo-600", value: screens.controladoria, label: "Controladoria" },
-    { icon: Leaf,        iconBg: "bg-lime-50",    iconColor: "text-lime-600",   value: screens.materia,     label: "Mat. Prima" },
+    { icon: Receipt,     iconBg: "bg-amber-50",   iconColor: "text-amber-600",  value: screens.arquivadas,    label: "Arquivadas" },
   ] : null;
 
   return (

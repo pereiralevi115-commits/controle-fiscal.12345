@@ -58,6 +58,15 @@ export default function Dashboard() {
   const accessesNotas         = isAdmin || isLider || canAccessPage('notas');
   const accessesArquivadas    = isAdmin || isLider || canAccessPage('arquivadas');
 
+  // Notas arquivadas (para contar na seção de telas)
+  const archivedInvoices = invoices.filter(inv => {
+    if (inv.cancelled) return false;
+    if (!inv.archived) return false;
+    if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
+    if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
+    return true;
+  });
+
   const visibleInvoices = invoices.filter(inv => {
     if (inv.cancelled) return false;
     if (inv.archived) return false;
@@ -82,37 +91,51 @@ export default function Dashboard() {
   });
 
   // Helper: count invoices by screen category
-  const countByScreen = (invs) => {
-    let nf = 0, compras = 0, frota = 0, controladoria = 0, materia = 0;
+  // "notas" = tela Notas Fiscais (/notas): fornecedores sem categoria especial, sem materia_prima
+  // NF (/nf) e Matéria Prima NÃO entram na contagem de telas
+  const countByScreen = (invs, archivedInvs) => {
+    let notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
-      if (!s) { nf++; return; }
-      if (s.materia_prima) { materia++; return; }
-      if (s.gestao_compras) { compras++; return; }
-      if (s.gestao_frota) { frota++; return; }
-      if (s.controladoria) { controladoria++; return; }
-      nf++;
+      if (s?.materia_prima) return; // exclui matéria prima
+      if (s?.gestao_compras) { compras++; return; }
+      if (s?.gestao_frota) { frota++; return; }
+      if (s?.controladoria) { controladoria++; return; }
+      // sem categoria especial = tela Notas Fiscais (/notas)
+      notas++;
     });
-    return { nf, compras, frota, controladoria, materia };
+    // arquivadas: notas arquivadas desta filial (de qualquer tela exceto materia_prima)
+    if (archivedInvs) {
+      archivedInvs.forEach(inv => {
+        const s = supplierMap[inv.supplier_cnpj];
+        if (!s?.materia_prima) arquivadas++;
+      });
+    }
+    return { notas, compras, frota, controladoria, arquivadas };
   };
 
-  // Group invoices by branch
+  // Group invoices by branch (visible + archived)
   const grouped = {};
   visibleInvoices.forEach(inv => {
     const key = inv.branch_cnpj || "__sem_filial__";
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(inv);
+    if (!grouped[key]) grouped[key] = { visible: [], archived: [] };
+    grouped[key].visible.push(inv);
+  });
+  archivedInvoices.forEach(inv => {
+    const key = inv.branch_cnpj || "__sem_filial__";
+    if (!grouped[key]) grouped[key] = { visible: [], archived: [] };
+    grouped[key].archived.push(inv);
   });
 
   // Build rows: one per branch that has invoices
-  const rows = Object.entries(grouped).map(([cnpj, invs]) => {
+  const rows = Object.entries(grouped).map(([cnpj, { visible: invs, archived: archInvs }]) => {
     const name = cnpj === "__sem_filial__" ? "Sem Filial" : (branchMap[cnpj] || cnpj);
     const total = invs.length;
     const sigv = invs.filter(i => i.sigv_recorded).length;
     const topcon = invs.filter(i => i.topcon_recorded).length;
     const boleto = invs.filter(i => i.boleto_recorded).length;
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
-    const screens = countByScreen(invs);
+    const screens = countByScreen(invs, archInvs);
     return { name, total, sigv, topcon, boleto, value, screens };
   });
 
@@ -125,7 +148,7 @@ export default function Dashboard() {
   const allTopcon = visibleInvoices.filter(i => i.topcon_recorded).length;
   const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
-  const allScreens = countByScreen(visibleInvoices);
+  const allScreens = countByScreen(visibleInvoices, archivedInvoices);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
