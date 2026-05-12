@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
     base44.auth.me()
@@ -23,20 +24,23 @@ export const AuthProvider = ({ children }) => {
       .catch(() => {
         // No preview do editor, auth falha com 403 — tratamos como admin para não bloquear o app
         setUser({ role: 'admin' });
+      })
+      .finally(() => {
+        setIsLoadingAuth(false);
       });
   }, []);
 
   const canAccessPage = (pageKey) => {
-    if (!user) return true;
-    if (user.role === 'admin') return true;
-    if (!userProfile) return true;
+    if (isLoadingAuth) return false;
+    if (user?.role === 'admin') return true;
+    if (!userProfile) return false;
     return (userProfile.pages || []).includes(pageKey);
   };
 
   const hasPermission = (permissionKey) => {
-    if (!user) return true;
-    if (user.role === 'admin') return true;
-    if (!userProfile) return true;
+    if (isLoadingAuth) return false;
+    if (user?.role === 'admin') return true;
+    if (!userProfile) return false;
     return (userProfile.permissions || []).includes(permissionKey);
   };
 
@@ -45,7 +49,7 @@ export const AuthProvider = ({ children }) => {
       user,
       userProfile,
       isAuthenticated: !!user,
-      isLoadingAuth: false,
+      isLoadingAuth,
       isLoadingPublicSettings: false,
       authError: null,
       navigateToLogin: () => base44.auth.redirectToLogin(window.location.href),

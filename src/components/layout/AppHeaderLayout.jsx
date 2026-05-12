@@ -24,9 +24,17 @@ const navItems = [
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
-  const { canAccessPage } = useAuth();
+  const { canAccessPage, isLoadingAuth } = useAuth();
 
   const visibleNavItems = navItems.filter(item => canAccessPage(item.key));
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
