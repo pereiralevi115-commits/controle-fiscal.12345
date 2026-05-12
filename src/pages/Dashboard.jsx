@@ -11,7 +11,7 @@ const formatCurrency = (value) =>
 
 export default function Dashboard() {
   const { allowedCnpjs } = useBranchFilter();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, canAccessPage } = useAuth();
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 500),
@@ -41,13 +41,46 @@ export default function Dashboard() {
   const branchMap = {};
   branches.forEach(b => { branchMap[b.cnpj] = b.name; });
 
-  // Same filter as Notas Fiscais page: exclude cancelled and hidden suppliers
   const hiddenCnpjs = new Set(suppliers.filter(s => s.hidden).map(s => s.cnpj));
-  const visibleInvoices = invoices.filter(inv =>
-    !inv.cancelled &&
-    !hiddenCnpjs.has(inv.supplier_cnpj) &&
-    (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))
-  );
+
+  // Determinar quais fornecedores são "especiais" (pertencem a telas específicas)
+  const supplierMap = {};
+  suppliers.forEach(s => { supplierMap[s.cnpj] = s; });
+
+  const isAdmin = user?.role === 'admin';
+  const isLider = userProfile?.name?.toLowerCase() === 'líder' || userProfile?.name?.toLowerCase() === 'lider';
+
+  // Determinar quais telas o usuário acessa (para perfis que não são admin/lider)
+  const accessesMateriaPrima = isAdmin || canAccessPage('materia-prima');
+  const accessesGestaCompras = isAdmin || canAccessPage('gestao-compras');
+  const accessesGestaFrota   = isAdmin || canAccessPage('gestao-frota');
+  const accessesControladoria = isAdmin || canAccessPage('controladoria');
+  const accessesNotas         = isAdmin || isLider || canAccessPage('notas');
+  const accessesArquivadas    = isAdmin || isLider || canAccessPage('arquivadas');
+
+  const visibleInvoices = invoices.filter(inv => {
+    if (inv.cancelled) return false;
+    if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
+    if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
+
+    const s = supplierMap[inv.supplier_cnpj];
+
+    // Se é líder: apenas notas fiscais normais (não especiais) + arquivadas
+    if (isLider) {
+      if (inv.archived) return accessesArquivadas;
+      // Notas fiscais: fornecedores sem nenhuma flag especial
+      const isSpecial = s && (s.materia_prima || s.gestao_compras || s.gestao_frota || s.controladoria);
+      return !isSpecial && accessesNotas;
+    }
+
+    // Admin ou outros perfis: filtrar por telas acessíveis
+    if (inv.archived) return accessesArquivadas;
+    if (s?.materia_prima) return accessesMateriaPrima;
+    if (s?.gestao_compras) return accessesGestaCompras;
+    if (s?.gestao_frota) return accessesGestaFrota;
+    if (s?.controladoria) return accessesControladoria;
+    return accessesNotas;
+  });
 
   // Group invoices by branch
   const grouped = {};
