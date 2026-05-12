@@ -14,7 +14,7 @@ export default function Dashboard() {
   const { user, userProfile, canAccessPage } = useAuth();
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 50000),
+    queryFn: () => base44.entities.Invoice.list("-issue_date", 250000),
   });
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
