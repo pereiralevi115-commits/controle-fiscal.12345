@@ -7,7 +7,7 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function Arquivadas() {
-  const { allowedCnpjs } = useBranchFilter();
+  const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", month: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
@@ -74,7 +74,7 @@ export default function Arquivadas() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || branchFilterLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
