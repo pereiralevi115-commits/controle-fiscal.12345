@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
  * Otherwise returns null (no restriction).
  */
 export function useBranchFilter() {
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
 
   const { data: profiles = [], isLoading: profilesLoading } = useQuery({
     queryKey: ['userProfiles'],
@@ -20,7 +20,10 @@ export function useBranchFilter() {
     queryFn: () => base44.entities.Branch.list(),
   });
 
-  const isLoading = profilesLoading || branchesLoading;
+  const isLoading = isLoadingAuth || profilesLoading || branchesLoading;
+
+  // Enquanto o auth ainda carrega, bloqueia tudo
+  if (isLoadingAuth) return { allowedCnpjs: [], allowedBranchIds: [], isLider: null, branches, isLoading: true };
 
   if (!user) return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches, isLoading: false };
 
