@@ -81,6 +81,21 @@ export default function Dashboard() {
     return accessesNotas;
   });
 
+  // Helper: count invoices by screen category
+  const countByScreen = (invs) => {
+    let nf = 0, compras = 0, frota = 0, controladoria = 0, materia = 0;
+    invs.forEach(inv => {
+      const s = supplierMap[inv.supplier_cnpj];
+      if (!s) { nf++; return; }
+      if (s.materia_prima) { materia++; return; }
+      if (s.gestao_compras) { compras++; return; }
+      if (s.gestao_frota) { frota++; return; }
+      if (s.controladoria) { controladoria++; return; }
+      nf++;
+    });
+    return { nf, compras, frota, controladoria, materia };
+  };
+
   // Group invoices by branch
   const grouped = {};
   visibleInvoices.forEach(inv => {
@@ -97,7 +112,8 @@ export default function Dashboard() {
     const topcon = invs.filter(i => i.topcon_recorded).length;
     const boleto = invs.filter(i => i.boleto_recorded).length;
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
-    return { name, total, sigv, topcon, boleto, value };
+    const screens = countByScreen(invs);
+    return { name, total, sigv, topcon, boleto, value, screens };
   });
 
   // Sort by branch name
@@ -109,6 +125,7 @@ export default function Dashboard() {
   const allTopcon = visibleInvoices.filter(i => i.topcon_recorded).length;
   const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
+  const allScreens = countByScreen(visibleInvoices);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -123,10 +140,10 @@ export default function Dashboard() {
 
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais */}
-          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} highlight />
+          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} highlight />
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} />
           ))}
 
           {rows.length === 0 && (

@@ -1,10 +1,10 @@
 import React from "react";
-import { FileText, CheckSquare, Receipt, BookOpen, DollarSign } from "lucide-react";
+import { FileText, CheckSquare, Receipt, BookOpen, DollarSign, ShoppingCart, Truck, BarChart2, Leaf } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function BranchCard({ name, total, sigv, topcon, boleto, value, highlight }) {
+export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, highlight }) {
   const pct = (n) => total > 0 ? Math.round(n / total * 100) : 0;
 
   const stats = [
@@ -51,6 +51,14 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, h
     },
   ];
 
+  const screenStats = screens ? [
+    { icon: FileText,    iconBg: "bg-slate-100",  iconColor: "text-slate-600",  value: screens.nf,          label: "NF" },
+    { icon: ShoppingCart, iconBg: "bg-blue-50",   iconColor: "text-blue-600",   value: screens.compras,     label: "Gest. Compras" },
+    { icon: Truck,       iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",   value: screens.frota,       label: "Gest. Frota" },
+    { icon: BarChart2,   iconBg: "bg-indigo-50",  iconColor: "text-indigo-600", value: screens.controladoria, label: "Controladoria" },
+    { icon: Leaf,        iconBg: "bg-lime-50",    iconColor: "text-lime-600",   value: screens.materia,     label: "Mat. Prima" },
+  ] : null;
+
   return (
     <div className={`bg-white rounded-xl shadow border ${highlight ? "border-slate-300" : "border-slate-100"}`}>
       <div className={`px-5 py-3 border-b ${highlight ? "border-slate-200 bg-slate-50 rounded-t-xl" : "border-slate-100"}`}>
@@ -70,6 +78,24 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, h
           </div>
         ))}
       </div>
+      {screenStats && (
+        <div className="border-t border-slate-100 px-5 py-3">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Registros por tela</p>
+          <div className="flex flex-wrap gap-4">
+            {screenStats.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-md ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
+                  <s.icon className={`w-3.5 h-3.5 ${s.iconColor}`} />
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 text-sm">{s.value}</span>
+                  <span className="text-xs text-slate-400 ml-1">{s.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
