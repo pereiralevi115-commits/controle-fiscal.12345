@@ -60,21 +60,20 @@ export default function Dashboard() {
 
   const visibleInvoices = invoices.filter(inv => {
     if (inv.cancelled) return false;
+    if (inv.archived) return false;
+    if (inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded) return false;
     if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
 
     const s = supplierMap[inv.supplier_cnpj];
 
-    // Se é líder: apenas notas fiscais normais (não especiais) + arquivadas
+    // Se é líder: apenas notas fiscais normais (não especiais)
     if (isLider) {
-      if (inv.archived) return accessesArquivadas;
-      // Notas fiscais: fornecedores sem nenhuma flag especial
       const isSpecial = s && (s.materia_prima || s.gestao_compras || s.gestao_frota || s.controladoria);
       return !isSpecial && accessesNotas;
     }
 
     // Admin ou outros perfis: filtrar por telas acessíveis
-    if (inv.archived) return accessesArquivadas;
     if (s?.materia_prima) return accessesMateriaPrima;
     if (s?.gestao_compras) return accessesGestaCompras;
     if (s?.gestao_frota) return accessesGestaFrota;
