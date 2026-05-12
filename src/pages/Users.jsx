@@ -26,6 +26,23 @@ export default function UsersPage() {
 
   const [sortConfig, setSortConfig] = useState([]);
 
+  const queryClient = useQueryClient();
+
+  const { data: users = [], isLoading, refetch } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["userProfiles"],
+    queryFn: () => base44.entities.UserProfile.list(),
+  });
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => base44.entities.Branch.list(),
+  });
+
   const handleSort = (key) => {
     setSortConfig((prev) => {
       const existing = prev.find((s) => s.key === key);
@@ -82,23 +99,6 @@ export default function UsersPage() {
       </button>
     );
   };
-
-  const queryClient = useQueryClient();
-
-  const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
-  });
-
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["userProfiles"],
-    queryFn: () => base44.entities.UserProfile.list(),
-  });
-
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => base44.entities.Branch.list(),
-  });
 
   const updateProfileMutation = useMutation({
     mutationFn: ({ userId, profileId }) =>
