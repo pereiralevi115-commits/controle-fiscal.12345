@@ -51,7 +51,10 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     },
   ];
 
+  const screenTotal = screens ? (screens.notas + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
+
   const screenStats = screens ? [
+    { icon: FileText,    iconBg: "bg-gray-800",   iconColor: "text-white",      value: screenTotal,           label: "Total" },
     { icon: FileText,    iconBg: "bg-slate-100",  iconColor: "text-slate-600",  value: screens.notas,         label: "Notas Fiscais" },
     { icon: ShoppingCart, iconBg: "bg-blue-50",   iconColor: "text-blue-600",   value: screens.compras,       label: "Gest. Compras" },
     { icon: Truck,       iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",   value: screens.frota,         label: "Gest. Frota" },
