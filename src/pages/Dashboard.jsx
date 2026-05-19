@@ -68,10 +68,13 @@ export default function Dashboard() {
     return true;
   });
 
+  const archivedSet = new Set(archivedInvoices.map(inv => inv.id));
+
   const visibleInvoices = invoices.filter(inv => {
     if (inv.cancelled) return false;
     if (inv.archived) return false;
     if (inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded) return false;
+    if (archivedSet.has(inv.id)) return false;
     if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
 
