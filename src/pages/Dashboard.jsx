@@ -99,20 +99,43 @@ export default function Dashboard() {
   // NF (/nf) e Matéria Prima NÃO entram na contagem de telas
   const isCompleted = (inv) => inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
 
+  const screenSummary = (invs) => {
+    const screens = { notas: [], compras: [], frota: [], controladoria: [] };
+    invs.forEach(inv => {
+      const s = supplierMap[inv.supplier_cnpj];
+      if (s?.materia_prima) return;
+      if (isCompleted(inv)) return;
+      if (s?.gestao_compras) { screens.compras.push(inv); return; }
+      if (s?.gestao_frota)   { screens.frota.push(inv);   return; }
+      if (s?.controladoria)  { screens.controladoria.push(inv); return; }
+      screens.notas.push(inv);
+    });
+    const summarize = (arr) => ({
+      count: arr.length,
+      sigv: arr.filter(i => i.sigv_recorded).length,
+      topcon: arr.filter(i => i.topcon_recorded).length,
+      boleto: arr.filter(i => i.boleto_recorded).length,
+      value: arr.reduce((s, i) => s + (i.total_value || 0), 0),
+    });
+    return {
+      notas: summarize(screens.notas),
+      compras: summarize(screens.compras),
+      frota: summarize(screens.frota),
+      controladoria: summarize(screens.controladoria),
+    };
+  };
+
   const countByScreen = (invs, archivedInvs) => {
     let notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
-      if (s?.materia_prima) return; // exclui matéria prima
-      // cada tela também exclui notas 100% concluídas
+      if (s?.materia_prima) return;
       const completed = isCompleted(inv);
       if (s?.gestao_compras) { if (!completed) compras++; return; }
       if (s?.gestao_frota)   { if (!completed) frota++;   return; }
       if (s?.controladoria)  { if (!completed) controladoria++; return; }
-      // sem categoria especial = tela Notas Fiscais (/notas)
       if (!completed) notas++;
     });
-    // arquivadas: notas arquivadas desta filial (de qualquer tela exceto materia_prima e NF)
     if (archivedInvs) {
       archivedInvs.forEach(inv => {
         const s = supplierMap[inv.supplier_cnpj];
@@ -144,7 +167,8 @@ export default function Dashboard() {
     const boleto = invs.filter(i => i.boleto_recorded).length;
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
     const screens = countByScreen(invs, archInvs);
-    return { name, total, sigv, topcon, boleto, value, screens };
+    const screenStats = screenSummary(invs);
+    return { name, total, sigv, topcon, boleto, value, screens, screenStats };
   });
 
   // Sort by branch name
@@ -157,6 +181,7 @@ export default function Dashboard() {
   const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
   const allScreens = countByScreen(visibleInvoices, archivedInvoices);
+  const allScreenStats = screenSummary(visibleInvoices);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -171,10 +196,10 @@ export default function Dashboard() {
 
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais */}
-          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} highlight />
+          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} highlight />
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} />
           ))}
 
           {rows.length === 0 && (
