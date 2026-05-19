@@ -14,9 +14,9 @@ const ScreenSummaryRow = ({ label, data }) => {
   if (!data || data.count === 0) return null;
   const pct = (n) => data.count > 0 ? Math.round(n / data.count * 100) : 0;
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-b-0 flex-wrap">
+    <div className="flex items-center gap-3 py-2 border-b border-slate-50 last:border-b-0">
       <span className="text-xs font-semibold text-slate-500 w-28 flex-shrink-0">{label}</span>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-1 justify-between">
         <div className="text-center">
           <p className="text-sm font-bold text-green-700">{data.sigv}</p>
           <p className="text-xs text-slate-400">SIGV ({pct(data.sigv)}%)</p>
@@ -30,7 +30,7 @@ const ScreenSummaryRow = ({ label, data }) => {
           <p className="text-xs text-slate-400">Boleto ({pct(data.boleto)}%)</p>
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold text-slate-700">{formatCurrencyShort(data.value)}</p>
+          <p className="text-sm font-bold text-slate-700">{formatCurrency(data.value)}</p>
           <p className="text-xs text-slate-400">Valor</p>
         </div>
         <div className="text-center">
