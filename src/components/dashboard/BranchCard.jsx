@@ -9,14 +9,6 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
 
   const stats = [
     {
-      icon: FileText,
-      iconBg: "bg-slate-100",
-      iconColor: "text-slate-600",
-      value: total,
-      label: "Total de Notas",
-      sub: null,
-    },
-    {
       icon: CheckSquare,
       iconBg: "bg-green-50",
       iconColor: "text-green-600",
