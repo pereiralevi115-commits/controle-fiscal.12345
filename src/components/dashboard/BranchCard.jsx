@@ -97,20 +97,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
       <div className={`px-5 py-3 border-b ${highlight ? "border-slate-200 bg-slate-50 rounded-t-xl" : "border-slate-100"}`}>
         <h2 className="font-bold text-slate-800 text-base">{name}</h2>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-y md:divide-y-0 divide-slate-100">
-        {stats.map((s, i) => (
-          <div key={i} className="flex items-center gap-4 p-5">
-            <div className={`w-10 h-10 rounded-lg ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
-              <s.icon className={`w-5 h-5 ${s.iconColor}`} />
-            </div>
-            <div>
-              <p className={`font-bold text-slate-800 ${s.wide ? "text-base" : "text-2xl"}`}>{s.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-              {s.sub && <p className="text-xs text-slate-400">{s.sub}</p>}
-            </div>
-          </div>
-        ))}
-      </div>
+
       {screenList && (
         <div className="border-t border-slate-100 px-5 py-3">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Registros por tela</p>
