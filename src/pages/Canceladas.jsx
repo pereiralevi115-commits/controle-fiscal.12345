@@ -13,7 +13,7 @@ import { useBranchFilter } from "@/hooks/useBranchFilter";
 const formatCurrency = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-export default function Canceladas() {
+export default function Canceladas({ embedded } = {}) {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
@@ -69,8 +69,8 @@ export default function Canceladas() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+    <div className={embedded ? "space-y-4" : "min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50"}>
+      <div className={embedded ? "space-y-4" : "max-w-full mx-auto p-4 md:p-8 space-y-6"}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight flex items-center gap-3">

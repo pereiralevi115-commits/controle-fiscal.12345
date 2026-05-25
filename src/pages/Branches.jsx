@@ -12,7 +12,7 @@ import { formatCNPJ } from "@/lib/formatters";
 
 const emptyBranch = { name: "", cnpj: "" };
 
-export default function Branches() {
+export default function Branches({ embedded } = {}) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
@@ -88,8 +88,8 @@ export default function Branches() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+    <div className={embedded ? "space-y-4" : "min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50"}>
+      <div className={embedded ? "space-y-4" : "max-w-full mx-auto p-4 md:p-8 space-y-6"}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Filiais</h1>

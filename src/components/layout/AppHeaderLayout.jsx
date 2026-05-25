@@ -16,13 +16,8 @@ const navItems = [
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
   { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
   { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
-  { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
-  { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
   { key: 'notas-para-verificar', name: 'Gerencial', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
-  { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Users },
-  { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
-  { key: 'usuarios', name: 'Usuários', path: '/usuarios', icon: UserCog },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {

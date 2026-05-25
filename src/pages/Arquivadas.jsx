@@ -6,7 +6,7 @@ import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 
-export default function Arquivadas() {
+export default function Arquivadas({ embedded } = {}) {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", month: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -82,6 +82,33 @@ export default function Arquivadas() {
     );
   }
 
+  const content = (
+    <>
+      <p className="text-slate-500 text-sm">
+        Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
+      </p>
+      <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
+      <div className="bg-white rounded-xl shadow-lg border-0">
+        <InvoiceTable
+          invoices={filteredInvoices}
+          branches={branches}
+          onMarkReceived={() => {}}
+          onViewDetails={setSelectedInvoice}
+          sortConfig={sortConfig}
+          onSort={handleSort}
+        />
+      </div>
+      <InvoiceDetailDialog
+        invoice={selectedInvoice}
+        open={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+        branches={branches}
+      />
+    </>
+  );
+
+  if (embedded) return <div className="space-y-4">{content}</div>;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
@@ -91,9 +118,7 @@ export default function Arquivadas() {
             Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
           </p>
         </div>
-
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
-
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable
             invoices={filteredInvoices}
@@ -104,7 +129,6 @@ export default function Arquivadas() {
             onSort={handleSort}
           />
         </div>
-
         <InvoiceDetailDialog
           invoice={selectedInvoice}
           open={!!selectedInvoice}

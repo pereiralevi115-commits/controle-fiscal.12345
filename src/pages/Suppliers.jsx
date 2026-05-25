@@ -11,7 +11,7 @@ import { Layers, ShoppingCart, Truck, BarChart2, Loader2 } from "lucide-react";
 import { formatCNPJ, formatPhone } from "@/lib/formatters";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
-export default function Suppliers() {
+export default function Suppliers({ embedded } = {}) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -194,8 +194,8 @@ export default function Suppliers() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+    <div className={embedded ? "space-y-4" : "min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50"}>
+      <div className={embedded ? "space-y-4" : "max-w-full mx-auto p-4 md:p-8 space-y-6"}>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Fornecedores</h1>
