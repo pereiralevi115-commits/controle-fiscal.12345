@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthContext';
@@ -18,6 +18,7 @@ const navItems = [
   { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
   { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
   { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
+  { key: 'notas-para-verificar', name: 'Notas para Verificar', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
   { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Users },
   { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
