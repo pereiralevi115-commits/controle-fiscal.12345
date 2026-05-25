@@ -59,6 +59,13 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     { key: "controladoria", label: "Controladoria", color: "text-indigo-700" },
   ];
 
+  const getBadgeClass = (i) => i === 0
+    ? "flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-800 border-slate-700"
+    : "flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white border-slate-200";
+
+  const getValueClass = (i) => i === 0 ? "font-bold text-sm text-white" : "font-bold text-sm text-slate-800";
+  const getLabelClass = (i) => i === 0 ? "text-xs text-slate-400" : "text-xs text-slate-500";
+
   return (
     <div className={`bg-white rounded-xl shadow-sm border ${highlight ? "border-slate-300 shadow-md" : "border-slate-200"} overflow-hidden`}>
       {/* Header */}
@@ -73,12 +80,15 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
           <div className="flex flex-wrap gap-3">
             {screenList.map((s, i) => (
-              <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${i === 0 ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+              <div key={i} className={getBadgeClass(i)}>
                 <div className={`w-5 h-5 rounded ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
                   <s.icon className={`w-3 h-3 ${s.iconColor}`} />
                 </div>
-                <span className={`font-bold text-sm ${i === 0 ? "text-white" : "text-slate-800"}`}>{s.value}</span>
-                <span className={`text-xs ${i === 0 ? "text-slate-400" : "text-slate-500"}`}>{s.label}</span>
+                <span className={getValueClass(i)}>{s.value}</span>
+                {i > 0 && screenTotal > 0 && (
+                  <span className="text-[11px] font-medium text-slate-400">({Math.round(s.value / screenTotal * 100)}%)</span>
+                )}
+                <span className={getLabelClass(i)}>{s.label}</span>
               </div>
             ))}
           </div>
