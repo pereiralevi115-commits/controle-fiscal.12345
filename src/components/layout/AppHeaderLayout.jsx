@@ -16,6 +16,7 @@ const navItems = [
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
   { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
   { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
+  { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
   { key: 'notas-para-verificar', name: 'Gerencial', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
 ];
