@@ -41,10 +41,10 @@ const ScreenSummaryRow = ({ label, data, color }) => {
 };
 
 export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, highlight }) {
-  const screenTotal = screens ? (screens.notas + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
+  const screenTotal = screens ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
 
   const totalValue = screenStats
-    ? (screenStats.notas?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0)
+    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0)
     : 0;
 
   const screenList = screens ? [
