@@ -99,12 +99,16 @@ export default function Dashboard() {
   // NF (/nf) e Matéria Prima NÃO entram na contagem de telas
   const isCompleted = (inv) => inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
 
-  const screenSummary = (invs) => {
+  const screenSummary = (invs, mpInvs) => {
     const screens = { materia_prima: [], notas: [], compras: [], frota: [], controladoria: [] };
+    // Matéria Prima: usa pool separado que inclui concluídas (igual à tela MateriaPrima)
+    if (mpInvs) {
+      screens.materia_prima = mpInvs;
+    }
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
       if (isCompleted(inv)) return;
-      if (s?.materia_prima) { screens.materia_prima.push(inv); return; }
+      if (s?.materia_prima) { if (!mpInvs) screens.materia_prima.push(inv); return; }
       if (s?.gestao_compras) { screens.compras.push(inv); return; }
       if (s?.gestao_frota)   { screens.frota.push(inv);   return; }
       if (s?.controladoria)  { screens.controladoria.push(inv); return; }
@@ -146,6 +150,16 @@ export default function Dashboard() {
     return { materia_prima, notas, compras, frota, controladoria, arquivadas };
   };
 
+  // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
+  const allMateriaPrimaInvoices = invoices.filter(inv => {
+    if (inv.cancelled) return false;
+    if (inv.archived) return false;
+    if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
+    if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
+    const s = supplierMap[inv.supplier_cnpj];
+    return s?.materia_prima === true;
+  });
+
   // Group invoices by branch (visible + archived)
   const grouped = {};
   visibleInvoices.forEach(inv => {
@@ -168,7 +182,8 @@ export default function Dashboard() {
     const boleto = invs.filter(i => i.boleto_recorded).length;
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
     const screens = countByScreen(invs, archInvs);
-    const screenStats = screenSummary(invs);
+    const branchMPInvoices = allMateriaPrimaInvoices.filter(inv => (inv.branch_cnpj || '__sem_filial__') === cnpj);
+    const screenStats = screenSummary(invs, branchMPInvoices);
     const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
     return { name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
   });
@@ -183,7 +198,7 @@ export default function Dashboard() {
   const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
   const allScreens = countByScreen(visibleInvoices, archivedInvoices);
-  const allScreenStats = screenSummary(visibleInvoices);
+  const allScreenStats = screenSummary(visibleInvoices, allMateriaPrimaInvoices);
   const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
   return (
