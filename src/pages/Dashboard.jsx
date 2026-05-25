@@ -151,10 +151,10 @@ export default function Dashboard() {
   };
 
   // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
+  // Igual ao filtro da tela MateriaPrima: não verifica hidden, só materia_prima === true
   const allMateriaPrimaInvoices = invoices.filter(inv => {
     if (inv.cancelled) return false;
     if (inv.archived) return false;
-    if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
     const s = supplierMap[inv.supplier_cnpj];
     return s?.materia_prima === true;
