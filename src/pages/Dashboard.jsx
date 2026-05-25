@@ -130,11 +130,11 @@ export default function Dashboard() {
     };
   };
 
-  const countByScreen = (invs, archivedInvs) => {
-    let materia_prima = 0, notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
+  const countByScreen = (invs, archivedInvs, mpInvs) => {
+    let materia_prima = mpInvs ? mpInvs.length : 0, notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
-      if (s?.materia_prima) { if (!isCompleted(inv)) materia_prima++; return; }
+      if (s?.materia_prima) return; // contado separadamente via mpInvs
       const completed = isCompleted(inv);
       if (s?.gestao_compras) { if (!completed) compras++; return; }
       if (s?.gestao_frota)   { if (!completed) frota++;   return; }
@@ -181,8 +181,8 @@ export default function Dashboard() {
     const topcon = invs.filter(i => i.topcon_recorded).length;
     const boleto = invs.filter(i => i.boleto_recorded).length;
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
-    const screens = countByScreen(invs, archInvs);
     const branchMPInvoices = allMateriaPrimaInvoices.filter(inv => (inv.branch_cnpj || '__sem_filial__') === cnpj);
+    const screens = countByScreen(invs, archInvs, branchMPInvoices);
     const screenStats = screenSummary(invs, branchMPInvoices);
     const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
     return { name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
@@ -197,7 +197,7 @@ export default function Dashboard() {
   const allTopcon = visibleInvoices.filter(i => i.topcon_recorded).length;
   const allBoleto = visibleInvoices.filter(i => i.boleto_recorded).length;
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
-  const allScreens = countByScreen(visibleInvoices, archivedInvoices);
+  const allScreens = countByScreen(visibleInvoices, archivedInvoices, allMateriaPrimaInvoices);
   const allScreenStats = screenSummary(visibleInvoices, allMateriaPrimaInvoices);
   const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
