@@ -48,7 +48,20 @@ export default function MateriaPrimaReport({ open, onClose, invoices, branches }
     return byBranch;
   }, [invoices]);
 
-  const sortedBranches = Object.keys(groupedData).sort();
+  const BRANCH_ORDER = [
+    "ARARANGUA", "ORLEANS", "CAPIVARI DE BAIXO", "CRICIUMA", "PASSO DE TORRES",
+    "BRAÇO DO NORTE", "MAQUINE", "CASEIROS", "LAGES",
+    "SANTO ANTONIO DA PATRULHA", "VILA FLORES"
+  ];
+
+  const sortedBranches = Object.keys(groupedData).sort((a, b) => {
+    const ai = BRANCH_ORDER.findIndex(n => a.toUpperCase().includes(n));
+    const bi = BRANCH_ORDER.findIndex(n => b.toUpperCase().includes(n));
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
   const grandTotal = invoices.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
