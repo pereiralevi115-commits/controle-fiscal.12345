@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import BranchCard from "@/components/dashboard/BranchCard";
@@ -9,7 +11,15 @@ import { useAuth } from "@/lib/AuthContext";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
+const months = [
+  { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" }, { value: "03", label: "Março" },
+  { value: "04", label: "Abril" }, { value: "05", label: "Maio" }, { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" }, { value: "08", label: "Agosto" }, { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" }, { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" },
+];
+
 export default function Dashboard() {
+  const [selectedMonthYear, setSelectedMonthYear] = useState("all");
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
@@ -37,6 +47,25 @@ export default function Dashboard() {
     );
   }
 
+  // Meses disponíveis
+  const availableMonths = Array.from(new Set(
+    invoices
+      .filter(inv => inv.issue_date)
+      .map(inv => {
+        const d = new Date(inv.issue_date + "T12:00:00");
+        return `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+      })
+  )).sort().reverse();
+
+  // Filtro por mês
+  const filterByMonth = (inv) => {
+    if (selectedMonthYear === "all") return true;
+    if (!inv.issue_date) return false;
+    const d = new Date(inv.issue_date + "T12:00:00");
+    const my = `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+    return my === selectedMonthYear;
+  };
+
   // Map CNPJ -> branch name, include "sem filial"
   const branchMap = {};
   branches.forEach(b => { branchMap[b.cnpj] = b.name; });
@@ -60,6 +89,7 @@ export default function Dashboard() {
 
   // Notas arquivadas (para contar na seção de telas)
   const archivedInvoices = invoices.filter(inv => {
+    if (!filterByMonth(inv)) return false;
     if (inv.cancelled) return false;
     const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
     if (!inv.archived && !allRecorded) return false;
@@ -71,6 +101,7 @@ export default function Dashboard() {
   const archivedSet = new Set(archivedInvoices.map(inv => inv.id));
 
   const visibleInvoices = invoices.filter(inv => {
+    if (!filterByMonth(inv)) return false;
     if (inv.cancelled) return false;
     if (inv.archived) return false;
     if (inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded) return false;
@@ -153,6 +184,7 @@ export default function Dashboard() {
   // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
   // Igual ao filtro da tela MateriaPrima: não verifica hidden, só materia_prima === true
   const allMateriaPrimaInvoices = invoices.filter(inv => {
+    if (!filterByMonth(inv)) return false;
     if (inv.cancelled) return false;
     if (inv.archived) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
@@ -208,6 +240,22 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
             <p className="text-slate-500 mt-1">Controle de lançamentos por filial</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={selectedMonthYear} onValueChange={setSelectedMonthYear}>
+              <SelectTrigger className="w-[180px]">
+                <Calendar className="w-4 h-4 mr-1" />
+                <SelectValue placeholder="Mês/Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os meses</SelectItem>
+                {availableMonths.map(my => {
+                  const [m, y] = my.split("-");
+                  const label = months.find(x => x.value === m)?.label || m;
+                  return <SelectItem key={my} value={my}>{label} {y}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
           </div>
 
         </div>
