@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, ShoppingCart, Truck, BarChart2, Receipt } from "lucide-react";
+import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -49,6 +49,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
 
   const screenList = screens ? [
     { icon: FileText,     iconBg: "bg-slate-800",  iconColor: "text-white",       value: screenTotal,           label: "Total",         val: totalValue },
+    { icon: Layers,       iconBg: "bg-green-50",   iconColor: "text-green-600",   value: screens.materia_prima,  label: "Mat. Prima",    val: screenStats?.materia_prima?.value },
     { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "Notas Fiscais", val: screenStats?.notas?.value },
     { icon: ShoppingCart, iconBg: "bg-blue-50",    iconColor: "text-blue-600",    value: screens.compras,       label: "Gest. Compras", val: screenStats?.compras?.value },
     { icon: Truck,        iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",    value: screens.frota,         label: "Gest. Frota",   val: screenStats?.frota?.value },
@@ -57,6 +58,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ] : null;
 
   const screenRowConfig = [
+    { key: "materia_prima", label: "Mat. Prima",    color: "text-green-700" },
     { key: "notas",         label: "Notas Fiscais", color: "text-slate-700" },
     { key: "compras",       label: "Gest. Compras", color: "text-blue-700" },
     { key: "frota",         label: "Gest. Frota",   color: "text-cyan-700" },

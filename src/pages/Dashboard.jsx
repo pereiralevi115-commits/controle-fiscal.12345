@@ -100,11 +100,11 @@ export default function Dashboard() {
   const isCompleted = (inv) => inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
 
   const screenSummary = (invs) => {
-    const screens = { notas: [], compras: [], frota: [], controladoria: [] };
+    const screens = { materia_prima: [], notas: [], compras: [], frota: [], controladoria: [] };
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
-      if (s?.materia_prima) return;
       if (isCompleted(inv)) return;
+      if (s?.materia_prima) { screens.materia_prima.push(inv); return; }
       if (s?.gestao_compras) { screens.compras.push(inv); return; }
       if (s?.gestao_frota)   { screens.frota.push(inv);   return; }
       if (s?.controladoria)  { screens.controladoria.push(inv); return; }
@@ -118,6 +118,7 @@ export default function Dashboard() {
       value: arr.reduce((s, i) => s + (i.total_value || 0), 0),
     });
     return {
+      materia_prima: summarize(screens.materia_prima),
       notas: summarize(screens.notas),
       compras: summarize(screens.compras),
       frota: summarize(screens.frota),
@@ -126,10 +127,10 @@ export default function Dashboard() {
   };
 
   const countByScreen = (invs, archivedInvs) => {
-    let notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
+    let materia_prima = 0, notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
-      if (s?.materia_prima) return;
+      if (s?.materia_prima) { if (!isCompleted(inv)) materia_prima++; return; }
       const completed = isCompleted(inv);
       if (s?.gestao_compras) { if (!completed) compras++; return; }
       if (s?.gestao_frota)   { if (!completed) frota++;   return; }
@@ -142,7 +143,7 @@ export default function Dashboard() {
         if (!s?.materia_prima) arquivadas++;
       });
     }
-    return { notas, compras, frota, controladoria, arquivadas };
+    return { materia_prima, notas, compras, frota, controladoria, arquivadas };
   };
 
   // Group invoices by branch (visible + archived)
