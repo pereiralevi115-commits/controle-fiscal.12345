@@ -31,6 +31,23 @@ const getAvailableMonthsAndYears = (invoices) => {
   return Array.from(monthYears).sort().reverse();
 };
 
+const BRANCH_ORDER = [
+  "ARARANGUA", "ORLEANS", "CAPIVARI DE BAIXO", "CRICIUMA", "PASSO DE TORRES",
+  "BRAÇO DO NORTE", "MAQUINE", "TURVO", "CASEIROS", "LAGES",
+  "SANTO ANTONIO DA PATRULA", "VILA FLORES"
+];
+
+const sortBranches = (branches) => {
+  return [...branches].sort((a, b) => {
+    const ai = BRANCH_ORDER.findIndex(n => a.name.toUpperCase().includes(n));
+    const bi = BRANCH_ORDER.findIndex(n => b.name.toUpperCase().includes(n));
+    if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+};
+
 export default function InvoiceFilters({ filters, onFilterChange, branches, invoices = [], showCancelledFilter }) {
   const availableMonthsAndYears = getAvailableMonthsAndYears(invoices);
 
@@ -55,7 +72,7 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, invo
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as filiais</SelectItem>
-          {branches.map((branch) => (
+          {sortBranches(branches).map((branch) => (
             <SelectItem key={branch.cnpj} value={branch.cnpj}>
               {branch.name}
             </SelectItem>
