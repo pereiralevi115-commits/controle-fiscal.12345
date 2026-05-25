@@ -66,8 +66,8 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ];
 
   const getBadgeClass = (i) => i === 0
-    ? "flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-800 border-slate-700"
-    : "flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white border-slate-200";
+    ? "flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-slate-800 border-slate-700"
+    : "flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white border-slate-200";
 
   const getValueClass = (i) => i === 0 ? "font-bold text-sm text-white" : "font-bold text-sm text-slate-800";
   const getLabelClass = (i) => i === 0 ? "text-xs text-slate-400" : "text-xs text-slate-500";
@@ -84,9 +84,9 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
       {screenList && (
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
             {screenList.map((s, i) => (
-              <div key={i} className={getBadgeClass(i)}>
+              <div key={i} className={getBadgeClass(i)} style={{flexShrink: 0}}>
                 <div className={`w-5 h-5 rounded ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
                   <s.icon className={`w-3 h-3 ${s.iconColor}`} />
                 </div>
