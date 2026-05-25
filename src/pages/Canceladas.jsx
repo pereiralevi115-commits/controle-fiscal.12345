@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
@@ -14,6 +16,15 @@ const formatCurrency = (v) =>
 export default function Canceladas() {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+
+  const undoMutation = useMutation({
+    mutationFn: (id) => base44.entities.Invoice.update(id, { cancelled: false, cancellation_date: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Cancelamento desfeito!");
+    },
+  });
 
   const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ["invoices"],
@@ -96,6 +107,7 @@ export default function Canceladas() {
                     <TableHead className="font-semibold">Emissão</TableHead>
                     <TableHead className="font-semibold">Cancelamento</TableHead>
                     <TableHead className="font-semibold text-right">Valor</TableHead>
+                    <TableHead className="font-semibold text-right">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -117,6 +129,15 @@ export default function Canceladas() {
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(inv.total_value)}</TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          onClick={() => undoMutation.mutate(inv.id)}
+                          disabled={undoMutation.isPending}
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-300 hover:bg-blue-50 rounded px-2 py-1 transition-all"
+                        >
+                          Desfazer
+                        </button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
