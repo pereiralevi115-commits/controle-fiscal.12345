@@ -44,12 +44,12 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const screenTotal = screens ? (screens.notas + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
 
   const screenList = screens ? [
-    { icon: FileText,     iconBg: "bg-slate-800",  iconColor: "text-white",       value: screenTotal,           label: "Total" },
-    { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "Notas Fiscais" },
-    { icon: ShoppingCart, iconBg: "bg-blue-50",    iconColor: "text-blue-600",    value: screens.compras,       label: "Gest. Compras" },
-    { icon: Truck,        iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",    value: screens.frota,         label: "Gest. Frota" },
-    { icon: BarChart2,    iconBg: "bg-indigo-50",  iconColor: "text-indigo-600",  value: screens.controladoria, label: "Controladoria" },
-    { icon: Receipt,      iconBg: "bg-amber-50",   iconColor: "text-amber-600",   value: screens.arquivadas,    label: "Arquivadas" },
+    { icon: FileText,     iconBg: "bg-slate-800",  iconColor: "text-white",       value: screenTotal,           label: "Total",         val: null },
+    { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "Notas Fiscais", val: screenStats?.notas?.value },
+    { icon: ShoppingCart, iconBg: "bg-blue-50",    iconColor: "text-blue-600",    value: screens.compras,       label: "Gest. Compras", val: screenStats?.compras?.value },
+    { icon: Truck,        iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",    value: screens.frota,         label: "Gest. Frota",   val: screenStats?.frota?.value },
+    { icon: BarChart2,    iconBg: "bg-indigo-50",  iconColor: "text-indigo-600",  value: screens.controladoria, label: "Controladoria", val: screenStats?.controladoria?.value },
+    { icon: Receipt,      iconBg: "bg-amber-50",   iconColor: "text-amber-600",   value: screens.arquivadas,    label: "Arquivadas",    val: null },
   ] : null;
 
   const screenRowConfig = [
@@ -89,6 +89,9 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
                   <span className="text-[11px] font-medium text-slate-400">({Math.round(s.value / screenTotal * 100)}%)</span>
                 )}
                 <span className={getLabelClass(i)}>{s.label}</span>
+                {s.val != null && s.val > 0 && (
+                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(s.val)}</span>
+                )}
               </div>
             ))}
           </div>
