@@ -12,6 +12,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
   const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras' || userProfile?.name === 'Gestor';
   const queryClient = useQueryClient();
+  const [showChoiceDialog, setShowChoiceDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [archiveNotes, setArchiveNotes] = useState("");
 
@@ -24,14 +25,28 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   const handleArchiveClick = () => {
     if (invoice.archived) {
-      // Desarquivar direto, sem dialog
       recordMutation.mutate({ archived: false, archive_notes: "" }, {
         onSuccess: () => toast.success("Nota desarquivada!"),
       });
     } else {
-      setArchiveNotes("");
-      setShowArchiveDialog(true);
+      setShowChoiceDialog(true);
     }
+  };
+
+  const handleChoiceArquivar = () => {
+    setShowChoiceDialog(false);
+    setArchiveNotes("");
+    setShowArchiveDialog(true);
+  };
+
+  const handleChoiceCancelar = () => {
+    const today = new Date().toISOString().split("T")[0];
+    recordMutation.mutate({ cancelled: true, cancellation_date: today }, {
+      onSuccess: () => {
+        toast.success("Nota cancelada!");
+        setShowChoiceDialog(false);
+      },
+    });
   };
 
   const handleArchiveConfirm = () => {
@@ -68,6 +83,33 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   return (
     <>
+      {/* Dialog de escolha: Arquivar ou Cancelar */}
+      <Dialog open={showChoiceDialog} onOpenChange={setShowChoiceDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Arquivar ou Cancelar?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-1">
+            NF {invoice.series ? `${invoice.series}/` : ""}{invoice.number} — {invoice.supplier_name}
+          </p>
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Button
+              onClick={handleChoiceArquivar}
+              className="bg-slate-800 hover:bg-slate-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
+            >
+              📁 ARQUIVAR
+            </Button>
+            <Button
+              onClick={handleChoiceCancelar}
+              disabled={recordMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
+            >
+              ✕ CANCELAR
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>

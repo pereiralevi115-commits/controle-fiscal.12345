@@ -18,6 +18,7 @@ import Controladoria from './pages/Controladoria';
 import NF from './pages/NF';
 import UsersPage from './pages/Users';
 import Arquivadas from './pages/Arquivadas';
+import Canceladas from './pages/Canceladas';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -42,6 +43,8 @@ const AuthenticatedApp = () => {
         return <Controladoria />;
       case '/arquivadas':
         return <Arquivadas />;
+      case '/canceladas':
+        return <Canceladas />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':
