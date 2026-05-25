@@ -84,7 +84,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
       {screenList && (
         <div className="px-5 py-4 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
-          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2">
             {screenList.map((s, i) => (
               <div key={i} className={getBadgeClass(i)} style={{flexShrink: 0}}>
                 <div className={`w-5 h-5 rounded ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
