@@ -168,7 +168,8 @@ export default function Dashboard() {
     const value = invs.reduce((s, i) => s + (i.total_value || 0), 0);
     const screens = countByScreen(invs, archInvs);
     const screenStats = screenSummary(invs);
-    return { name, total, sigv, topcon, boleto, value, screens, screenStats };
+    const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
+    return { name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
   });
 
   // Sort by branch name
@@ -182,6 +183,7 @@ export default function Dashboard() {
   const allValue  = visibleInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
   const allScreens = countByScreen(visibleInvoices, archivedInvoices);
   const allScreenStats = screenSummary(visibleInvoices);
+  const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -196,10 +198,10 @@ export default function Dashboard() {
 
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais */}
-          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} highlight />
+          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} highlight />
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} />
           ))}
 
           {rows.length === 0 && (
