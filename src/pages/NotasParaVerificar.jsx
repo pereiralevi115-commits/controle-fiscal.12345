@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Arquivadas from "./Arquivadas";
+
 import Canceladas from "./Canceladas";
 import Suppliers from "./Suppliers";
 import Branches from "./Branches";
 import UsersPage from "./Users";
 
 const tabs = [
-  { key: "arquivadas",   label: "Arquivadas" },
   { key: "canceladas",   label: "Canceladas" },
   { key: "fornecedores", label: "Fornecedores" },
   { key: "filiais",      label: "Filiais" },
@@ -24,7 +23,7 @@ export default function NotasParaVerificar() {
           <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Gerencial</h1>
         </div>
 
-        <Tabs defaultValue="arquivadas">
+        <Tabs defaultValue="canceladas">
           <TabsList className="flex flex-wrap gap-1 h-auto">
             {tabs.map(t => (
               <TabsTrigger key={t.key} value={t.key} className="text-sm">
@@ -33,9 +32,6 @@ export default function NotasParaVerificar() {
             ))}
           </TabsList>
 
-          <TabsContent value="arquivadas" className="mt-4">
-            <Arquivadas embedded />
-          </TabsContent>
           <TabsContent value="canceladas" className="mt-4">
             <Canceladas embedded />
           </TabsContent>
