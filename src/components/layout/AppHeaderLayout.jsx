@@ -18,7 +18,7 @@ const navItems = [
   { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
   { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
   { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
-  { key: 'notas-para-verificar', name: 'Notas para Verificar', path: '/notas-para-verificar', icon: ClipboardCheck },
+  { key: 'notas-para-verificar', name: 'Gerencial', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
   { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Users },
   { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
