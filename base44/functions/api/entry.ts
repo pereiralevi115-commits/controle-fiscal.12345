@@ -103,28 +103,15 @@ Deno.serve(async (req) => {
         try { body = await req.json(); } catch (_) {}
 
         const base44 = createClientFromRequest(req);
-        const action = body.action;
+        const action = body.action || (new URL(req.url)).searchParams.get("action");
 
-        // Sem action → retorna documentação
         if (!action) {
             return Response.json({
                 description: "API unificada do Controle Fiscal",
                 available_actions: [
-                    {
-                        action: "criciumaInvoices",
-                        description: "Retorna notas fiscais da filial Criciúma (inclui CNPJ 01273320000420)",
-                        params: { senha: "string (obrigatório)" },
-                    },
-                    {
-                        action: "generateInvoicePDF",
-                        description: "Gera PDF de uma nota fiscal",
-                        params: { invoice_id: "string (obrigatório)" },
-                    },
-                    {
-                        action: "deleteAllInvoices",
-                        description: "Remove todas as notas fiscais (apenas admin)",
-                        params: {},
-                    },
+                    { action: "criciumaInvoices", params: { senha: "string" } },
+                    { action: "generateInvoicePDF", params: { invoice_id: "string" } },
+                    { action: "deleteAllInvoices", params: {} },
                 ],
             });
         }
