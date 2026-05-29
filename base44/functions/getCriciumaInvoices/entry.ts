@@ -1,36 +1,31 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const API_PASSWORD = "123456";
-
 Deno.serve(async (req) => {
     try {
-        // Verificar senha
-        const body = await req.json().catch(() => ({}));
-        const senha = body.senha || req.headers.get("x-api-password");
+        let body = {};
+        try { body = await req.json(); } catch (_) {}
 
-        if (senha !== API_PASSWORD) {
+        const senha = body.senha || req.headers.get("x-api-password");
+        if (senha !== "123456") {
             return Response.json({ error: "Senha inválida" }, { status: 401 });
         }
 
         const base44 = createClientFromRequest(req);
 
-        // Buscar filiais
         const branches = await base44.asServiceRole.entities.Branch.list();
-        const criciumaBranch = branches.find(b =>
+        const branch = branches.find(b =>
             b.name?.toUpperCase().includes("CRICIUMA") ||
             b.name?.toUpperCase().includes("CRICIÚMA")
         );
 
-        if (!criciumaBranch) {
+        if (!branch) {
             return Response.json({ error: "Filial Criciúma não encontrada" }, { status: 404 });
         }
 
-        // Buscar todas as notas
         const allInvoices = await base44.asServiceRole.entities.Invoice.list("-issue_date", 250000);
 
-        // Filtrar as de Criciúma (não canceladas)
         const invoices = allInvoices
-            .filter(inv => inv.branch_cnpj === criciumaBranch.cnpj && !inv.cancelled)
+            .filter(inv => inv.branch_cnpj === branch.cnpj && !inv.cancelled)
             .map(inv => ({
                 id: inv.id,
                 number: inv.number,
@@ -38,21 +33,17 @@ Deno.serve(async (req) => {
                 issue_date: inv.issue_date,
                 due_date: inv.due_date,
                 total_value: inv.total_value,
-                total_products: inv.total_products,
-                total_freight: inv.total_freight,
-                total_discount: inv.total_discount,
                 supplier_name: inv.supplier_name,
                 supplier_cnpj: inv.supplier_cnpj,
                 recipient_name: inv.recipient_name,
-                recipient_cnpj: inv.recipient_cnpj,
                 operation_nature: inv.operation_nature,
                 status: inv.status,
                 additional_info: inv.additional_info,
                 access_key: inv.access_key,
-                sigv_recorded: inv.sigv_recorded || false,
-                topcon_recorded: inv.topcon_recorded || false,
-                boleto_recorded: inv.boleto_recorded || false,
-                archived: inv.archived || false,
+                sigv_recorded: !!inv.sigv_recorded,
+                topcon_recorded: !!inv.topcon_recorded,
+                boleto_recorded: !!inv.boleto_recorded,
+                archived: !!inv.archived,
                 items: (inv.items || []).map(item => ({
                     code: item.code,
                     description: item.description,
@@ -75,7 +66,7 @@ Deno.serve(async (req) => {
             }));
 
         return Response.json({
-            branch: { name: criciumaBranch.name, cnpj: criciumaBranch.cnpj },
+            branch: { name: branch.name, cnpj: branch.cnpj },
             total: invoices.length,
             invoices,
         });
