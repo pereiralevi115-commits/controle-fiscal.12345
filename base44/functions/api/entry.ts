@@ -110,7 +110,6 @@ Deno.serve(async (req) => {
                 description: "API unificada do Controle Fiscal",
                 available_actions: [
                     { action: "criciumaInvoices", params: { senha: "string" } },
-                    { action: "generateInvoicePDF", params: { invoice_id: "string" } },
                     { action: "deleteAllInvoices", params: {} },
                 ],
             });
@@ -118,14 +117,6 @@ Deno.serve(async (req) => {
 
         if (action === "criciumaInvoices") {
             return await handleCriciumaInvoices(base44, body.senha);
-        }
-
-        if (action === "generateInvoicePDF") {
-            if (!body.invoice_id) {
-                return Response.json({ error: "invoice_id é obrigatório" }, { status: 400 });
-            }
-            const result = await base44.functions.invoke("generateInvoicePDF", { invoice_id: body.invoice_id });
-            return Response.json(result.data ?? result);
         }
 
         if (action === "deleteAllInvoices") {
