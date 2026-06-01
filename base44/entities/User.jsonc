@@ -23,5 +23,9 @@
         "type": "string"
       }
     }
-  }
+  },
+  "required": [
+    "profile_id",
+    "branch_ids"
+  ]
 }
