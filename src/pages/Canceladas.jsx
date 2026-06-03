@@ -5,17 +5,21 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { XCircle } from "lucide-react";
+import { XCircle, Calendar } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 export default function Canceladas({ embedded } = {}) {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [search, setSearch] = useState("");
+  const [monthYear, setMonthYear] = useState("all");
   const queryClient = useQueryClient();
 
   const undoMutation = useMutation({
@@ -42,10 +46,26 @@ export default function Canceladas({ embedded } = {}) {
     return m;
   }, [branches]);
 
+  const availableMonths = useMemo(() => {
+    const set = new Set();
+    invoices.forEach(inv => {
+      if (inv.cancelled && inv.issue_date) {
+        const d = new Date(inv.issue_date + "T12:00:00");
+        set.add(`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`);
+      }
+    });
+    return Array.from(set).sort().reverse();
+  }, [invoices]);
+
   const filtered = useMemo(() => {
     return invoices.filter(inv => {
       if (!inv.cancelled) return false;
       if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
+      if (monthYear !== "all") {
+        if (!inv.issue_date) return false;
+        const d = new Date(inv.issue_date + "T12:00:00");
+        if (`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}` !== monthYear) return false;
+      }
       if (search) {
         const s = search.toLowerCase();
         return (
@@ -56,7 +76,7 @@ export default function Canceladas({ embedded } = {}) {
       }
       return true;
     });
-  }, [invoices, allowedCnpjs, search, branchMap]);
+  }, [invoices, allowedCnpjs, search, branchMap, monthYear]);
 
   const isLoading = loadingInvoices || loadingBranches || branchFilterLoading;
 
@@ -81,13 +101,26 @@ export default function Canceladas({ embedded } = {}) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-3">
           <Input
             placeholder="Buscar por fornecedor, número ou filial..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="max-w-sm"
           />
+          <Select value={monthYear} onValueChange={setMonthYear}>
+            <SelectTrigger className="w-[180px]">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Mês/Ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os meses</SelectItem>
+              {availableMonths.map(my => {
+                const [m, y] = my.split("-");
+                return <SelectItem key={my} value={my}>{MONTH_NAMES[parseInt(m, 10) - 1]} {y}</SelectItem>;
+              })}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

@@ -10,7 +10,7 @@ import { useBranchFilter } from "@/hooks/useBranchFilter";
 export default function NF() {
   const queryClient = useQueryClient();
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", month: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -77,10 +77,16 @@ export default function NF() {
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
 
+      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
+        const date = new Date(inv.issue_date + "T12:00:00");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${month}-${year}` === filters.monthYear;
+      })());
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
       const notArchived = !inv.archived;
       const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived && notCompleted;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived && notCompleted;
     });
 
     filtered.sort((a, b) => {

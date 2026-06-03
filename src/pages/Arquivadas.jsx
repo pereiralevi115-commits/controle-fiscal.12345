@@ -8,7 +8,7 @@ import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function Arquivadas({ embedded } = {}) {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", month: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
@@ -42,9 +42,16 @@ export default function Arquivadas({ embedded } = {}) {
       if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
       else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
 
+      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
+        const date = new Date(inv.issue_date + "T12:00:00");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${month}-${year}` === filters.monthYear;
+      })());
+
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
 
-      return searchMatch && branchMatch && cancelledMatch && liderBranchMatch;
+      return searchMatch && branchMatch && cancelledMatch && monthYearMatch && liderBranchMatch;
     });
 
     filtered.sort((a, b) => {

@@ -144,7 +144,7 @@ export default function Invoices() {
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
 
         <div className="bg-white rounded-xl shadow-lg border-0">
         <InvoiceTable
