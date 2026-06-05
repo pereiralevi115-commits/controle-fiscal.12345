@@ -19,6 +19,7 @@ const ALL_PAGES = [
   { key: "gestao-frota", label: "Gestão de Frota", path: "/gestao-frota" },
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
   { key: "arquivadas", label: "Arquivadas", path: "/arquivadas" },
+  { key: "notas-para-verificar", label: "Gerencial", path: "/notas-para-verificar" },
   { key: "importar", label: "Importar XML", path: "/importar" },
   { key: "fornecedores", label: "Fornecedores", path: "/fornecedores" },
   { key: "filiais", label: "Filiais", path: "/filiais" },
