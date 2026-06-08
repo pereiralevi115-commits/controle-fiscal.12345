@@ -75,7 +75,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
       // Colunas (larguras em mm)
       const cols = [
         { key: "branch", label: "Filial", w: 28 },
-        { key: "supplier", label: "Fornecedor", w: 40 },
+        { key: "supplier", label: "Fornecedor", w: 75 },
         { key: "nf", label: "NF", w: 20 },
         { key: "issue", label: "Emissão", w: 20 },
         { key: "due", label: "Vencimento", w: 22 },
@@ -147,7 +147,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
         const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
         const values = {
           branch: truncate(branchName(inv), 20),
-          supplier: truncate(inv.supplier_name, 30),
+          supplier: truncate(inv.supplier_name, 55),
           nf: truncate(nf, 14),
           issue: formatDate(inv.issue_date),
           due: formatDate(inv.due_date),
