@@ -164,6 +164,8 @@ export default function NFReport({ open, onClose, invoices, branches }) {
           if (isStatusSim) {
             if (c.key === "topcon") {
               pdf.setTextColor(147, 51, 234);
+            } else if (c.key === "boleto") {
+              pdf.setTextColor(234, 88, 12);
             } else {
               pdf.setTextColor(22, 163, 74);
             }
@@ -269,7 +271,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                       {inv.topcon_recorded ? <span className="text-purple-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {inv.boleto_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
+                      {inv.boleto_recorded ? <span className="text-orange-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>
                 ))}
