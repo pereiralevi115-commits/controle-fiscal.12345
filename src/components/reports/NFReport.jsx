@@ -29,12 +29,12 @@ export default function NFReport({ open, onClose, invoices, branches }) {
   const branchMap = {};
   branches.forEach((b) => { branchMap[b.cnpj] = b.name; });
 
-  // Filtrar por período (data de emissão)
+  // Filtrar por período (data de vencimento)
   const periodInvoices = useMemo(() => {
     return invoices.filter((inv) => {
-      if (!inv.issue_date) return !startDate && !endDate;
-      if (startDate && inv.issue_date < startDate) return false;
-      if (endDate && inv.issue_date > endDate) return false;
+      if (!inv.due_date) return !startDate && !endDate;
+      if (startDate && inv.due_date < startDate) return false;
+      if (endDate && inv.due_date > endDate) return false;
       return true;
     });
   }, [invoices, startDate, endDate]);
