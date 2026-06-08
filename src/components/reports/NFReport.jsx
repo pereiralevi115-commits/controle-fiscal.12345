@@ -34,7 +34,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
   // Filtrar por período (data de vencimento) e ordenar por filial
   const periodInvoices = useMemo(() => {
     const filtered = invoices.filter((inv) => {
-      if (!inv.due_date) return !startDate && !endDate;
+      if (!inv.due_date) return !startDate;
       if (startDate && inv.due_date < startDate) return false;
       if (endDate && inv.due_date > endDate) return false;
       return true;
