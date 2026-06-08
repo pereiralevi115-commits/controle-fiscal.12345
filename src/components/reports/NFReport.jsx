@@ -80,8 +80,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
         { key: "issue", label: "Emissão", w: 22 },
         { key: "due", label: "Vencimento", w: 24 },
         { key: "value", label: "Valor", w: 26, align: "right" },
-        { key: "product", label: "Produto", w: 55 },
-        { key: "info", label: "Inf. Adicionais", w: 53 },
+        { key: "product", label: "Produto", w: 108 },
       ];
 
       const truncate = (text, maxChars) => {
@@ -150,8 +149,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
           issue: formatDate(inv.issue_date),
           due: formatDate(inv.due_date),
           value: formatCurrency(inv.total_value),
-          product: truncate(productsText(inv), 38),
-          info: truncate(inv.additional_info, 36),
+          product: truncate(productsText(inv), 75),
         };
 
         let x = margin;
@@ -230,7 +228,6 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                   <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
                   <th className="px-3 py-2 text-right font-semibold">Valor</th>
                   <th className="px-3 py-2 text-left font-semibold">Produto</th>
-                  <th className="px-3 py-2 text-left font-semibold">Informações Adicionais</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,7 +242,6 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.due_date)}</td>
                     <td className="px-3 py-2 text-right font-medium text-slate-700 whitespace-nowrap">{formatCurrency(inv.total_value)}</td>
                     <td className="px-3 py-2 text-slate-600">{productsText(inv)}</td>
-                    <td className="px-3 py-2 text-slate-600">{inv.additional_info || "—"}</td>
                   </tr>
                 ))}
               </tbody>
