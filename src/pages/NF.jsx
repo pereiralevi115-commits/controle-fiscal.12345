@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
-import MateriaPrimaReport from "@/components/reports/MateriaPrimaReport";
+import NFReport from "@/components/reports/NFReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
@@ -165,7 +165,7 @@ export default function NF() {
           branches={branches}
         />
 
-        <MateriaPrimaReport
+        <NFReport
           open={showReport}
           onClose={() => setShowReport(false)}
           invoices={filteredInvoices}
