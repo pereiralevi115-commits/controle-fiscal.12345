@@ -160,7 +160,16 @@ export default function NFReport({ open, onClose, invoices, branches }) {
         let x = margin;
         cols.forEach((c) => {
           const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
+          const isStatusSim = ["sigv", "topcon", "boleto"].includes(c.key) && values[c.key] === "Sim";
+          if (isStatusSim) {
+            pdf.setTextColor(22, 163, 74);
+            pdf.setFont(undefined, "bold");
+          }
           pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
+          if (isStatusSim) {
+            pdf.setTextColor(15, 23, 42);
+            pdf.setFont(undefined, "normal");
+          }
           x += c.w;
         });
         y += 6;
