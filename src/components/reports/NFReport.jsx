@@ -29,206 +29,148 @@ export default function NFReport({ open, onClose, invoices, branches }) {
   const branchMap = {};
   branches.forEach((b) => { branchMap[b.cnpj] = b.name; });
 
-  // Filtrar por período (data de vencimento)
+  const branchName = (inv) => branchMap[inv.branch_cnpj] || inv.branch_cnpj || "Sem Filial";
+
+  // Filtrar por período (data de vencimento) e ordenar por filial
   const periodInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
+    const filtered = invoices.filter((inv) => {
       if (!inv.due_date) return !startDate && !endDate;
       if (startDate && inv.due_date < startDate) return false;
       if (endDate && inv.due_date > endDate) return false;
       return true;
     });
+
+    return filtered.sort((a, b) => {
+      const an = branchName(a).toUpperCase();
+      const bn = branchName(b).toUpperCase();
+      const ai = BRANCH_ORDER.findIndex(n => an.includes(n));
+      const bi = BRANCH_ORDER.findIndex(n => bn.includes(n));
+      const aIdx = ai === -1 ? 999 : ai;
+      const bIdx = bi === -1 ? 999 : bi;
+      if (aIdx !== bIdx) return aIdx - bIdx;
+      if (an !== bn) return an.localeCompare(bn);
+      return new Date(a.due_date || 0) - new Date(b.due_date || 0);
+    });
   }, [invoices, startDate, endDate]);
-
-  // Organizar por filial e depois por fornecedor + data
-  const groupedData = useMemo(() => {
-    const byBranch = {};
-    periodInvoices.forEach((inv) => {
-      const branchName = branchMap[inv.branch_cnpj] || inv.branch_cnpj || "Sem Filial";
-      if (!byBranch[branchName]) byBranch[branchName] = {};
-      const supplierName = inv.supplier_name;
-      if (!byBranch[branchName][supplierName]) byBranch[branchName][supplierName] = [];
-      byBranch[branchName][supplierName].push(inv);
-    });
-    Object.keys(byBranch).forEach((branch) => {
-      Object.keys(byBranch[branch]).forEach((supplier) => {
-        byBranch[branch][supplier].sort((a, b) => new Date(a.issue_date || 0) - new Date(b.issue_date || 0));
-      });
-    });
-    return byBranch;
-  }, [periodInvoices]);
-
-  const sortedBranches = Object.keys(groupedData).sort((a, b) => {
-    const ai = BRANCH_ORDER.findIndex(n => a.toUpperCase().includes(n));
-    const bi = BRANCH_ORDER.findIndex(n => b.toUpperCase().includes(n));
-    if (ai === -1 && bi === -1) return a.localeCompare(b);
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
-  });
 
   const grandTotal = periodInvoices.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
 
-  const branchTotals = useMemo(() => {
-    const totals = {};
-    sortedBranches.forEach((branchName) => {
-      totals[branchName] = Object.keys(groupedData[branchName]).reduce((sum, supplierName) => {
-        return sum + groupedData[branchName][supplierName].reduce((s, inv) => s + (inv.total_value || 0), 0);
-      }, 0);
-    });
-    return totals;
-  }, [groupedData, sortedBranches]);
-
   const periodLabel = (startDate || endDate)
-    ? `Período: ${startDate ? format(new Date(startDate + "T12:00:00"), "dd/MM/yyyy") : "início"} até ${endDate ? format(new Date(endDate + "T12:00:00"), "dd/MM/yyyy") : "hoje"}`
+    ? `Período (vencimento): ${startDate ? format(new Date(startDate + "T12:00:00"), "dd/MM/yyyy") : "início"} até ${endDate ? format(new Date(endDate + "T12:00:00"), "dd/MM/yyyy") : "hoje"}`
     : "Período: todas as datas";
+
+  const productsText = (inv) =>
+    inv.items && inv.items.length > 0 ? inv.items.map(i => i.description).join(", ") : "—";
 
   const handleGeneratePDF = () => {
     setIsGenerating(true);
     try {
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
+      const margin = 10;
       const contentWidth = pageWidth - margin * 2;
-      const lineHeight = 6;
-      let yPosition = margin;
+      let y = margin;
 
-      try {
-        pdf.addImage("https://media.base44.com/images/public/69fa46185be2e7353b027550/1b30abd51_MotorVlog13.png", "PNG", pageWidth - margin - 25, yPosition, 25, 15);
-      } catch (e) {
-        console.log("Logo não disponível");
-      }
+      // Colunas (larguras em mm)
+      const cols = [
+        { key: "branch", label: "Filial", w: 30 },
+        { key: "supplier", label: "Fornecedor", w: 45 },
+        { key: "nf", label: "NF", w: 22 },
+        { key: "issue", label: "Emissão", w: 22 },
+        { key: "due", label: "Vencimento", w: 24 },
+        { key: "value", label: "Valor", w: 26, align: "right" },
+        { key: "product", label: "Produto", w: 55 },
+        { key: "info", label: "Inf. Adicionais", w: 53 },
+      ];
 
-      pdf.setFontSize(18);
-      pdf.setTextColor(15, 23, 42);
-      pdf.setFont(undefined, "bold");
-      pdf.text("Relatório NF", margin, yPosition + 5);
+      const truncate = (text, maxChars) => {
+        const t = String(text || "");
+        return t.length > maxChars ? t.substring(0, maxChars - 1) + "…" : t;
+      };
 
-      pdf.setFontSize(9);
-      pdf.setTextColor(100, 110, 120);
+      const drawHeader = () => {
+        try {
+          pdf.addImage("https://media.base44.com/images/public/69fa46185be2e7353b027550/1b30abd51_MotorVlog13.png", "PNG", pageWidth - margin - 25, y, 25, 15);
+        } catch (e) { /* logo opcional */ }
+
+        pdf.setFontSize(16);
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Relatório NF", margin, y + 5);
+
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 110, 120);
+        pdf.setFont(undefined, "normal");
+        pdf.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}  ·  ${periodLabel}  ·  ${periodInvoices.length} nota(s)`, margin, y + 11);
+        y += 16;
+
+        drawTableHeader();
+      };
+
+      const drawTableHeader = () => {
+        pdf.setFillColor(30, 41, 59);
+        pdf.rect(margin, y, contentWidth, 7, "F");
+        pdf.setFontSize(8);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont(undefined, "bold");
+        let x = margin;
+        cols.forEach((c) => {
+          pdf.text(c.label, c.align === "right" ? x + c.w - 2 : x + 2, y + 4.7, { align: c.align === "right" ? "right" : "left" });
+          x += c.w;
+        });
+        y += 7;
+      };
+
+      drawHeader();
+
+      pdf.setFontSize(7.5);
       pdf.setFont(undefined, "normal");
-      pdf.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, yPosition + 11);
-      pdf.text(periodLabel, margin, yPosition + 16);
 
-      yPosition += 20;
-
-      pdf.setDrawColor(30, 41, 59);
-      pdf.setLineWidth(0.8);
-      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 8;
-
-      pdf.setFillColor(240, 244, 248);
-      pdf.rect(margin, yPosition, contentWidth, 8, "F");
-      pdf.setFontSize(10);
-      pdf.setTextColor(71, 85, 105);
-      pdf.setFont(undefined, "normal");
-      pdf.text(`${periodInvoices.length} nota(s) · ${sortedBranches.length} filial(is)`, margin + 3, yPosition + 5);
-      yPosition += 9;
-
-      sortedBranches.forEach((branchName, branchIndex) => {
-        if (branchIndex > 0) {
+      periodInvoices.forEach((inv, idx) => {
+        if (y > pageHeight - margin - 12) {
           pdf.addPage();
-          yPosition = margin;
+          y = margin;
+          drawTableHeader();
+          pdf.setFontSize(7.5);
+          pdf.setFont(undefined, "normal");
         }
 
-        const supplierMap = groupedData[branchName];
-        const sortedSuppliers = Object.keys(supplierMap).sort();
+        if (idx % 2 === 0) {
+          pdf.setFillColor(245, 247, 250);
+          pdf.rect(margin, y, contentWidth, 6, "F");
+        }
 
-        pdf.setFillColor(30, 41, 59);
-        pdf.rect(margin, yPosition, contentWidth, 10, "F");
-        pdf.setFontSize(12);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFont(undefined, "bold");
-        pdf.text(branchName, margin + 3, yPosition + 7);
-        yPosition += 11;
+        pdf.setTextColor(15, 23, 42);
+        const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
+        const values = {
+          branch: truncate(branchName(inv), 20),
+          supplier: truncate(inv.supplier_name, 30),
+          nf: truncate(nf, 14),
+          issue: formatDate(inv.issue_date),
+          due: formatDate(inv.due_date),
+          value: formatCurrency(inv.total_value),
+          product: truncate(productsText(inv), 38),
+          info: truncate(inv.additional_info, 36),
+        };
 
-        sortedSuppliers.forEach((supplierName) => {
-          const invList = supplierMap[supplierName];
-          const supplierTotal = invList.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
-
-          if (yPosition > pageHeight - margin - 50) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-
-          pdf.setFillColor(248, 250, 252);
-          pdf.rect(margin, yPosition, contentWidth, 8, "F");
-          pdf.setFontSize(10);
-          pdf.setTextColor(15, 23, 42);
-          pdf.setFont(undefined, "bold");
-          pdf.text(supplierName, margin + 2, yPosition + 5.5);
-          yPosition += 8;
-
-          pdf.setFillColor(241, 245, 249);
-          pdf.setFontSize(9);
-          pdf.setTextColor(51, 65, 85);
-          pdf.setFont(undefined, "bold");
-
-          const tableY = yPosition;
-          pdf.rect(margin, tableY, contentWidth, 6, "F");
-          pdf.text("NF", margin + 2, tableY + 4);
-          pdf.text("Emissão", margin + 18, tableY + 4);
-          pdf.text("Vencimento", margin + 38, tableY + 4);
-          pdf.text("Produtos", margin + 62, tableY + 4);
-          pdf.text("Valor", pageWidth - margin - 5, tableY + 4, { align: "right" });
-          yPosition += 8;
-
-          invList.forEach((inv) => {
-            if (yPosition > pageHeight - margin - 25) {
-              pdf.addPage();
-              yPosition = margin;
-            }
-
-            pdf.setFontSize(9);
-            pdf.setTextColor(15, 23, 42);
-            pdf.setFont(undefined, "normal");
-
-            const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
-            const products = inv.items && inv.items.length > 0
-              ? inv.items.map(item => item.description).join(" | ")
-              : "—";
-            const productsFormatted = products.length > 45 ? products.substring(0, 42) + "..." : products;
-
-            pdf.text(String(nf), margin + 2, yPosition + 3.5);
-            pdf.text(formatDate(inv.issue_date), margin + 18, yPosition + 3.5);
-            pdf.text(formatDate(inv.due_date), margin + 38, yPosition + 3.5);
-            pdf.text(productsFormatted, margin + 62, yPosition + 3.5);
-            pdf.text(formatCurrency(inv.total_value), pageWidth - margin - 5, yPosition + 3.5, { align: "right" });
-
-            yPosition += lineHeight;
-          });
-
-          pdf.setFillColor(241, 245, 249);
-          pdf.setFontSize(9);
-          pdf.setTextColor(15, 23, 42);
-          pdf.setFont(undefined, "bold");
-          pdf.rect(margin, yPosition, contentWidth, 6, "F");
-          pdf.text("Subtotal: ", margin + 2, yPosition + 4);
-          pdf.text(formatCurrency(supplierTotal), pageWidth - margin - 5, yPosition + 4, { align: "right" });
-          yPosition += 6;
+        let x = margin;
+        cols.forEach((c) => {
+          pdf.text(values[c.key], c.align === "right" ? x + c.w - 2 : x + 2, y + 4, { align: c.align === "right" ? "right" : "left" });
+          x += c.w;
         });
-
-        pdf.setFillColor(71, 85, 105);
-        pdf.setFontSize(10);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFont(undefined, "bold");
-        pdf.rect(margin, yPosition, contentWidth, 8, "F");
-        pdf.text(`TOTAL ${branchName.toUpperCase()} — ${formatCurrency(branchTotals[branchName])}`, margin + 2, yPosition + 5.5);
-        yPosition += 9;
+        y += 6;
       });
 
-      if (yPosition > pageHeight - margin - 20) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-
+      // Total geral
+      if (y > pageHeight - margin - 10) { pdf.addPage(); y = margin; }
       pdf.setFillColor(30, 41, 59);
-      pdf.setFontSize(11);
+      pdf.rect(margin, y, contentWidth, 8, "F");
+      pdf.setFontSize(9);
       pdf.setTextColor(255, 255, 255);
       pdf.setFont(undefined, "bold");
-      pdf.rect(margin, yPosition, contentWidth, 8, "F");
-      pdf.text(`TOTAL GERAL — ${periodInvoices.length} nota(s)`, margin + 2, yPosition + 5.5);
-      pdf.text(formatCurrency(grandTotal), pageWidth - margin - 5, yPosition + 5.5, { align: "right" });
+      pdf.text(`TOTAL GERAL — ${periodInvoices.length} nota(s)`, margin + 2, y + 5.5);
+      pdf.text(formatCurrency(grandTotal), pageWidth - margin - 2, y + 5.5, { align: "right" });
 
       pdf.save("Relatorio-NF.pdf");
     } catch (error) {
@@ -240,16 +182,16 @@ export default function NFReport({ open, onClose, invoices, branches }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between gap-4 flex-wrap">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+        <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between gap-4 flex-wrap z-10">
           <DialogTitle className="text-xl">Relatório NF</DialogTitle>
           <div className="flex items-end gap-3 flex-wrap">
             <div className="space-y-1">
-              <Label className="text-xs text-slate-500">De</Label>
+              <Label className="text-xs text-slate-500">De (vencimento)</Label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-[150px]" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-slate-500">Até</Label>
+              <Label className="text-xs text-slate-500">Até (vencimento)</Label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-[150px]" />
             </div>
             <Button onClick={handleGeneratePDF} disabled={isGenerating} className="gap-2">
@@ -274,78 +216,41 @@ export default function NFReport({ open, onClose, invoices, branches }) {
           </div>
 
           <div className="bg-slate-50 border-l-4 border-slate-800 px-4 py-3 text-sm text-slate-700">
-            <strong>{periodInvoices.length}</strong> nota(s) · <strong>{sortedBranches.length}</strong> filial(is)
+            <strong>{periodInvoices.length}</strong> nota(s)
           </div>
 
-          {sortedBranches.map((branchName) => {
-            const supplierMap = groupedData[branchName];
-            const sortedSuppliers = Object.keys(supplierMap).sort();
-
-            return (
-              <div key={branchName} className="bg-white border border-slate-200 rounded overflow-hidden">
-                <div className="bg-slate-800 text-white px-4 py-4 font-bold text-lg uppercase tracking-widest shadow-md">
-                  {branchName}
-                </div>
-
-                <div>
-                  {sortedSuppliers.map((supplierName, supplierIndex) => {
-                    const invList = supplierMap[supplierName];
-                    const supplierTotal = invList.reduce((sum, inv) => sum + (inv.total_value || 0), 0);
-
-                    return (
-                      <div key={supplierName} className={supplierIndex > 0 ? "border-t border-slate-200" : ""}>
-                        <div className="bg-gradient-to-r from-slate-100 to-slate-50 px-4 py-3 border-l-4 border-slate-700 font-black text-base text-slate-900 shadow-sm">
-                          {supplierName}
-                        </div>
-
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="bg-slate-100 border-b border-slate-200">
-                                <th className="px-3 py-2 text-left font-semibold text-slate-700">NF</th>
-                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Emissão</th>
-                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Vencimento</th>
-                                <th className="px-3 py-2 text-left font-semibold text-slate-700">Produtos</th>
-                                <th className="px-3 py-2 text-right font-semibold text-slate-700">Valor</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {invList.map((inv) => (
-                                <tr key={inv.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                  <td className="px-3 py-2 font-medium text-blue-600">
-                                    {inv.series ? `${inv.series}/${inv.number}` : inv.number}
-                                  </td>
-                                  <td className="px-3 py-2 text-slate-600">{formatDate(inv.issue_date)}</td>
-                                  <td className="px-3 py-2 text-slate-600">{formatDate(inv.due_date)}</td>
-                                  <td className="px-3 py-2 text-slate-600">
-                                    {inv.items && inv.items.length > 0
-                                      ? inv.items.map(item => item.description).join(", ")
-                                      : "—"}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-medium text-slate-700">
-                                    {formatCurrency(inv.total_value)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <div className="bg-slate-100 px-4 py-2.5 flex justify-end items-center border-t border-slate-200 font-bold text-xs">
-                          <span className="text-slate-700 mr-4">Subtotal:</span>
-                          <span className="text-slate-900 font-bold text-sm">{formatCurrency(supplierTotal)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-4 py-4 text-center font-bold text-lg border-t border-slate-300">
-                  TOTAL {branchName.toUpperCase()} — {formatCurrency(branchTotals[branchName])}
-                </div>
-              </div>
-            );
-          })}
+          <div className="overflow-x-auto border border-slate-200 rounded">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  <th className="px-3 py-2 text-left font-semibold">Filial</th>
+                  <th className="px-3 py-2 text-left font-semibold">Fornecedor</th>
+                  <th className="px-3 py-2 text-left font-semibold">NF</th>
+                  <th className="px-3 py-2 text-left font-semibold">Emissão</th>
+                  <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
+                  <th className="px-3 py-2 text-right font-semibold">Valor</th>
+                  <th className="px-3 py-2 text-left font-semibold">Produto</th>
+                  <th className="px-3 py-2 text-left font-semibold">Informações Adicionais</th>
+                </tr>
+              </thead>
+              <tbody>
+                {periodInvoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-slate-100 even:bg-slate-50">
+                    <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{branchName(inv)}</td>
+                    <td className="px-3 py-2 text-slate-700">{inv.supplier_name}</td>
+                    <td className="px-3 py-2 font-medium text-blue-600 whitespace-nowrap">
+                      {inv.series ? `${inv.series}/${inv.number}` : inv.number}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.issue_date)}</td>
+                    <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.due_date)}</td>
+                    <td className="px-3 py-2 text-right font-medium text-slate-700 whitespace-nowrap">{formatCurrency(inv.total_value)}</td>
+                    <td className="px-3 py-2 text-slate-600">{productsText(inv)}</td>
+                    <td className="px-3 py-2 text-slate-600">{inv.additional_info || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="bg-slate-800 text-white px-6 py-4 rounded flex justify-between items-center font-semibold text-sm">
             <span>TOTAL GERAL — {periodInvoices.length} nota(s)</span>
