@@ -235,7 +235,6 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                   <th className="px-3 py-2 text-left font-semibold">Emissão</th>
                   <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
                   <th className="px-3 py-2 text-right font-semibold">Valor</th>
-                  <th className="px-3 py-2 text-left font-semibold">Produto</th>
                   <th className="px-3 py-2 text-center font-semibold">SIGV</th>
                   <th className="px-3 py-2 text-center font-semibold">TOPCON</th>
                   <th className="px-3 py-2 text-center font-semibold">BOLETO</th>
@@ -252,7 +251,6 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.issue_date)}</td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.due_date)}</td>
                     <td className="px-3 py-2 text-right font-medium text-slate-700 whitespace-nowrap">{formatCurrency(inv.total_value)}</td>
-                    <td className="px-3 py-2 text-slate-600">{productsText(inv)}</td>
                     <td className="px-3 py-2 text-center">
                       {inv.sigv_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
                     </td>
