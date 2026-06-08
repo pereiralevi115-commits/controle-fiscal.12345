@@ -162,7 +162,11 @@ export default function NFReport({ open, onClose, invoices, branches }) {
           const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
           const isStatusSim = ["sigv", "topcon", "boleto"].includes(c.key) && values[c.key] === "Sim";
           if (isStatusSim) {
-            pdf.setTextColor(22, 163, 74);
+            if (c.key === "topcon") {
+              pdf.setTextColor(147, 51, 234);
+            } else {
+              pdf.setTextColor(22, 163, 74);
+            }
             pdf.setFont(undefined, "bold");
           }
           pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
@@ -262,7 +266,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                       {inv.sigv_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      {inv.topcon_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
+                      {inv.topcon_recorded ? <span className="text-purple-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {inv.boleto_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
