@@ -74,13 +74,16 @@ export default function NFReport({ open, onClose, invoices, branches }) {
 
       // Colunas (larguras em mm)
       const cols = [
-        { key: "branch", label: "Filial", w: 30 },
-        { key: "supplier", label: "Fornecedor", w: 45 },
-        { key: "nf", label: "NF", w: 22 },
-        { key: "issue", label: "Emissão", w: 22 },
-        { key: "due", label: "Vencimento", w: 24 },
-        { key: "value", label: "Valor", w: 26, align: "right" },
-        { key: "product", label: "Produto", w: 108 },
+        { key: "branch", label: "Filial", w: 28 },
+        { key: "supplier", label: "Fornecedor", w: 40 },
+        { key: "nf", label: "NF", w: 20 },
+        { key: "issue", label: "Emissão", w: 20 },
+        { key: "due", label: "Vencimento", w: 22 },
+        { key: "value", label: "Valor", w: 24, align: "right" },
+        { key: "product", label: "Produto", w: 75 },
+        { key: "sigv", label: "SIGV", w: 13, align: "center" },
+        { key: "topcon", label: "TOPCON", w: 17, align: "center" },
+        { key: "boleto", label: "BOLETO", w: 18, align: "center" },
       ];
 
       const truncate = (text, maxChars) => {
@@ -115,7 +118,8 @@ export default function NFReport({ open, onClose, invoices, branches }) {
         pdf.setFont(undefined, "bold");
         let x = margin;
         cols.forEach((c) => {
-          pdf.text(c.label, c.align === "right" ? x + c.w - 2 : x + 2, y + 4.7, { align: c.align === "right" ? "right" : "left" });
+          const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
+          pdf.text(c.label, tx, y + 4.7, { align: c.align || "left" });
           x += c.w;
         });
         y += 7;
@@ -149,12 +153,16 @@ export default function NFReport({ open, onClose, invoices, branches }) {
           issue: formatDate(inv.issue_date),
           due: formatDate(inv.due_date),
           value: formatCurrency(inv.total_value),
-          product: truncate(productsText(inv), 75),
+          product: truncate(productsText(inv), 50),
+          sigv: inv.sigv_recorded ? "Sim" : "—",
+          topcon: inv.topcon_recorded ? "Sim" : "—",
+          boleto: inv.boleto_recorded ? "Sim" : "—",
         };
 
         let x = margin;
         cols.forEach((c) => {
-          pdf.text(values[c.key], c.align === "right" ? x + c.w - 2 : x + 2, y + 4, { align: c.align === "right" ? "right" : "left" });
+          const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
+          pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
           x += c.w;
         });
         y += 6;
@@ -228,6 +236,9 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                   <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
                   <th className="px-3 py-2 text-right font-semibold">Valor</th>
                   <th className="px-3 py-2 text-left font-semibold">Produto</th>
+                  <th className="px-3 py-2 text-center font-semibold">SIGV</th>
+                  <th className="px-3 py-2 text-center font-semibold">TOPCON</th>
+                  <th className="px-3 py-2 text-center font-semibold">BOLETO</th>
                 </tr>
               </thead>
               <tbody>
@@ -242,6 +253,15 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.due_date)}</td>
                     <td className="px-3 py-2 text-right font-medium text-slate-700 whitespace-nowrap">{formatCurrency(inv.total_value)}</td>
                     <td className="px-3 py-2 text-slate-600">{productsText(inv)}</td>
+                    <td className="px-3 py-2 text-center">
+                      {inv.sigv_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {inv.topcon_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {inv.boleto_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
