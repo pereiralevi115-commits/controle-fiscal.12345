@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import MateriaPrimaReport from "@/components/reports/MateriaPrimaReport";
+import { Button } from "@/components/ui/button";
+import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 
 export default function NF() {
@@ -12,6 +15,7 @@ export default function NF() {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showReport, setShowReport] = useState(false);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
@@ -127,11 +131,17 @@ export default function NF() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">NF</h1>
-          <p className="text-slate-500 mt-1">
-            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">NF</h1>
+            <p className="text-slate-500 mt-1">
+              {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <Button onClick={() => setShowReport(true)} className="gap-2">
+            <FileBarChart className="w-4 h-4" />
+            Gerar Relatório
+          </Button>
         </div>
 
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
@@ -152,6 +162,13 @@ export default function NF() {
           open={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
           onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
+          branches={branches}
+        />
+
+        <MateriaPrimaReport
+          open={showReport}
+          onClose={() => setShowReport(false)}
+          invoices={filteredInvoices}
           branches={branches}
         />
       </div>
