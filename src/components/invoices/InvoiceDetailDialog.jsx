@@ -109,12 +109,12 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
             <div className="grid grid-cols-4 gap-0">
               <InfoField label="Nº DOCUMENTO" value={invoice.number} />
               <InfoField label="SÉRIE" value={invoice.series} />
-              <InfoField label="DATA DE EMISSÃO" value={invoice.issue_date ? format(new Date(invoice.issue_date), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+              <InfoField label="DATA DE EMISSÃO" value={invoice.issue_date ? format(new Date(invoice.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
               <InfoField label="NATUREZA DA OPERAÇÃO" value="Venda de mercadorias" />
             </div>
             <div className="grid grid-cols-2 gap-0">
               <InfoField label="VALOR TOTAL NF" value={formatCurrency(invoice.total_value)} />
-              <InfoField label="DATA DE VENCIMENTO" value={invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+              <InfoField label="DATA DE VENCIMENTO" value={invoice.due_date ? format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
             </div>
           </div>
 
@@ -249,7 +249,7 @@ export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkRece
                           <p className="font-semibold text-sm">{formatCurrency(payment.value)}</p>
                         </div>
                         <div className="flex justify-between items-start">
-                          <p className="text-xs text-muted-foreground">{invoice.due_date ? format(new Date(invoice.due_date), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
+                          <p className="text-xs text-muted-foreground">{invoice.due_date ? format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"}</p>
                           <p className="text-xs text-muted-foreground">{paymentTypeStr}</p>
                         </div>
                       </div>
