@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
+import { useInvoices } from "@/hooks/useInvoices";
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -30,10 +31,7 @@ export default function Canceladas({ embedded } = {}) {
     },
   });
 
-  const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 250000),
-  });
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ["branches"],

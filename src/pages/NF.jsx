@@ -9,6 +9,7 @@ import NFReport from "@/components/reports/NFReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
+import { useInvoices } from "@/hooks/useInvoices";
 
 export default function NF() {
   const queryClient = useQueryClient();
@@ -21,10 +22,7 @@ export default function NF() {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 250000),
-  });
+  const { data: invoices = [], isLoading } = useInvoices();
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],

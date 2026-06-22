@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import BranchCard from "@/components/dashboard/BranchCard";
 import { FileText } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
+import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
 const formatCurrency = (value) =>
@@ -22,10 +23,7 @@ export default function Dashboard() {
   const [selectedMonthYear, setSelectedMonthYear] = useState("all");
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
-  const { data: invoices = [], isLoading: loadingInvoices } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 250000),
-  });
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ["branches"],

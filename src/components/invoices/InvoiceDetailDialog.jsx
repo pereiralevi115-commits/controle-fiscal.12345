@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,9 +28,27 @@ const InfoField = ({ label, value }) => (
   </div>
 );
 
-export default function InvoiceDetailDialog({ invoice, open, onClose, onMarkReceived, branches }) {
+export default function InvoiceDetailDialog({ invoice: invoiceProp, open, onClose, onMarkReceived, branches }) {
   const { hasPermission } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [fullInvoice, setFullInvoice] = useState(null);
+
+  // As listas trazem uma versão enxuta da nota (sem campos pesados como
+  // endereço, informações complementares, chave de acesso, etc.).
+  // Ao abrir os detalhes, recarregamos a nota completa do servidor.
+  useEffect(() => {
+    let active = true;
+    setFullInvoice(null);
+    if (open && invoiceProp?.id) {
+      base44.entities.Invoice.get(invoiceProp.id)
+        .then((data) => { if (active) setFullInvoice(data); })
+        .catch(() => { /* mantém os dados enxutos já exibidos */ });
+    }
+    return () => { active = false; };
+  }, [open, invoiceProp?.id]);
+
+  // Usa a nota completa quando disponível; senão, a versão enxuta da lista.
+  const invoice = fullInvoice || invoiceProp;
 
   if (!invoice) return null;
 
