@@ -45,6 +45,7 @@ const LIST_FIELDS = [
   "boleto_recorded",
   "internal_notes",
   "internal_notes_list",
+  "additional_info",
   "items",
   "installments",
   "payments",
