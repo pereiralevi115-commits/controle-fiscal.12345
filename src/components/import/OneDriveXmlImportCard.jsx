@@ -216,6 +216,22 @@ export default function OneDriveXmlImportCard() {
             {autoOn ? "Desativar automático" : "Ativar automático"}
           </Button>
         </div>
+
+        {/* Legenda explicativa dos botões */}
+        <div className="grid sm:grid-cols-2 gap-2 pt-1">
+          <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
+            <RefreshCw className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-700">Importar agora:</span> processa a pasta na hora, com a tela aberta. Ideal para a carga inicial de arquivos antigos.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
+            <Cloud className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-700">Automático:</span> importa sozinho cada XML novo que cair na pasta, sem precisar abrir o sistema. Ideal para o dia a dia.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ── Passo 2: Escolher pasta ── */}
