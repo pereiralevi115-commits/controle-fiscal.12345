@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/AuthContext';
@@ -11,6 +11,8 @@ const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/pub
 const navItems = [
   { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { key: 'nf', name: 'NF', path: '/nf', icon: FileText },
+  { key: 'cte', name: 'CT-e', path: '/cte', icon: Package },
+  { key: 'nfse', name: 'NFS-e', path: '/nfse', icon: Receipt },
   { key: 'notas', name: 'Notas Fiscais', path: '/notas', icon: FileText },
   { key: 'materia-prima', name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },

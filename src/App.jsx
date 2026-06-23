@@ -21,6 +21,8 @@ import Arquivadas from './pages/Arquivadas';
 import Canceladas from './pages/Canceladas';
 import CriciumaInvoices from './pages/CriciumaInvoices';
 import NotasParaVerificar from './pages/NotasParaVerificar';
+import CTe from './pages/CTe';
+import NFSe from './pages/NFSe';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -51,6 +53,10 @@ const AuthenticatedApp = () => {
         return <CriciumaInvoices />;
       case '/notas-para-verificar':
         return <NotasParaVerificar />;
+      case '/cte':
+        return <CTe />;
+      case '/nfse':
+        return <NFSe />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':
