@@ -33,7 +33,7 @@ const gerencialItems = [
 
 const navItems = [
   { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { key: 'importar', name: 'INTEGRAÇÃO', path: '/importar', icon: Upload },
+  { key: 'importar', name: 'Integração', path: '/importar', icon: Upload },
 ];
 
 export default function AppHeaderLayout({ children, currentPath }) {
