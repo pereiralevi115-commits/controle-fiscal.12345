@@ -179,6 +179,17 @@ export default function OneDriveXmlImportCard() {
         </div>
       </div>
 
+      <OneDriveFolderBrowser
+        loading={loading}
+        currentFolder={currentFolder}
+        folders={folders}
+        xmlFileCount={xmlFileCount}
+        onOpenRoot={() => loadFolder(null, [])}
+        onGoBack={folderStack.length > 0 ? handleGoBack : null}
+        onOpenFolder={handleOpenFolder}
+        onSelectCurrent={() => saveFolder(settings?.auto_sync_enabled ?? false)}
+      />
+
       <ImportResultSummary result={result} title="Resultado da importação do OneDrive" />
     </section>
   );
