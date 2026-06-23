@@ -176,18 +176,19 @@ export default function OneDriveXmlImportCard() {
   return (
     <section className="space-y-5">
       {/* ── Passo 1: Pasta atual + status ── */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+      <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-violet-50/40 p-5 space-y-3.5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold">1</span>
+          <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold shadow-sm shadow-indigo-500/30">1</span>
             Pasta conectada
           </div>
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${autoOn ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>
+          <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${autoOn ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${autoOn ? "bg-green-500" : "bg-slate-400"}`} />
             {autoOn ? "Automático ativo" : "Automático desligado"}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2.5">
+        <div className="flex items-center gap-2.5 rounded-xl bg-white border border-slate-200 px-3.5 py-3 shadow-sm">
           <Cloud className="w-4 h-4 text-indigo-500 flex-shrink-0" />
           <span className={`text-sm truncate ${hasFolder ? "text-slate-800 font-medium" : "text-slate-400 italic"}`}>
             {hasFolder ? settings.folder_path : "Nenhuma pasta conectada ainda — selecione abaixo."}
@@ -201,13 +202,13 @@ export default function OneDriveXmlImportCard() {
         )}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleImportFolder} disabled={importing || (!hasFolder && currentFolder.id === "root")} className="flex-1 min-w-[140px]">
+          <Button onClick={handleImportFolder} disabled={importing || (!hasFolder && currentFolder.id === "root")} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing && importProgress
               ? `${importProgress.processed}/${importProgress.total}...`
               : "Importar agora"}
           </Button>
-          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving} className="flex-1 min-w-[140px]">
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {autoOn ? "Desativar automático" : "Ativar automático"}
           </Button>
@@ -216,8 +217,8 @@ export default function OneDriveXmlImportCard() {
 
       {/* ── Passo 2: Escolher pasta ── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold">2</span>
+        <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold shadow-sm shadow-indigo-500/30">2</span>
           Escolher outra pasta
         </div>
         <OneDriveFolderBrowser
