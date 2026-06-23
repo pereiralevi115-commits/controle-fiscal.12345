@@ -1,0 +1,53 @@
+{
+  "name": "OneDriveImportSettings",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Chave \u00fanica da configura\u00e7\u00e3o compartilhada do OneDrive"
+    },
+    "folder_id": {
+      "type": "string",
+      "description": "ID da pasta selecionada no OneDrive"
+    },
+    "folder_name": {
+      "type": "string",
+      "description": "Nome da pasta selecionada no OneDrive"
+    },
+    "folder_path": {
+      "type": "string",
+      "description": "Caminho exibido da pasta selecionada no OneDrive"
+    },
+    "auto_sync_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se a sincroniza\u00e7\u00e3o autom\u00e1tica do OneDrive est\u00e1 ativa"
+    },
+    "last_sync_at": {
+      "type": "string",
+      "description": "Data e hora ISO da \u00faltima sincroniza\u00e7\u00e3o/importa\u00e7\u00e3o"
+    },
+    "last_sync_message": {
+      "type": "string",
+      "description": "Resumo do \u00faltimo processamento do OneDrive"
+    },
+    "last_import_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de XMLs processados na \u00faltima importa\u00e7\u00e3o"
+    },
+    "last_import_success": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de notas importadas na \u00faltima execu\u00e7\u00e3o"
+    },
+    "last_import_errors": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de erros da \u00faltima execu\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "key"
+  ]
+}
