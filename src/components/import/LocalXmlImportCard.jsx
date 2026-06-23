@@ -115,10 +115,6 @@ export default function LocalXmlImportCard() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-800">Upload manual</h2>
-        <p className="text-sm text-slate-500 mt-1">Envie XMLs direto do seu computador.</p>
-      </div>
       <LocalXmlDropzone
         dragOver={dragOver}
         setDragOver={setDragOver}

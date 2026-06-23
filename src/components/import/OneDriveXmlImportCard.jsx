@@ -170,58 +170,67 @@ export default function OneDriveXmlImportCard() {
     loadFolder(previous?.id === "root" ? null : previous?.id, nextStack);
   };
 
-  return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-800">OneDrive compartilhado</h2>
-        <p className="text-sm text-slate-500 mt-1">Escolha uma pasta do OneDrive para importar XMLs manualmente ou de forma automática.</p>
-      </div>
+  const hasFolder = !!settings?.folder_id;
+  const autoOn = !!settings?.auto_sync_enabled;
 
-      <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-5 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-slate-800 font-medium">
-              <Cloud className="w-4 h-4 text-primary" />
-              Pasta configurada
-            </div>
-            <div className="text-sm text-slate-500">
-              {settings?.folder_path ? settings.folder_path : "Nenhuma pasta salva ainda."}
-            </div>
-            {settings?.last_sync_message && (
-              <div className="text-xs text-slate-500">
-                Último resultado: {settings.last_sync_message}
-              </div>
-            )}
+  return (
+    <section className="space-y-5">
+      {/* ── Passo 1: Pasta atual + status ── */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold">1</span>
+            Pasta conectada
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => saveFolder()} disabled={saving || loading || currentFolder.id === "root"}>
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Salvar pasta
-            </Button>
-            <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {settings?.auto_sync_enabled ? "Desativar automático" : "Ativar automático"}
-            </Button>
-            <Button onClick={handleImportFolder} disabled={importing}>
-              {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-              {importing && importProgress
-                ? `${importProgress.processed}/${importProgress.total} arquivos...`
-                : "Importar agora"}
-            </Button>
-          </div>
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${autoOn ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>
+            {autoOn ? "Automático ativo" : "Automático desligado"}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2.5">
+          <Cloud className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+          <span className={`text-sm truncate ${hasFolder ? "text-slate-800 font-medium" : "text-slate-400 italic"}`}>
+            {hasFolder ? settings.folder_path : "Nenhuma pasta conectada ainda — selecione abaixo."}
+          </span>
+        </div>
+
+        {settings?.last_sync_message && (
+          <p className="text-xs text-slate-500">
+            <span className="font-medium">Último resultado:</span> {settings.last_sync_message}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button onClick={handleImportFolder} disabled={importing || (!hasFolder && currentFolder.id === "root")} className="flex-1 min-w-[140px]">
+            {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            {importing && importProgress
+              ? `${importProgress.processed}/${importProgress.total}...`
+              : "Importar agora"}
+          </Button>
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving} className="flex-1 min-w-[140px]">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {autoOn ? "Desativar automático" : "Ativar automático"}
+          </Button>
         </div>
       </div>
 
-      <OneDriveFolderBrowser
-        loading={loading}
-        currentFolder={currentFolder}
-        folders={folders}
-        xmlFileCount={xmlFileCount}
-        onOpenRoot={() => loadFolder(null, [])}
-        onGoBack={folderStack.length > 0 ? handleGoBack : null}
-        onOpenFolder={handleOpenFolder}
-        onSelectCurrent={() => saveFolder(settings?.auto_sync_enabled ?? false)}
-      />
+      {/* ── Passo 2: Escolher pasta ── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold">2</span>
+          Escolher outra pasta
+        </div>
+        <OneDriveFolderBrowser
+          loading={loading}
+          currentFolder={currentFolder}
+          folders={folders}
+          xmlFileCount={xmlFileCount}
+          onOpenRoot={() => loadFolder(null, [])}
+          onGoBack={folderStack.length > 0 ? handleGoBack : null}
+          onOpenFolder={handleOpenFolder}
+          onSelectCurrent={() => saveFolder(settings?.auto_sync_enabled ?? false)}
+        />
+      </div>
 
       <ImportResultSummary result={result} title="Resultado da importação do OneDrive" />
     </section>
