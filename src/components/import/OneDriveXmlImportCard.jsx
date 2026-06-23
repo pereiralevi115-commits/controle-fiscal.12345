@@ -5,20 +5,37 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ImportResultSummary from "@/components/import/ImportResultSummary";
 import OneDriveFolderBrowser from "@/components/import/OneDriveFolderBrowser";
+import OneDriveConnectedFolders from "@/components/import/OneDriveConnectedFolders";
 import OneDriveHelpBox from "@/components/import/OneDriveHelpBox";
 import { Cloud, Loader2, RefreshCw } from "lucide-react";
+
+// Normaliza a lista de pastas conectadas (considera o campo legado de pasta única).
+function getConnectedFolders(settings) {
+  if (!settings) return [];
+  if (Array.isArray(settings.folders) && settings.folders.length > 0) {
+    return settings.folders.filter((f) => f && f.folder_id);
+  }
+  if (settings.folder_id) {
+    return [{ folder_id: settings.folder_id, folder_name: settings.folder_name, folder_path: settings.folder_path }];
+  }
+  return [];
+}
 
 export default function OneDriveXmlImportCard() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
   const [result, setResult] = useState(null);
   const [settings, setSettings] = useState(null);
   const [folders, setFolders] = useState([]);
   const [currentFolder, setCurrentFolder] = useState({ id: "root", name: "Raiz do OneDrive", pathLabel: "/" });
   const [xmlFileCount, setXmlFileCount] = useState(0);
   const [folderStack, setFolderStack] = useState([]);
+  const [importProgress, setImportProgress] = useState(null);
+
+  const connectedFolders = getConnectedFolders(settings);
 
   const loadStatus = async () => {
     const response = await base44.functions.invoke("oneDriveXmlManager", { action: "getStatus" });
@@ -47,23 +64,22 @@ export default function OneDriveXmlImportCard() {
     Promise.all([loadStatus(), loadFolder()]).catch(() => {});
   }, []);
 
-  const saveFolder = async (autoSyncEnabled = settings?.auto_sync_enabled ?? false) => {
+  const handleAddFolder = async () => {
     if (!currentFolder || currentFolder.id === "root") {
-      toast.error("Abra a pasta desejada antes de salvar.");
+      toast.error("Abra a pasta desejada antes de adicionar.");
       return;
     }
 
     setSaving(true);
     try {
       const response = await base44.functions.invoke("oneDriveXmlManager", {
-        action: "saveSettings",
+        action: "addFolder",
         folderId: currentFolder.id,
         folderName: currentFolder.name,
         folderPath: currentFolder.pathLabel,
-        autoSyncEnabled,
       });
       setSettings(response.data.settings);
-      toast.success("Pasta do OneDrive salva com sucesso!");
+      toast.success("Pasta conectada com sucesso!");
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message);
     } finally {
@@ -71,20 +87,32 @@ export default function OneDriveXmlImportCard() {
     }
   };
 
+  const handleRemoveFolder = async (folderId) => {
+    setRemovingId(folderId);
+    try {
+      const response = await base44.functions.invoke("oneDriveXmlManager", {
+        action: "removeFolder",
+        folderId,
+      });
+      setSettings(response.data.settings);
+      toast.success("Pasta removida.");
+    } catch (error) {
+      toast.error(error?.response?.data?.error || error.message);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
   const handleToggleAutoSync = async () => {
-    if (!settings?.folder_id && currentFolder?.id === "root") {
-      toast.error("Selecione uma pasta primeiro.");
+    if (connectedFolders.length === 0) {
+      toast.error("Conecte pelo menos uma pasta primeiro.");
       return;
     }
 
-    const folderData = settings?.folder_id ? settings : currentFolder;
     setSaving(true);
     try {
       const response = await base44.functions.invoke("oneDriveXmlManager", {
-        action: "saveSettings",
-        folderId: folderData.folder_id || folderData.id,
-        folderName: folderData.folder_name || folderData.name,
-        folderPath: folderData.folder_path || folderData.pathLabel,
+        action: "toggleAutoSync",
         autoSyncEnabled: !settings?.auto_sync_enabled,
       });
       setSettings(response.data.settings);
@@ -96,15 +124,9 @@ export default function OneDriveXmlImportCard() {
     }
   };
 
-  const [importProgress, setImportProgress] = useState(null);
-
   const handleImportFolder = async () => {
-    const folderData = settings?.folder_id
-      ? { id: settings.folder_id, name: settings.folder_name, pathLabel: settings.folder_path }
-      : currentFolder;
-
-    if (!folderData?.id || folderData.id === "root") {
-      toast.error("Selecione uma pasta do OneDrive primeiro.");
+    if (connectedFolders.length === 0) {
+      toast.error("Conecte pelo menos uma pasta do OneDrive primeiro.");
       return;
     }
 
@@ -112,32 +134,31 @@ export default function OneDriveXmlImportCard() {
     setResult(null);
     setImportProgress(null);
 
+    let folderIndex = 0;
     let skip = 0;
     let totalSuccess = 0;
     let totalErrors = 0;
-    let grandTotal = 0;
 
     try {
       while (true) {
         const response = await base44.functions.invoke("oneDriveXmlManager", {
           action: "importFolder",
-          folderId: folderData.id,
-          folderName: folderData.name,
-          folderPath: folderData.pathLabel,
+          folderIndex,
           skip,
         });
 
         const data = response.data;
-        grandTotal = data.total || grandTotal;
-        totalSuccess = data.totalSuccess ?? (totalSuccess + (data.success || 0));
-        totalErrors = data.totalErrors ?? (totalErrors + (data.errors || 0));
+        totalSuccess = data.totalSuccess ?? totalSuccess;
+        totalErrors = data.totalErrors ?? totalErrors;
 
         setImportProgress({
-          processed: data.processed || (skip + 10),
-          total: grandTotal,
+          folder: (data.folderIndex ?? folderIndex) + 1,
+          folderCount: data.folderCount || connectedFolders.length,
+          processed: data.processed || 0,
+          total: data.total || 0,
         });
 
-        if (data.done) {
+        if (data.allDone) {
           setResult({ success: totalSuccess, errors: totalErrors, error_details: data.error_details || [] });
           await loadStatus();
           queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -149,9 +170,9 @@ export default function OneDriveXmlImportCard() {
           break;
         }
 
-        skip = data.processed;
-        // Pequena pausa entre lotes para não sobrecarregar
-        await new Promise(r => setTimeout(r, 500));
+        folderIndex = data.nextFolderIndex;
+        skip = data.nextSkip;
+        await new Promise((r) => setTimeout(r, 500));
       }
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message);
@@ -171,37 +192,39 @@ export default function OneDriveXmlImportCard() {
     loadFolder(previous?.id === "root" ? null : previous?.id, nextStack);
   };
 
-  const hasFolder = !!settings?.folder_id;
+  const hasFolder = connectedFolders.length > 0;
   const autoOn = !!settings?.auto_sync_enabled;
+  const reachedMax = connectedFolders.length >= 3;
 
   return (
     <section className="space-y-5">
       <OneDriveHelpBox />
 
-      {/* ── Passo 1: Pasta atual + status ── */}
+      {/* ── Passo 1: Pastas conectadas + status ── */}
       <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-violet-50/40 p-5 space-y-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold shadow-sm shadow-indigo-500/30">1</span>
-            Pasta conectada
+            Pastas conectadas
           </div>
           <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${autoOn ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${autoOn ? "bg-green-500" : "bg-slate-400"}`} />
-            {autoOn ? "Automático ativo" : "Automático desligado"}
+            {autoOn ? "Automático ativo em todas" : "Automático desligado"}
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5 rounded-xl bg-white border border-slate-200 px-3.5 py-3 shadow-sm">
-          <Cloud className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-          <span className={`text-sm truncate ${hasFolder ? "text-slate-800 font-medium" : "text-slate-400 italic"}`}>
-            {hasFolder ? settings.folder_path : "Nenhuma pasta conectada ainda — selecione abaixo."}
-          </span>
-        </div>
+        <OneDriveConnectedFolders
+          folders={connectedFolders}
+          onRemove={handleRemoveFolder}
+          removingId={removingId}
+        />
 
         {importing && importProgress ? (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-indigo-700">Importando notas...</span>
+              <span className="font-medium text-indigo-700">
+                Importando pasta {importProgress.folder}/{importProgress.folderCount}...
+              </span>
               <span className="font-semibold text-slate-700 tabular-nums">
                 {importProgress.processed} / {importProgress.total}
                 {importProgress.total > 0 && (
@@ -228,11 +251,11 @@ export default function OneDriveXmlImportCard() {
         ) : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleImportFolder} disabled={importing || (!hasFolder && currentFolder.id === "root")} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
+          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing ? "Importando..." : "Importar agora"}
           </Button>
-          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {autoOn ? "Desativar automático" : "Ativar automático"}
           </Button>
@@ -243,34 +266,40 @@ export default function OneDriveXmlImportCard() {
           <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
             <RefreshCw className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-slate-600 leading-relaxed">
-              <span className="font-semibold text-slate-700">Importar agora:</span> processa a pasta na hora, com a tela aberta. Ideal para a carga inicial de arquivos antigos.
+              <span className="font-semibold text-slate-700">Importar agora:</span> processa todas as pastas na hora, com a tela aberta. Ideal para a carga inicial de arquivos antigos.
             </p>
           </div>
           <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
             <Cloud className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-slate-600 leading-relaxed">
-              <span className="font-semibold text-slate-700">Automático:</span> importa sozinho cada XML novo que cair na pasta, sem precisar abrir o sistema. Ideal para o dia a dia.
+              <span className="font-semibold text-slate-700">Automático:</span> importa sozinho cada XML novo que cair em qualquer pasta conectada, sem precisar abrir o sistema. Ideal para o dia a dia.
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── Passo 2: Escolher pasta ── */}
+      {/* ── Passo 2: Adicionar pasta ── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold shadow-sm shadow-indigo-500/30">2</span>
-          Escolher outra pasta
+          {reachedMax ? "Máximo de 3 pastas conectadas" : "Adicionar pasta"}
         </div>
-        <OneDriveFolderBrowser
-          loading={loading}
-          currentFolder={currentFolder}
-          folders={folders}
-          xmlFileCount={xmlFileCount}
-          onOpenRoot={() => loadFolder(null, [])}
-          onGoBack={folderStack.length > 0 ? handleGoBack : null}
-          onOpenFolder={handleOpenFolder}
-          onSelectCurrent={() => saveFolder(settings?.auto_sync_enabled ?? false)}
-        />
+        {reachedMax ? (
+          <p className="text-xs text-slate-500 pl-1">
+            Você já conectou 3 pastas. Remova uma acima para adicionar outra.
+          </p>
+        ) : (
+          <OneDriveFolderBrowser
+            loading={loading}
+            currentFolder={currentFolder}
+            folders={folders}
+            xmlFileCount={xmlFileCount}
+            onOpenRoot={() => loadFolder(null, [])}
+            onGoBack={folderStack.length > 0 ? handleGoBack : null}
+            onOpenFolder={handleOpenFolder}
+            onSelectCurrent={handleAddFolder}
+          />
+        )}
       </div>
 
       <ImportResultSummary result={result} title="Resultado da importação do OneDrive" />

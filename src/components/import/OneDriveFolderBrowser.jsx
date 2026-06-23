@@ -20,7 +20,7 @@ export default function OneDriveFolderBrowser({ loading, currentFolder, folders,
         </div>
         <Button size="sm" className="h-8" onClick={onSelectCurrent} disabled={isRoot || loading}>
           <Check className="w-4 h-4 mr-1.5" />
-          Usar esta pasta
+          Adicionar esta pasta
         </Button>
       </div>
 

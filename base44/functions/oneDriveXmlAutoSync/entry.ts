@@ -35,12 +35,22 @@ async function getSettings(base44) {
   return settings[0] || null;
 }
 
+// Retorna a lista de pastas conectadas, considerando o campo legado de pasta única.
+function getConnectedFolders(settings) {
+  if (!settings) return [];
+  if (Array.isArray(settings.folders) && settings.folders.length > 0) {
+    return settings.folders.filter((f) => f && f.folder_id);
+  }
+  if (settings.folder_id) {
+    return [{ folder_id: settings.folder_id, folder_name: settings.folder_name, folder_path: settings.folder_path }];
+  }
+  return [];
+}
+
 async function saveResult(base44, settings, result, message) {
   if (!settings) return;
   await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
-    folder_id: settings.folder_id,
-    folder_name: settings.folder_name,
-    folder_path: settings.folder_path,
+    folders: getConnectedFolders(settings),
     auto_sync_enabled: settings.auto_sync_enabled,
     last_sync_at: new Date().toISOString(),
     last_sync_message: message,
@@ -148,26 +158,46 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const payload = await req.json();
     const settings = await getSettings(base44);
+    const connectedFolders = getConnectedFolders(settings);
 
-    if (!settings?.auto_sync_enabled || !settings?.folder_id) {
+    if (!settings?.auto_sync_enabled || connectedFolders.length === 0) {
       return Response.json({ skipped: true, reason: 'Sincronização automática desativada.' });
     }
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('one_drive');
     const notifications = payload?.data?.value || [];
-    const relevant = await hasRelevantChange(accessToken, settings.folder_id, notifications);
 
-    if (!relevant) {
-      return Response.json({ skipped: true, reason: 'Alteração fora da pasta monitorada.' });
+    // Verifica se a alteração pertence a alguma das pastas monitoradas.
+    let anyRelevant = notifications.length === 0;
+    if (!anyRelevant) {
+      for (const folder of connectedFolders) {
+        if (await hasRelevantChange(accessToken, folder.folder_id, notifications)) {
+          anyRelevant = true;
+          break;
+        }
+      }
     }
 
-    const result = await importFolder(base44, accessToken, settings.folder_id);
-    const message = result.total === 0
-      ? 'Nenhum XML encontrado na pasta monitorada.'
-      : `${result.success} importada(s), ${result.errors} erro(s)`;
+    if (!anyRelevant) {
+      return Response.json({ skipped: true, reason: 'Alteração fora das pastas monitoradas.' });
+    }
 
-    await saveResult(base44, settings, result, message);
-    return Response.json({ ok: true, result });
+    // Importa todas as pastas conectadas e acumula os resultados.
+    const totals = { success: 0, errors: 0, total: 0, error_details: [] };
+    for (const folder of connectedFolders) {
+      const result = await importFolder(base44, accessToken, folder.folder_id);
+      totals.success += result.success || 0;
+      totals.errors += result.errors || 0;
+      totals.total += result.total || 0;
+      totals.error_details = totals.error_details.concat(result.error_details || []);
+    }
+
+    const message = totals.total === 0
+      ? 'Nenhum XML encontrado nas pastas monitoradas.'
+      : `${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))`;
+
+    await saveResult(base44, settings, totals, message);
+    return Response.json({ ok: true, result: totals });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -6,17 +6,38 @@
       "type": "string",
       "description": "Chave \u00fanica da configura\u00e7\u00e3o compartilhada do OneDrive"
     },
+    "folders": {
+      "type": "array",
+      "description": "Lista de pastas conectadas do OneDrive (at\u00e9 3)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "folder_id": {
+            "type": "string",
+            "description": "ID da pasta no OneDrive"
+          },
+          "folder_name": {
+            "type": "string",
+            "description": "Nome da pasta no OneDrive"
+          },
+          "folder_path": {
+            "type": "string",
+            "description": "Caminho exibido da pasta no OneDrive"
+          }
+        }
+      }
+    },
     "folder_id": {
       "type": "string",
-      "description": "ID da pasta selecionada no OneDrive"
+      "description": "ID da pasta selecionada no OneDrive (legado)"
     },
     "folder_name": {
       "type": "string",
-      "description": "Nome da pasta selecionada no OneDrive"
+      "description": "Nome da pasta selecionada no OneDrive (legado)"
     },
     "folder_path": {
       "type": "string",
-      "description": "Caminho exibido da pasta selecionada no OneDrive"
+      "description": "Caminho exibido da pasta selecionada no OneDrive (legado)"
     },
     "auto_sync_enabled": {
       "type": "boolean",

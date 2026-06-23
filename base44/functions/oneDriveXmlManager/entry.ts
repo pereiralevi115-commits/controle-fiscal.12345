@@ -326,6 +326,18 @@ async function getSettings(base44) {
   return settings[0] || null;
 }
 
+// Retorna a lista de pastas conectadas, considerando o campo legado de pasta única.
+function getConnectedFolders(settings) {
+  if (!settings) return [];
+  if (Array.isArray(settings.folders) && settings.folders.length > 0) {
+    return settings.folders.filter((f) => f && f.folder_id);
+  }
+  if (settings.folder_id) {
+    return [{ folder_id: settings.folder_id, folder_name: settings.folder_name, folder_path: settings.folder_path }];
+  }
+  return [];
+}
+
 async function saveSettings(base44, data) {
   const existing = await getSettings(base44);
   const payload = {
@@ -476,42 +488,112 @@ Deno.serve(async (req) => {
       return Response.json(data);
     }
 
-    if (action === 'saveSettings') {
+    if (action === 'addFolder') {
       const current = await getSettings(base44);
+      if (!folderId) {
+        return Response.json({ error: 'Selecione uma pasta válida.' }, { status: 400 });
+      }
+      const existingFolders = getConnectedFolders(current);
+      if (existingFolders.some((f) => f.folder_id === folderId)) {
+        return Response.json({ error: 'Esta pasta já está conectada.' }, { status: 400 });
+      }
+      if (existingFolders.length >= 3) {
+        return Response.json({ error: 'Você já conectou o máximo de 3 pastas. Remova uma para adicionar outra.' }, { status: 400 });
+      }
+      const folders = [...existingFolders, { folder_id: folderId, folder_name: folderName, folder_path: folderPath }];
       const settings = await saveSettings(base44, {
-        folder_id: folderId ?? current?.folder_id,
-        folder_name: folderName ?? current?.folder_name,
-        folder_path: folderPath ?? current?.folder_path,
-        auto_sync_enabled: typeof autoSyncEnabled === 'boolean' ? autoSyncEnabled : (current?.auto_sync_enabled || false),
+        folders,
+        folder_id: null,
+        folder_name: null,
+        folder_path: null,
+        auto_sync_enabled: current?.auto_sync_enabled || false,
+        last_sync_at: current?.last_sync_at,
+        last_sync_message: current?.last_sync_message,
+        last_import_total: current?.last_import_total || 0,
+        last_import_success: current?.last_import_success || 0,
+        last_import_errors: current?.last_import_errors || 0,
+      });
+      return Response.json({ settings });
+    }
+
+    if (action === 'removeFolder') {
+      const current = await getSettings(base44);
+      const folders = getConnectedFolders(current).filter((f) => f.folder_id !== folderId);
+      const settings = await saveSettings(base44, {
+        folders,
+        folder_id: null,
+        folder_name: null,
+        folder_path: null,
+        auto_sync_enabled: current?.auto_sync_enabled || false,
+        last_sync_at: current?.last_sync_at,
+        last_sync_message: current?.last_sync_message,
+        last_import_total: current?.last_import_total || 0,
+        last_import_success: current?.last_import_success || 0,
+        last_import_errors: current?.last_import_errors || 0,
+      });
+      return Response.json({ settings });
+    }
+
+    if (action === 'toggleAutoSync') {
+      const current = await getSettings(base44);
+      const folders = getConnectedFolders(current);
+      if (folders.length === 0) {
+        return Response.json({ error: 'Conecte pelo menos uma pasta primeiro.' }, { status: 400 });
+      }
+      const settings = await saveSettings(base44, {
+        folders,
+        folder_id: null,
+        folder_name: null,
+        folder_path: null,
+        auto_sync_enabled: typeof autoSyncEnabled === 'boolean' ? autoSyncEnabled : !(current?.auto_sync_enabled),
+        last_sync_at: current?.last_sync_at,
+        last_sync_message: current?.last_sync_message,
+        last_import_total: current?.last_import_total || 0,
+        last_import_success: current?.last_import_success || 0,
+        last_import_errors: current?.last_import_errors || 0,
       });
       return Response.json({ settings });
     }
 
     if (action === 'importFolder') {
       const settings = await getSettings(base44);
-      const effectiveFolderId = folderId || settings?.folder_id;
-      if (!effectiveFolderId) {
-        return Response.json({ error: 'Selecione uma pasta do OneDrive primeiro.' }, { status: 400 });
+      const connectedFolders = getConnectedFolders(settings);
+      if (connectedFolders.length === 0) {
+        return Response.json({ error: 'Conecte pelo menos uma pasta do OneDrive primeiro.' }, { status: 400 });
       }
 
+      // Processa uma pasta por vez, lote por lote. O frontend controla folderIndex/skip.
+      const folderIndex = payload.folderIndex || 0;
       const skip = payload.skip || 0;
-      const result = await importFolderById(base44, accessToken, effectiveFolderId, skip);
+      const currentFolderEntry = connectedFolders[folderIndex];
 
-      // Acumula os totais com o que já foi salvo (para chamadas subsequentes)
-      const prevSuccess = skip > 0 ? (settings?.last_import_success || 0) : 0;
-      const prevErrors = skip > 0 ? (settings?.last_import_errors || 0) : 0;
+      if (!currentFolderEntry) {
+        return Response.json({ allDone: true, done: true });
+      }
+
+      const result = await importFolderById(base44, accessToken, currentFolderEntry.folder_id, skip);
+
+      // Acumula os totais entre lotes e pastas (zera só no primeiríssimo lote da primeira pasta).
+      const isFirstBatch = folderIndex === 0 && skip === 0;
+      const prevSuccess = isFirstBatch ? 0 : (settings?.last_import_success || 0);
+      const prevErrors = isFirstBatch ? 0 : (settings?.last_import_errors || 0);
 
       const totalSuccess = prevSuccess + (result.success || 0);
       const totalErrors = prevErrors + (result.errors || 0);
 
-      const message = result.done
-        ? `Concluído: ${totalSuccess} importada(s), ${totalErrors} erro(s) de ${result.total} arquivo(s)`
-        : `Processando: ${result.processed}/${result.total} arquivos...`;
+      const folderDone = result.done;
+      const isLastFolder = folderIndex >= connectedFolders.length - 1;
+      const allDone = folderDone && isLastFolder;
+
+      const message = allDone
+        ? `Concluído: ${totalSuccess} importada(s), ${totalErrors} erro(s) (${connectedFolders.length} pasta(s))`
+        : `Processando pasta ${folderIndex + 1}/${connectedFolders.length}: ${result.processed}/${result.total} arquivos...`;
 
       await saveSettings(base44, {
-        folder_id: folderId || settings?.folder_id,
-        folder_name: folderName || settings?.folder_name,
-        folder_path: folderPath || settings?.folder_path,
+        folders: connectedFolders,
+        folder_id: null,
+        folder_name: null,
+        folder_path: null,
         auto_sync_enabled: settings?.auto_sync_enabled || false,
         last_sync_at: new Date().toISOString(),
         last_sync_message: message,
@@ -519,7 +601,23 @@ Deno.serve(async (req) => {
         last_import_success: totalSuccess,
         last_import_errors: totalErrors,
       });
-      return Response.json({ ...result, totalSuccess, totalErrors });
+
+      // Indica ao frontend qual a próxima posição (próximo lote ou próxima pasta).
+      const nextFolderIndex = folderDone ? folderIndex + 1 : folderIndex;
+      const nextSkip = folderDone ? 0 : result.processed;
+
+      return Response.json({
+        ...result,
+        totalSuccess,
+        totalErrors,
+        folderIndex,
+        folderName: currentFolderEntry.folder_name,
+        folderCount: connectedFolders.length,
+        nextFolderIndex,
+        nextSkip,
+        allDone,
+        done: allDone,
+      });
     }
 
     if (action === 'importFiles') {
