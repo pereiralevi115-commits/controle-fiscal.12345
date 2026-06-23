@@ -95,6 +95,8 @@ export default function OneDriveXmlImportCard() {
     }
   };
 
+  const [importProgress, setImportProgress] = useState(null);
+
   const handleImportFolder = async () => {
     const folderData = settings?.folder_id
       ? { id: settings.folder_id, name: settings.folder_name, pathLabel: settings.folder_path }
@@ -107,25 +109,54 @@ export default function OneDriveXmlImportCard() {
 
     setImporting(true);
     setResult(null);
+    setImportProgress(null);
+
+    let skip = 0;
+    let totalSuccess = 0;
+    let totalErrors = 0;
+    let grandTotal = 0;
+
     try {
-      const response = await base44.functions.invoke("oneDriveXmlManager", {
-        action: "importFolder",
-        folderId: folderData.id,
-        folderName: folderData.name,
-        folderPath: folderData.pathLabel,
-      });
-      setResult(response.data);
-      await loadStatus();
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      if ((response.data.success || 0) > 0) {
-        toast.success(`${response.data.success} nota(s) importada(s) com sucesso!`);
-      } else {
-        toast.message("Nenhum XML novo foi importado.");
+      while (true) {
+        const response = await base44.functions.invoke("oneDriveXmlManager", {
+          action: "importFolder",
+          folderId: folderData.id,
+          folderName: folderData.name,
+          folderPath: folderData.pathLabel,
+          skip,
+        });
+
+        const data = response.data;
+        grandTotal = data.total || grandTotal;
+        totalSuccess = data.totalSuccess ?? (totalSuccess + (data.success || 0));
+        totalErrors = data.totalErrors ?? (totalErrors + (data.errors || 0));
+
+        setImportProgress({
+          processed: data.processed || (skip + 10),
+          total: grandTotal,
+        });
+
+        if (data.done) {
+          setResult({ success: totalSuccess, errors: totalErrors, error_details: data.error_details || [] });
+          await loadStatus();
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          if (totalSuccess > 0) {
+            toast.success(`${totalSuccess} nota(s) importada(s) com sucesso!`);
+          } else {
+            toast.message("Nenhum XML novo foi importado.");
+          }
+          break;
+        }
+
+        skip = data.processed;
+        // Pequena pausa entre lotes para não sobrecarregar
+        await new Promise(r => setTimeout(r, 500));
       }
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message);
     } finally {
       setImporting(false);
+      setImportProgress(null);
     }
   };
 
@@ -173,7 +204,9 @@ export default function OneDriveXmlImportCard() {
             </Button>
             <Button onClick={handleImportFolder} disabled={importing}>
               {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-              Importar agora
+              {importing && importProgress
+                ? `${importProgress.processed}/${importProgress.total} arquivos...`
+                : "Importar agora"}
             </Button>
           </div>
         </div>
