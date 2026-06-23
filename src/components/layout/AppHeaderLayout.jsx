@@ -96,7 +96,7 @@ export default function AppHeaderLayout({ children, currentPath }) {
 
                         {visibleGestaoItems.length > 0 && (
                           <NavDropdown
-                            label="Gestão"
+                            label="NF/Setores"
                             triggerIcon={BarChart2}
                             isActive={isGestaoActive}
                             items={visibleGestaoItems}
