@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers } from "lucide-react";
+import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -40,7 +40,7 @@ const ScreenSummaryRow = ({ label, data, color }) => {
   );
 };
 
-export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, highlight }) {
+export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, cteStats, nfseStats, highlight }) {
   const screenTotal = screens ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
 
   const totalValue = screenStats
@@ -49,7 +49,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
 
   const screenList = screens ? [
     { icon: FileText,     iconBg: "bg-slate-800",  iconColor: "text-white",       value: screenTotal,           label: "Total",         val: totalValue },
-    { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "Notas Fiscais", val: screenStats?.notas?.value },
+    { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "NF-e",          val: screenStats?.notas?.value },
     { icon: Layers,       iconBg: "bg-green-50",   iconColor: "text-green-600",   value: screens.materia_prima,  label: "Mat. Prima",    val: screenStats?.materia_prima?.value },
     { icon: ShoppingCart, iconBg: "bg-blue-50",    iconColor: "text-blue-600",    value: screens.compras,       label: "Gest. Compras", val: screenStats?.compras?.value },
     { icon: Truck,        iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",    value: screens.frota,         label: "Gest. Frota",   val: screenStats?.frota?.value },
@@ -100,6 +100,32 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
                 )}
               </div>
             ))}
+
+            {nfseStats && (
+              <div className={getBadgeClass(1)} style={{flex: '1 1 auto', minWidth: 0}}>
+                <div className="w-5 h-5 rounded bg-rose-50 flex items-center justify-center flex-shrink-0">
+                  <FileSpreadsheet className="w-3 h-3 text-rose-600" />
+                </div>
+                <span className={getValueClass(1)}>{nfseStats.count}</span>
+                <span className={getLabelClass(1)}>NFS-e</span>
+                {nfseStats.value > 0 && (
+                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(nfseStats.value)}</span>
+                )}
+              </div>
+            )}
+
+            {cteStats && (
+              <div className={getBadgeClass(1)} style={{flex: '1 1 auto', minWidth: 0}}>
+                <div className="w-5 h-5 rounded bg-teal-50 flex items-center justify-center flex-shrink-0">
+                  <FileBox className="w-3 h-3 text-teal-600" />
+                </div>
+                <span className={getValueClass(1)}>{cteStats.count}</span>
+                <span className={getLabelClass(1)}>CT-e</span>
+                {cteStats.value > 0 && (
+                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(cteStats.value)}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

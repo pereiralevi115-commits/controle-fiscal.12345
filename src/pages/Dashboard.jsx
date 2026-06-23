@@ -35,6 +35,16 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Supplier.list(),
   });
 
+  // CT-e e NFS-e têm telas próprias; buscamos contagem/valor consolidados para o Dashboard.
+  const { data: cteList = [] } = useQuery({
+    queryKey: ["invoices", "cte"],
+    queryFn: () => base44.entities.Invoice.filter({ document_type: "cte", cancelled: false }, "-issue_date", 5000, ["id", "total_value", "issue_date"]),
+  });
+  const { data: nfseList = [] } = useQuery({
+    queryKey: ["invoices", "nfse"],
+    queryFn: () => base44.entities.Invoice.filter({ document_type: "nfse", cancelled: false }, "-issue_date", 5000, ["id", "total_value", "issue_date"]),
+  });
+
   const isLoading = loadingInvoices || loadingBranches || loadingSuppliers || branchFilterLoading;
 
   if (isLoading) {
@@ -231,6 +241,12 @@ export default function Dashboard() {
   const allScreenStats = screenSummary(visibleInvoices, allMateriaPrimaInvoices);
   const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
+  // CT-e e NFS-e consolidados (aplicando o mesmo filtro de mês)
+  const filteredCte = cteList.filter(filterByMonth);
+  const filteredNfse = nfseList.filter(filterByMonth);
+  const cteStats = { count: filteredCte.length, value: filteredCte.reduce((s, i) => s + (i.total_value || 0), 0) };
+  const nfseStats = { count: filteredNfse.length, value: filteredNfse.reduce((s, i) => s + (i.total_value || 0), 0) };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
@@ -260,7 +276,7 @@ export default function Dashboard() {
 
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais */}
-          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} highlight />
+          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
 
           {rows.map((row) => (
             <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} />
