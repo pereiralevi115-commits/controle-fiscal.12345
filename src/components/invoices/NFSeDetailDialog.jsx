@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { formatCNPJ } from "@/lib/formatters";
@@ -83,12 +83,17 @@ export default function NFSeDetailDialog({ invoice: invoiceProp, open, onClose, 
             </h2>
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
-          {hasPermission('download_pdf') && (
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="gap-2">
-              {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Baixar PDF
+          <div className="flex items-center gap-2">
+            {hasPermission('download_pdf') && (
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="gap-2">
+                {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Baixar PDF
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+              <X className="w-5 h-5" />
             </Button>
-          )}
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
