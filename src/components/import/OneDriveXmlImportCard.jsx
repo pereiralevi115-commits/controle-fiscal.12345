@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ImportResultSummary from "@/components/import/ImportResultSummary";
 import OneDriveFolderBrowser from "@/components/import/OneDriveFolderBrowser";
+import OneDriveHelpBox from "@/components/import/OneDriveHelpBox";
 import { Cloud, Loader2, RefreshCw } from "lucide-react";
 
 export default function OneDriveXmlImportCard() {
@@ -175,6 +176,8 @@ export default function OneDriveXmlImportCard() {
 
   return (
     <section className="space-y-5">
+      <OneDriveHelpBox />
+
       {/* ── Passo 1: Pasta atual + status ── */}
       <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-violet-50/40 p-5 space-y-3.5">
         <div className="flex items-center justify-between gap-3">
