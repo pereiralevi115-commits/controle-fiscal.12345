@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package, ChevronDown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import NavDropdown from '@/components/layout/NavDropdown';
 import { useAuth } from '@/lib/AuthContext';
 
 const APP_NAME = 'Controle Fiscal';
@@ -16,12 +16,15 @@ const notasFiscaisItems = [
   { key: 'notas', name: 'NF-e', path: '/notas', icon: FileText },
 ];
 
-const navItems = [
-  { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
+const gestaoItems = [
   { key: 'materia-prima', name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
   { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
   { key: 'controladoria', name: 'Controladoria', path: '/controladoria', icon: BarChart2 },
+];
+
+const navItems = [
+  { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
   { key: 'notas-para-verificar', name: 'Gerencial', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
@@ -33,6 +36,8 @@ export default function AppHeaderLayout({ children, currentPath }) {
   const visibleNavItems = navItems.filter(item => canAccessPage(item.key));
   const visibleNotasItems = notasFiscaisItems.filter(item => canAccessPage(item.key));
   const isNotasActive = visibleNotasItems.some(item => item.path === currentPath);
+  const visibleGestaoItems = gestaoItems.filter(item => canAccessPage(item.key));
+  const isGestaoActive = visibleGestaoItems.some(item => item.path === currentPath);
 
   if (isLoadingAuth) {
     return (
@@ -65,7 +70,7 @@ export default function AppHeaderLayout({ children, currentPath }) {
                   const isActive = currentPath === item.path;
                   const Icon = item.icon;
 
-                  if (item.key === 'dashboard' && visibleNotasItems.length > 0) {
+                  if (item.key === 'dashboard') {
                     return (
                       <React.Fragment key={item.path}>
                         <Link
@@ -80,34 +85,23 @@ export default function AppHeaderLayout({ children, currentPath }) {
                           <span className="hidden sm:block">{item.name}</span>
                         </Link>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all outline-none ${
-                                isNotasActive
-                                  ? 'bg-[#FDB913] text-slate-900'
-                                  : 'text-slate-600 hover:bg-slate-100'
-                              }`}
-                            >
-                              <FileText className="w-4 h-4 shrink-0" />
-                              <span className="hidden sm:block">Notas Fiscais</span>
-                              <ChevronDown className="w-4 h-4 shrink-0" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-44">
-                            {visibleNotasItems.map(sub => {
-                              const SubIcon = sub.icon;
-                              return (
-                                <DropdownMenuItem key={sub.path} asChild>
-                                  <Link to={sub.path} className="flex items-center gap-2 cursor-pointer">
-                                    {SubIcon && <SubIcon className="w-4 h-4 shrink-0" />}
-                                    <span>{sub.name}</span>
-                                  </Link>
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {visibleNotasItems.length > 0 && (
+                          <NavDropdown
+                            label="Notas Fiscais"
+                            triggerIcon={FileText}
+                            isActive={isNotasActive}
+                            items={visibleNotasItems}
+                          />
+                        )}
+
+                        {visibleGestaoItems.length > 0 && (
+                          <NavDropdown
+                            label="Gestão"
+                            triggerIcon={BarChart2}
+                            isActive={isGestaoActive}
+                            items={visibleGestaoItems}
+                          />
+                        )}
                       </React.Fragment>
                     );
                   }
