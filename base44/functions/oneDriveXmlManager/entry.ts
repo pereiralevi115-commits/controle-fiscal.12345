@@ -12,6 +12,8 @@ function getTagText(parent, tagName) {
 function detectDocumentType(doc) {
   if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
+  // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
+  if (doc.getElementsByTagName("infNFSe").length > 0) return "nfse";
   const nfseTags = ["InfNfse", "Nfse", "CompNfse", "InfDeclaracaoPrestacaoServico", "Rps"];
   for (const tag of nfseTags) {
     if (doc.getElementsByTagName(tag).length > 0) return "nfse";
@@ -138,7 +140,43 @@ function parseCTe(doc) {
   };
 }
 
+function parseNFSeNacional(doc) {
+  const inf = doc.getElementsByTagName("infNFSe")[0];
+  const number = getTagText(inf, "nNFSe");
+  const accessKey = (inf.getAttribute("Id") || "").replace(/^NFS/, "");
+  const issueDateRaw = getTagText(inf, "dhProc") || getTagText(inf, "dhEmi");
+
+  const emit = inf.getElementsByTagName("emit")[0];
+  const toma = inf.getElementsByTagName("toma")[0];
+  const valores = inf.getElementsByTagName("valores")[0];
+  const serv = inf.getElementsByTagName("serv")[0];
+  const dps = inf.getElementsByTagName("infDPS")[0];
+
+  return {
+    document_type: "nfse",
+    number: number || "",
+    series: dps ? getTagText(dps, "serie") : "",
+    access_key: accessKey,
+    supplier_name: getTagText(emit, "xNome"),
+    supplier_cnpj: getTagText(emit, "CNPJ") || getTagText(emit, "CPF"),
+    supplier_ie: getTagText(emit, "IM"),
+    supplier_city: getTagText(inf, "xLocEmi"),
+    recipient_name: getTagText(toma, "xNome"),
+    recipient_cnpj: getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    total_value: parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0,
+    issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
+    due_date: "",
+    status: "pendente",
+    tax_iss: parseFloat(getTagText(valores, "vISSQN")) || 0,
+    service_description: getTagText(serv, "xDescServ") || getTagText(inf, "xTribNac"),
+    items: [], installments: [], payments: [],
+  };
+}
+
 function parseNFSe(doc) {
+  if (doc.getElementsByTagName("infNFSe").length > 0) {
+    return parseNFSeNacional(doc);
+  }
   const infRoot = doc.getElementsByTagName("InfNfse")[0]
     || doc.getElementsByTagName("Nfse")[0]
     || doc.getElementsByTagName("InfDeclaracaoPrestacaoServico")[0]
@@ -180,14 +218,32 @@ function parseNFSe(doc) {
   };
 }
 
+function cleanXmlText(xmlText) {
+  if (typeof xmlText !== "string") return "";
+  let cleaned = xmlText.replace(/^\uFEFF/, "").replace(/^\s+/, "");
+  const firstTag = cleaned.indexOf("<");
+  if (firstTag > 0) cleaned = cleaned.substring(firstTag);
+  return cleaned;
+}
+
 function parseXmlText(xmlText) {
+  const cleaned = cleanXmlText(xmlText);
   const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
+  const doc = parser.parseFromString(cleaned, "text/xml");
   const type = detectDocumentType(doc);
-  if (type === "nfe") return parseNFe(doc);
-  if (type === "cte") return parseCTe(doc);
-  if (type === "nfse") return parseNFSe(doc);
-  throw new Error("XML não reconhecido");
+
+  let parsed;
+  if (type === "nfe") parsed = parseNFe(doc);
+  else if (type === "cte") parsed = parseCTe(doc);
+  else if (type === "nfse") parsed = parseNFSe(doc);
+  else throw new Error("XML não reconhecido. Esperado NF-e, CT-e ou NFS-e.");
+
+  // Rejeita documentos vazios (parsing falhou): evita criar notas em branco.
+  if (!parsed.number && !parsed.supplier_name && !parsed.access_key) {
+    throw new Error("XML inválido ou ilegível — não foi possível extrair os dados do documento.");
+  }
+
+  return parsed;
 }
 
 // Importa um lote de XMLs diretamente (sem chamar parseXml por HTTP)
