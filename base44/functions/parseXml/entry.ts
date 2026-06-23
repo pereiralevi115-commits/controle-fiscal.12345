@@ -11,6 +11,8 @@ function getTagText(parent, tagName) {
 function detectDocumentType(doc) {
   if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
+  // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
+  if (doc.getElementsByTagName("infNFSe").length > 0) return "nfse";
   // NFS-e tem muitas variações municipais; detectamos por tags comuns.
   const nfseTags = ["InfNfse", "Nfse", "CompNfse", "InfDeclaracaoPrestacaoServico", "Rps"];
   for (const tag of nfseTags) {
@@ -270,7 +272,93 @@ function parseCTe(doc) {
   };
 }
 
+function parseNFSeNacional(doc) {
+  const inf = doc.getElementsByTagName("infNFSe")[0];
+
+  const number = getTagText(inf, "nNFSe");
+  const accessKey = (inf.getAttribute("Id") || "").replace(/^NFS/, "");
+
+  const issueDateRaw = getTagText(inf, "dhProc") || getTagText(inf, "dhEmi");
+  const issueDate = issueDateRaw ? issueDateRaw.substring(0, 10) : "";
+
+  // Emitente / Prestador
+  const emit = inf.getElementsByTagName("emit")[0];
+  const supplierName = getTagText(emit, "xNome");
+  const supplierCnpj = getTagText(emit, "CNPJ") || getTagText(emit, "CPF");
+  const supplierIe = getTagText(emit, "IM");
+  const emitEnder = emit?.getElementsByTagName("enderNac")[0];
+  const supplierAddress = emitEnder ? getTagText(emitEnder, "xLgr") : "";
+  const supplierNumber = emitEnder ? getTagText(emitEnder, "nro") : "";
+  const supplierDistrict = emitEnder ? getTagText(emitEnder, "xBairro") : "";
+  const supplierCity = getTagText(inf, "xLocEmi");
+  const supplierState = emitEnder ? getTagText(emitEnder, "UF") : "";
+  const supplierZip = emitEnder ? getTagText(emitEnder, "CEP") : "";
+  const supplierPhone = emit ? getTagText(emit, "fone") : "";
+  const supplierEmail = emit ? getTagText(emit, "email") : "";
+
+  // Tomador
+  const toma = inf.getElementsByTagName("toma")[0];
+  const recipientName = getTagText(toma, "xNome");
+  const recipientCnpj = getTagText(toma, "CNPJ") || getTagText(toma, "CPF");
+  const tomaEnd = toma?.getElementsByTagName("end")[0];
+  const recipientAddress = tomaEnd ? getTagText(tomaEnd, "xLgr") : "";
+  const recipientNumber = tomaEnd ? getTagText(tomaEnd, "nro") : "";
+  const recipientDistrict = tomaEnd ? getTagText(tomaEnd, "xBairro") : "";
+  const tomaEndNac = tomaEnd?.getElementsByTagName("endNac")[0];
+  const recipientZip = tomaEndNac ? getTagText(tomaEndNac, "CEP") : "";
+
+  // Valores (nó <valores> direto sob infNFSe)
+  const valoresEls = inf.getElementsByTagName("valores");
+  const valores = valoresEls[0];
+  const totalValue = parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0;
+  const taxIss = parseFloat(getTagText(valores, "vISSQN")) || 0;
+
+  // Descrição do serviço
+  const serv = inf.getElementsByTagName("serv")[0];
+  const serviceDescription = getTagText(serv, "xDescServ") || getTagText(inf, "xTribNac");
+
+  const dps = inf.getElementsByTagName("infDPS")[0];
+  const series = dps ? getTagText(dps, "serie") : "";
+
+  return {
+    document_type: "nfse",
+    number: number || "",
+    series,
+    access_key: accessKey,
+    supplier_name: supplierName,
+    supplier_cnpj: supplierCnpj,
+    supplier_ie: supplierIe,
+    supplier_address: supplierAddress,
+    supplier_number: supplierNumber,
+    supplier_district: supplierDistrict,
+    supplier_city: supplierCity,
+    supplier_state: supplierState,
+    supplier_zip: supplierZip,
+    supplier_phone: supplierPhone,
+    supplier_email: supplierEmail,
+    recipient_name: recipientName,
+    recipient_cnpj: recipientCnpj,
+    recipient_address: recipientAddress,
+    recipient_number: recipientNumber,
+    recipient_district: recipientDistrict,
+    recipient_zip: recipientZip,
+    total_value: totalValue,
+    issue_date: issueDate,
+    due_date: "",
+    status: "pendente",
+    tax_iss: taxIss,
+    service_description: serviceDescription,
+    items: [],
+    installments: [],
+    payments: [],
+  };
+}
+
 function parseNFSe(doc) {
+  // Padrão nacional possui <infNFSe>; demais são variações municipais.
+  if (doc.getElementsByTagName("infNFSe").length > 0) {
+    return parseNFSeNacional(doc);
+  }
   // Acessa nó relevante; cobre as variações mais comuns dos padrões municipais.
   const infRoot = doc.getElementsByTagName("InfNfse")[0]
     || doc.getElementsByTagName("Nfse")[0]
