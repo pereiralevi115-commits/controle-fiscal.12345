@@ -482,48 +482,40 @@ async function listFolderItems(accessToken, parentId) {
   };
 }
 
-// Busca TODOS os XMLs da pasta usando paginação da Graph API
-async function listAllXmlFiles(accessToken, folderId) {
-  const allFiles = [];
-  let nextLink = `/me/drive/items/${folderId}/children?$select=id,name,file&$top=200`;
+// Lista UMA página de XMLs da Graph API (até 200), retornando o cursor para a próxima.
+async function listXmlPage(accessToken, folderId, nextLink) {
+  const path = nextLink || `/me/drive/items/${folderId}/children?$select=id,name,file&$top=200`;
+  const response = path.startsWith('https://')
+    ? await fetch(path, { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }).then(r => r.json())
+    : await graphRequest(accessToken, path);
 
-  while (nextLink) {
-    const url = nextLink.startsWith('https://') ? nextLink : null;
-    const response = url
-      ? await fetch(url, { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }).then(r => r.json())
-      : await graphRequest(accessToken, nextLink);
-
-    const items = response?.value || [];
-    items.filter(item => item.file && item.name?.toLowerCase().endsWith('.xml')).forEach(f => allFiles.push(f));
-    nextLink = response?.['@odata.nextLink'] || null;
-  }
-
-  return allFiles;
+  const items = response?.value || [];
+  const files = items.filter(item => item.file && item.name?.toLowerCase().endsWith('.xml'));
+  return { files, nextLink: response?.['@odata.nextLink'] || null };
 }
 
-// Importa em lotes de BATCH_SIZE arquivos por chamada para evitar timeout
-const BATCH_SIZE = 10;
+// Processa UMA página da Graph API por chamada (até 200 XMLs), usando o cursor
+// nextLink para continuar. Evita varrer todos os arquivos a cada lote (o que
+// causava timeout em pastas grandes).
+async function importFolderPage(base44, accessToken, folderId, nextLink) {
+  const { files, nextLink: newNextLink } = await listXmlPage(accessToken, folderId, nextLink);
 
-async function importFolderById(base44, accessToken, folderId, skip = 0) {
-  const allXmlFiles = await listAllXmlFiles(accessToken, folderId);
-  const totalFiles = allXmlFiles.length;
-
-  const batch = allXmlFiles.slice(skip, skip + BATCH_SIZE);
-
-  if (batch.length === 0) {
+  if (files.length === 0) {
     return {
       success: 0, errors: 0, error_details: [], total: 0,
-      processed: 0, remaining: 0, done: true,
+      processed: 0, next_link: newNextLink, done: !newNextLink,
     };
   }
 
   const xmlContents = [];
   const fileErrors = [];
 
-  for (const file of batch) {
+  for (const file of files) {
     try {
       const content = await downloadFileText(accessToken, file.id);
       xmlContents.push(content);
+      // Pequena pausa entre downloads para evitar o throttling (429) do OneDrive.
+      await new Promise((r) => setTimeout(r, 120));
     } catch (error) {
       fileErrors.push({ error: `${file.name}: ${error.message}` });
     }
@@ -533,19 +525,15 @@ async function importFolderById(base44, accessToken, folderId, skip = 0) {
     ? await importXmlBatchLocal(base44, xmlContents)
     : { success: 0, errors: 0, error_details: [], total: 0 };
 
-  const processed = skip + batch.length;
-  const remaining = totalFiles - processed;
-
   return {
     ...importResult,
     errors: importResult.errors + fileErrors.length,
     error_details: importResult.error_details.concat(
       fileErrors.map((item, index) => ({ index: importResult.total + index, error: item.error }))
     ),
-    total: totalFiles,
-    processed,
-    remaining,
-    done: remaining <= 0,
+    processed: files.length,
+    next_link: newNextLink,
+    done: !newNextLink,
   };
 }
 
@@ -589,19 +577,23 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Selecione uma pasta do OneDrive primeiro.' }, { status: 400 });
       }
 
-      const skip = payload.skip || 0;
-      const result = await importFolderById(base44, accessToken, effectiveFolderId, skip);
+      // Cursor de paginação: a 1ª chamada vem sem nextLink (recomeça do zero).
+      const nextLink = payload.nextLink || null;
+      const isFirstPage = !nextLink;
+      const result = await importFolderPage(base44, accessToken, effectiveFolderId, nextLink);
 
       // Acumula os totais com o que já foi salvo (para chamadas subsequentes)
-      const prevSuccess = skip > 0 ? (settings?.last_import_success || 0) : 0;
-      const prevErrors = skip > 0 ? (settings?.last_import_errors || 0) : 0;
+      const prevSuccess = isFirstPage ? 0 : (settings?.last_import_success || 0);
+      const prevErrors = isFirstPage ? 0 : (settings?.last_import_errors || 0);
+      const prevProcessed = isFirstPage ? 0 : (settings?.last_import_total || 0);
 
       const totalSuccess = prevSuccess + (result.success || 0);
       const totalErrors = prevErrors + (result.errors || 0);
+      const totalProcessed = prevProcessed + (result.processed || 0);
 
       const message = result.done
-        ? `Concluído: ${totalSuccess} importada(s), ${totalErrors} erro(s) de ${result.total} arquivo(s)`
-        : `Processando: ${result.processed}/${result.total} arquivos...`;
+        ? `Concluído: ${totalSuccess} importada(s), ${totalErrors} erro(s) de ${totalProcessed} arquivo(s) processado(s)`
+        : `Processando: ${totalProcessed} arquivos...`;
 
       await saveSettings(base44, {
         folder_id: folderId || settings?.folder_id,
@@ -610,11 +602,11 @@ Deno.serve(async (req) => {
         auto_sync_enabled: settings?.auto_sync_enabled || false,
         last_sync_at: new Date().toISOString(),
         last_sync_message: message,
-        last_import_total: result.total,
+        last_import_total: totalProcessed,
         last_import_success: totalSuccess,
         last_import_errors: totalErrors,
       });
-      return Response.json({ ...result, totalSuccess, totalErrors });
+      return Response.json({ ...result, totalSuccess, totalErrors, totalProcessed });
     }
 
     if (action === 'importFiles') {
@@ -638,7 +630,7 @@ Deno.serve(async (req) => {
       }
 
       const result = xmlContents.length > 0
-        ? await importXmlContents(base44, xmlContents)
+        ? await importXmlBatchLocal(base44, xmlContents)
         : { success: 0, errors: 0, error_details: [], total: 0 };
 
       return Response.json({
