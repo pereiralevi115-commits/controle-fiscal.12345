@@ -198,18 +198,39 @@ export default function OneDriveXmlImportCard() {
           </span>
         </div>
 
-        {settings?.last_sync_message && (
+        {importing && importProgress ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-indigo-700">Importando notas...</span>
+              <span className="font-semibold text-slate-700 tabular-nums">
+                {importProgress.processed} / {importProgress.total}
+                {importProgress.total > 0 && (
+                  <span className="text-slate-400 ml-1.5">
+                    ({Math.round((importProgress.processed / importProgress.total) * 100)}%)
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="h-2.5 w-full rounded-full bg-indigo-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all duration-500 ease-out"
+                style={{ width: `${importProgress.total > 0 ? Math.min(100, (importProgress.processed / importProgress.total) * 100) : 0}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Mantenha esta tela aberta enquanto a importação acontece.
+            </p>
+          </div>
+        ) : settings?.last_sync_message ? (
           <p className="text-xs text-slate-500">
             <span className="font-medium">Último resultado:</span> {settings.last_sync_message}
           </p>
-        )}
+        ) : null}
 
         <div className="flex flex-wrap gap-2 pt-1">
           <Button onClick={handleImportFolder} disabled={importing || (!hasFolder && currentFolder.id === "root")} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            {importing && importProgress
-              ? `${importProgress.processed}/${importProgress.total}...`
-              : "Importar agora"}
+            {importing ? "Importando..." : "Importar agora"}
           </Button>
           <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
