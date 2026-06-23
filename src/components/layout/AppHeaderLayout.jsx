@@ -24,9 +24,15 @@ const gestaoItems = [
   { key: 'arquivadas', name: 'Arquivadas', path: '/arquivadas', icon: Archive },
 ];
 
+const gerencialItems = [
+  { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
+  { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Building2 },
+  { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
+  { key: 'usuarios', name: 'Usuários', path: '/usuarios', icon: UserCog },
+];
+
 const navItems = [
   { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { key: 'notas-para-verificar', name: 'Gerencial', path: '/notas-para-verificar', icon: ClipboardCheck },
   { key: 'importar', name: 'Importar XML', path: '/importar', icon: Upload },
 ];
 
@@ -38,6 +44,8 @@ export default function AppHeaderLayout({ children, currentPath }) {
   const isNotasActive = visibleNotasItems.some(item => item.path === currentPath);
   const visibleGestaoItems = gestaoItems.filter(item => canAccessPage(item.key));
   const isGestaoActive = visibleGestaoItems.some(item => item.path === currentPath);
+  const visibleGerencialItems = gerencialItems.filter(item => canAccessPage(item.key));
+  const isGerencialActive = visibleGerencialItems.some(item => item.path === currentPath);
 
   if (isLoadingAuth) {
     return (
@@ -100,6 +108,15 @@ export default function AppHeaderLayout({ children, currentPath }) {
                             triggerIcon={BarChart2}
                             isActive={isGestaoActive}
                             items={visibleGestaoItems}
+                          />
+                        )}
+
+                        {visibleGerencialItems.length > 0 && (
+                          <NavDropdown
+                            label="Gerencial"
+                            triggerIcon={ClipboardCheck}
+                            isActive={isGerencialActive}
+                            items={visibleGerencialItems}
                           />
                         )}
                       </React.Fragment>
