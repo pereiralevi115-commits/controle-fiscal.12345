@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import DocumentSimpleTable from "@/components/documents/DocumentSimpleTable";
-import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import { useInvoices } from "@/hooks/useInvoices";
 
 export default function NFSe() {
@@ -64,7 +64,7 @@ export default function NFSe() {
           />
         </div>
 
-        <InvoiceDetailDialog
+        <NFSeDetailDialog
           invoice={selected}
           open={!!selected}
           onClose={() => setSelected(null)}
