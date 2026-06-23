@@ -20,6 +20,7 @@ import { base44 } from "@/api/base44Client";
 // Campos necessários para as listas, filtros, tooltips e ações.
 const LIST_FIELDS = [
   "id",
+  "document_type",
   "branch_cnpj",
   "supplier_name",
   "supplier_cnpj",
@@ -65,9 +66,21 @@ async function fetchAllInvoices() {
   return all;
 }
 
-export function useInvoices() {
+// As listagens de NF-e (NFe, MatériaPrima, Gestão de Compras, Frota, Controladoria,
+// Arquivadas, Canceladas, Dashboard, etc.) só lidam com NF-e. CT-e e NFS-e têm telas
+// próprias, então filtramos aqui para preservar o comportamento das telas existentes.
+function filterByType(invoices, type) {
+  if (!type) return invoices;
+  return invoices.filter((inv) => {
+    const docType = inv.document_type || "nfe"; // legado: notas antigas sem o campo são NF-e
+    return docType === type;
+  });
+}
+
+export function useInvoices(documentType = "nfe") {
   return useQuery({
     queryKey: ["invoices"],
     queryFn: fetchAllInvoices,
+    select: (data) => filterByType(data, documentType),
   });
 }

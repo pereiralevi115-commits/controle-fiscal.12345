@@ -2,6 +2,16 @@
   "name": "Invoice",
   "type": "object",
   "properties": {
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "nfe",
+        "cte",
+        "nfse"
+      ],
+      "default": "nfe",
+      "description": "Tipo do documento fiscal: NF-e, CT-e ou NFS-e"
+    },
     "number": {
       "type": "string",
       "description": "N\u00famero da nota fiscal"
@@ -17,6 +27,18 @@
     "operation_nature": {
       "type": "string",
       "description": "Natureza da opera\u00e7\u00e3o"
+    },
+    "service_description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do servi\u00e7o (NFS-e) ou observa\u00e7\u00f5es de transporte (CT-e)"
+    },
+    "cte_modal": {
+      "type": "string",
+      "description": "Modal de transporte do CT-e (rodovi\u00e1rio, a\u00e9reo, etc.)"
+    },
+    "cte_cfop": {
+      "type": "string",
+      "description": "CFOP da presta\u00e7\u00e3o do servi\u00e7o de transporte"
     },
     "supplier_name": {
       "type": "string",
@@ -247,6 +269,10 @@
     "tax_cofins": {
       "type": "number",
       "description": "Valor do COFINS"
+    },
+    "tax_iss": {
+      "type": "number",
+      "description": "Valor do ISS (NFS-e)"
     },
     "tax_icms_base": {
       "type": "number",

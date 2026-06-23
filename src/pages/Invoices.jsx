@@ -6,6 +6,7 @@ import InvoiceTable from "@/components/invoices/InvoiceTable";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
+import { useInvoices } from "@/hooks/useInvoices";
 
 export default function Invoices() {
   const queryClient = useQueryClient();
@@ -17,10 +18,7 @@ export default function Invoices() {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: invoices = [], isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: () => base44.entities.Invoice.list("-issue_date", 250000),
-  });
+  const { data: invoices = [], isLoading } = useInvoices("nfe");
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
