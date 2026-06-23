@@ -47,19 +47,16 @@ export default function LocalXmlImportCard() {
           const reader = new FileReader();
           reader.onload = () => {
             const buffer = reader.result;
-            // Lê os bytes crus e detecta o encoding declarado no XML.
-            // NF-e/CT-e costumam vir em ISO-8859-1/Windows-1252, e o
-            // readAsText padrão (UTF-8) corrompe o conteúdo.
-            const headBytes = new Uint8Array(buffer).subarray(0, 200);
-            const head = new TextDecoder("ascii").decode(headBytes).toLowerCase();
-            const match = head.match(/encoding=["']([^"']+)["']/);
-            let encoding = match ? match[1].toLowerCase() : "utf-8";
-            if (encoding === "iso-8859-1" || encoding === "latin1") encoding = "windows-1252";
+            // Tenta decodificar como UTF-8 em modo estrito. Se o arquivo
+            // estiver em ISO-8859-1/Windows-1252 (comum em NF-e/CT-e antigos),
+            // o UTF-8 estrito falha e caímos para windows-1252. Isso evita
+            // tanto a corrupção de acentos quanto o caractere inválido (U+FFFD)
+            // que tornava o XML ilegível para o parser do servidor.
             let text;
             try {
-              text = new TextDecoder(encoding).decode(buffer);
+              text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
             } catch {
-              text = new TextDecoder("utf-8").decode(buffer);
+              text = new TextDecoder("windows-1252").decode(buffer);
             }
             resolve(text);
           };
