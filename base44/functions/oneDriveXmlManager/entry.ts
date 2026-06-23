@@ -10,6 +10,12 @@ function getTagText(parent, tagName) {
 }
 
 function detectDocumentType(doc) {
+  if (
+    doc.getElementsByTagName("procEventoNFe").length > 0 ||
+    doc.getElementsByTagName("procEventoCTe").length > 0 ||
+    doc.getElementsByTagName("infEvento").length > 0 ||
+    doc.getElementsByTagName("detEvento").length > 0
+  ) return "evento";
   if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
   // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
@@ -19,6 +25,57 @@ function detectDocumentType(doc) {
     if (doc.getElementsByTagName(tag).length > 0) return "nfse";
   }
   return null;
+}
+
+const EVENT_LABELS = {
+  "110111": "Cancelamento",
+  "110110": "Carta de Correção (CC-e)",
+  "110112": "Cancelamento por Substituição",
+  "210200": "Confirmação da Operação",
+  "210210": "Ciência da Operação",
+  "210220": "Desconhecimento da Operação",
+  "210240": "Operação Não Realizada",
+};
+
+function parseEvento(doc) {
+  const infEvento = doc.getElementsByTagName("infEvento")[0];
+  const detEvento = doc.getElementsByTagName("detEvento")[0];
+  const eventTypeCode = getTagText(infEvento, "tpEvento");
+  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const retEvento = doc.getElementsByTagName("retEvento")[0];
+  return {
+    __is_event: true,
+    access_key: accessKey,
+    event: {
+      event_type_code: eventTypeCode,
+      event_type_label: EVENT_LABELS[eventTypeCode] || getTagText(detEvento, "descEvento") || "Evento Fiscal",
+      description:
+        getTagText(detEvento, "xJust") ||
+        getTagText(detEvento, "xCorrecao") ||
+        getTagText(detEvento, "xMotivo") ||
+        getTagText(detEvento, "descEvento") ||
+        "",
+      event_date: getTagText(infEvento, "dhEvento"),
+      protocol_number: retEvento ? getTagText(retEvento, "nProt") : "",
+      sequence: getTagText(infEvento, "nSeqEvento"),
+    },
+  };
+}
+
+async function applyEventToInvoice(base44, invoice, event) {
+  const existingEvents = Array.isArray(invoice.fiscal_events) ? invoice.fiscal_events : [];
+  const alreadyExists = existingEvents.some(
+    (e) => e.event_type_code === event.event_type_code && (e.sequence || "") === (event.sequence || "")
+  );
+  if (alreadyExists) return;
+
+  const updateData = { fiscal_events: [...existingEvents, event] };
+  if (event.event_type_code === "110111" || event.event_type_code === "110112") {
+    updateData.cancelled = true;
+    updateData.cancellation_date = event.event_date ? event.event_date.substring(0, 10) : undefined;
+    updateData.cancellation_reason = event.description || "Cancelada via evento";
+  }
+  await base44.asServiceRole.entities.Invoice.update(invoice.id, updateData);
 }
 
 function parseNFe(doc) {
@@ -233,6 +290,13 @@ function parseXmlText(xmlText) {
   const type = detectDocumentType(doc);
 
   let parsed;
+  if (type === "evento") {
+    const ev = parseEvento(doc);
+    if (!ev.access_key) {
+      throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
+    }
+    return ev;
+  }
   if (type === "nfe") parsed = parseNFe(doc);
   else if (type === "cte") parsed = parseCTe(doc);
   else if (type === "nfse") parsed = parseNFSe(doc);
@@ -251,10 +315,24 @@ async function importXmlBatchLocal(base44, xmlContents) {
   let success = 0;
   let errors = 0;
   const errorDetails = [];
+  const pendingEvents = [];
 
   for (let i = 0; i < xmlContents.length; i++) {
     try {
       const parsed = parseXmlText(xmlContents[i]);
+
+      // ----- XMLs de evento (cancelamento, CC-e, manifestação, etc.) -----
+      if (parsed.__is_event) {
+        const target = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+        if (target.length === 0) {
+          pendingEvents.push({ index: i, parsed });
+          continue;
+        }
+        await applyEventToInvoice(base44, target[0], parsed.event);
+        success++;
+        continue;
+      }
+
       parsed.branch_cnpj = parsed.recipient_cnpj;
 
       let existing = [];
@@ -279,6 +357,23 @@ async function importXmlBatchLocal(base44, xmlContents) {
     } catch (err) {
       errors++;
       errorDetails.push({ index: i, error: err.message });
+    }
+  }
+
+  // Reprocessa eventos cuja nota foi criada depois neste mesmo lote.
+  for (const { index, parsed } of pendingEvents) {
+    try {
+      const target = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+      if (target.length === 0) {
+        errors++;
+        errorDetails.push({ index, error: `Evento (${parsed.event.event_type_label}) sem nota correspondente — chave ${parsed.access_key}` });
+        continue;
+      }
+      await applyEventToInvoice(base44, target[0], parsed.event);
+      success++;
+    } catch (err) {
+      errors++;
+      errorDetails.push({ index, error: err.message });
     }
   }
 

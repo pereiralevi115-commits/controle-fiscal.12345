@@ -7,6 +7,7 @@ import { Download, Loader2, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { formatCNPJ } from "@/lib/formatters";
+import FiscalEventsSection from "./FiscalEventsSection";
 import { useAuth } from "@/lib/AuthContext";
 
 const formatCurrency = (value) =>
@@ -162,6 +163,9 @@ export default function NFSeDetailDialog({ invoice: invoiceProp, open, onClose, 
               <p className="text-3xl font-bold text-amber-700">{formatCurrency(invoice.total_value)}</p>
             </div>
           </div>
+
+          {/* EVENTOS DO DOCUMENTO */}
+          <FiscalEventsSection events={invoice.fiscal_events} />
 
           {/* CHAVE / CÓDIGO DE VERIFICAÇÃO */}
           {invoice.access_key && (

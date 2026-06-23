@@ -9,6 +9,13 @@ function getTagText(parent, tagName) {
 }
 
 function detectDocumentType(doc) {
+  // Eventos (procEventoNFe / procEventoCTe / evento avulso)
+  if (
+    doc.getElementsByTagName("procEventoNFe").length > 0 ||
+    doc.getElementsByTagName("procEventoCTe").length > 0 ||
+    doc.getElementsByTagName("infEvento").length > 0 ||
+    doc.getElementsByTagName("detEvento").length > 0
+  ) return "evento";
   if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
   // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
@@ -19,6 +26,54 @@ function detectDocumentType(doc) {
     if (doc.getElementsByTagName(tag).length > 0) return "nfse";
   }
   return null;
+}
+
+// Rótulos amigáveis por código de evento (tpEvento)
+const EVENT_LABELS = {
+  "110111": "Cancelamento",
+  "110110": "Carta de Correção (CC-e)",
+  "110112": "Cancelamento por Substituição",
+  "210200": "Confirmação da Operação",
+  "210210": "Ciência da Operação",
+  "210220": "Desconhecimento da Operação",
+  "210240": "Operação Não Realizada",
+};
+
+function parseEvento(doc) {
+  const infEvento = doc.getElementsByTagName("infEvento")[0];
+  const detEvento = doc.getElementsByTagName("detEvento")[0];
+
+  const eventTypeCode = getTagText(infEvento, "tpEvento");
+  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const eventDate = getTagText(infEvento, "dhEvento");
+  const sequence = getTagText(infEvento, "nSeqEvento");
+
+  // Descrição: justificativa de cancelamento, texto da correção, etc.
+  const description =
+    getTagText(detEvento, "xJust") ||
+    getTagText(detEvento, "xCorrecao") ||
+    getTagText(detEvento, "xMotivo") ||
+    getTagText(detEvento, "descEvento") ||
+    "";
+
+  // Protocolo de registro do evento (no retorno do processamento)
+  const retEvento = doc.getElementsByTagName("retEvento")[0];
+  const protocolNumber = retEvento ? getTagText(retEvento, "nProt") : "";
+
+  const label = EVENT_LABELS[eventTypeCode] || getTagText(detEvento, "descEvento") || "Evento Fiscal";
+
+  return {
+    __is_event: true,
+    access_key: accessKey,
+    event: {
+      event_type_code: eventTypeCode,
+      event_type_label: label,
+      description,
+      event_date: eventDate,
+      protocol_number: protocolNumber,
+      sequence,
+    },
+  };
 }
 
 function parseNFe(doc) {
@@ -471,6 +526,13 @@ function parseXmlDocument(xmlText) {
   const type = detectDocumentType(doc);
 
   let parsed;
+  if (type === "evento") {
+    const ev = parseEvento(doc);
+    if (!ev.access_key) {
+      throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
+    }
+    return ev;
+  }
   if (type === "nfe") parsed = parseNFe(doc);
   else if (type === "cte") parsed = parseCTe(doc);
   else if (type === "nfse") parsed = parseNFSe(doc);
@@ -482,6 +544,29 @@ function parseXmlDocument(xmlText) {
   }
 
   return parsed;
+}
+
+// Adiciona um evento ao histórico da nota (sem duplicar) e ajusta o status
+// quando for cancelamento.
+async function applyEventToInvoice(base44, invoice, event) {
+  const existingEvents = Array.isArray(invoice.fiscal_events) ? invoice.fiscal_events : [];
+
+  // Evita duplicar o mesmo evento (mesmo tipo + sequência)
+  const alreadyExists = existingEvents.some(
+    (e) => e.event_type_code === event.event_type_code && (e.sequence || "") === (event.sequence || "")
+  );
+  if (alreadyExists) return;
+
+  const updateData = { fiscal_events: [...existingEvents, event] };
+
+  // Cancelamento: marca a nota como cancelada.
+  if (event.event_type_code === "110111" || event.event_type_code === "110112") {
+    updateData.cancelled = true;
+    updateData.cancellation_date = event.event_date ? event.event_date.substring(0, 10) : undefined;
+    updateData.cancellation_reason = event.description || "Cancelada via evento";
+  }
+
+  await base44.asServiceRole.entities.Invoice.update(invoice.id, updateData);
 }
 
 Deno.serve(async (req) => {
@@ -497,9 +582,25 @@ Deno.serve(async (req) => {
     const results = [];
     const errors = [];
 
+    // Eventos que chegaram antes da nota correspondente (vinculamos no fim)
+    const pendingEvents = [];
+
     for (let i = 0; i < xml_contents.length; i++) {
       try {
         const parsed = parseXmlDocument(xml_contents[i]);
+
+        // ----- Trata XMLs de evento (cancelamento, CC-e, manifestação, etc.) -----
+        if (parsed.__is_event) {
+          const target = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+          if (target.length === 0) {
+            pendingEvents.push({ index: i, parsed });
+            continue;
+          }
+          await applyEventToInvoice(base44, target[0], parsed.event);
+          results.push({ event: true });
+          continue;
+        }
+
         parsed.branch_cnpj = parsed.recipient_cnpj;
 
         let existing = [];
@@ -527,6 +628,21 @@ Deno.serve(async (req) => {
         }
       } catch (err) {
         errors.push({ index: i, error: err.message });
+      }
+    }
+
+    // Reprocessa eventos cuja nota só foi criada depois nesta mesma importação.
+    for (const { index, parsed } of pendingEvents) {
+      try {
+        const target = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+        if (target.length === 0) {
+          errors.push({ index, error: `Evento (${parsed.event.event_type_label}) sem nota correspondente — chave ${parsed.access_key}` });
+          continue;
+        }
+        await applyEventToInvoice(base44, target[0], parsed.event);
+        results.push({ event: true });
+      } catch (err) {
+        errors.push({ index, error: err.message });
       }
     }
 

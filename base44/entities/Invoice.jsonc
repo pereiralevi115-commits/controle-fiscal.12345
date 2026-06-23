@@ -171,6 +171,39 @@
       "type": "string",
       "description": "Motivo do cancelamento"
     },
+    "fiscal_events": {
+      "type": "array",
+      "description": "Hist\u00f3rico de eventos fiscais vinculados ao documento (cancelamento, CC-e, manifesta\u00e7\u00e3o do destinat\u00e1rio, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_type_code": {
+            "type": "string",
+            "description": "C\u00f3digo do tipo de evento (tpEvento), ex: 110111 = Cancelamento"
+          },
+          "event_type_label": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o amig\u00e1vel do evento (ex: Cancelamento, Carta de Corre\u00e7\u00e3o)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o/justificativa do evento (xJust, xCorrecao, xCondUso, etc.)"
+          },
+          "event_date": {
+            "type": "string",
+            "description": "Data/hora do evento (ISO ou data)"
+          },
+          "protocol_number": {
+            "type": "string",
+            "description": "N\u00famero do protocolo de registro do evento"
+          },
+          "sequence": {
+            "type": "string",
+            "description": "N\u00famero sequencial do evento (nSeqEvento)"
+          }
+        }
+      }
+    },
     "archived": {
       "type": "boolean",
       "default": false,

@@ -9,6 +9,7 @@ import { CheckCircle2, X, Download, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
+import FiscalEventsSection from "./FiscalEventsSection";
 import { formatCNPJ } from "@/lib/formatters";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -287,6 +288,9 @@ export default function InvoiceDetailDialog({ invoice: invoiceProp, open, onClos
               </div>
             </div>
           )}
+
+          {/* EVENTOS DO DOCUMENTO */}
+          <FiscalEventsSection events={invoice.fiscal_events} />
 
           {/* CHAVE DE ACESSO */}
           {invoice.access_key && (
