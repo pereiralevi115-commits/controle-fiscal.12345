@@ -455,16 +455,33 @@ function parseNFSe(doc) {
   };
 }
 
+function cleanXmlText(xmlText) {
+  if (typeof xmlText !== "string") return "";
+  // Remove BOM e espaços/caracteres antes do início do XML (<?xml ... ou <tag)
+  let cleaned = xmlText.replace(/^\uFEFF/, "").replace(/^\s+/, "");
+  const firstTag = cleaned.indexOf("<");
+  if (firstTag > 0) cleaned = cleaned.substring(firstTag);
+  return cleaned;
+}
+
 function parseXmlDocument(xmlText) {
+  const cleaned = cleanXmlText(xmlText);
   const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
+  const doc = parser.parseFromString(cleaned, "text/xml");
   const type = detectDocumentType(doc);
 
-  if (type === "nfe") return parseNFe(doc);
-  if (type === "cte") return parseCTe(doc);
-  if (type === "nfse") return parseNFSe(doc);
+  let parsed;
+  if (type === "nfe") parsed = parseNFe(doc);
+  else if (type === "cte") parsed = parseCTe(doc);
+  else if (type === "nfse") parsed = parseNFSe(doc);
+  else throw new Error("XML não reconhecido. Esperado NF-e, CT-e ou NFS-e.");
 
-  throw new Error("XML não reconhecido. Esperado NF-e, CT-e ou NFS-e.");
+  // Rejeita documentos vazios (parsing falhou): evita criar notas em branco.
+  if (!parsed.number && !parsed.supplier_name && !parsed.access_key) {
+    throw new Error("XML inválido ou ilegível — não foi possível extrair os dados do documento.");
+  }
+
+  return parsed;
 }
 
 Deno.serve(async (req) => {
