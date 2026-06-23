@@ -291,12 +291,22 @@ async function listFolderItems(accessToken, parentId) {
     ? await graphRequest(accessToken, `/me/drive/items/${parentId}?$select=id,name,parentReference,folder`)
     : { id: 'root', name: 'Raiz do OneDrive', pathLabel: '/' };
 
-  const childrenPath = parentId
-    ? `/me/drive/items/${parentId}/children?$select=id,name,parentReference,folder,file,size,lastModifiedDateTime&$top=200`
-    : `/me/drive/root/children?$select=id,name,parentReference,folder,file,size,lastModifiedDateTime&$top=200`;
+  // Percorre TODAS as páginas da Graph API (devolve no máx. 200 por vez),
+  // senão o contador para em 200 mesmo havendo milhares de arquivos.
+  const firstPath = parentId
+    ? `/me/drive/items/${parentId}/children?$select=id,name,parentReference,folder,file&$top=200`
+    : `/me/drive/root/children?$select=id,name,parentReference,folder,file&$top=200`;
 
-  const response = await graphRequest(accessToken, childrenPath);
-  const items = response?.value || [];
+  const items = [];
+  let nextLink = firstPath;
+  while (nextLink) {
+    const response = nextLink.startsWith('https://')
+      ? await fetch(nextLink, { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }).then((r) => r.json())
+      : await graphRequest(accessToken, nextLink);
+    (response?.value || []).forEach((item) => items.push(item));
+    nextLink = response?.['@odata.nextLink'] || null;
+  }
+
   const folders = items
     .filter((item) => item.folder)
     .map((item) => ({
