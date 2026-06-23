@@ -83,16 +83,16 @@ export default function NFSeDetailDialog({ invoice: invoiceProp, open, onClose, 
             </h2>
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {hasPermission('download_pdf') && (
               <Button variant="outline" size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="gap-2">
                 {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 Baixar PDF
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="w-5 h-5" />
-            </Button>
+            </button>
           </div>
         </div>
 
