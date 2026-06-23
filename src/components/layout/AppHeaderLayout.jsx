@@ -13,7 +13,7 @@ const navItems = [
   { key: 'nf', name: 'NF', path: '/nf', icon: FileText },
   { key: 'cte', name: 'CT-e', path: '/cte', icon: Package },
   { key: 'nfse', name: 'NFS-e', path: '/nfse', icon: Receipt },
-  { key: 'notas', name: 'NFe', path: '/notas', icon: FileText },
+  { key: 'notas', name: 'NF-e', path: '/notas', icon: FileText },
   { key: 'materia-prima', name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
   { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
