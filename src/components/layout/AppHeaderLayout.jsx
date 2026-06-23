@@ -1,19 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package, ChevronDown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/AuthContext';
 
 const APP_NAME = 'Controle Fiscal';
 const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697370b851ff4a130adcda27/17b9d331c_Designsemnome57.png';
 
-const navItems = [
-  { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
+const notasFiscaisItems = [
   { key: 'nf', name: 'NF', path: '/nf', icon: FileText },
   { key: 'cte', name: 'CT-e', path: '/cte', icon: Package },
   { key: 'nfse', name: 'NFS-e', path: '/nfse', icon: Receipt },
   { key: 'notas', name: 'NF-e', path: '/notas', icon: FileText },
+];
+
+const navItems = [
+  { key: 'dashboard', name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { key: 'materia-prima', name: 'Matéria Prima', path: '/materia-prima', icon: Layers },
   { key: 'gestao-compras', name: 'Gestão de Compras', path: '/gestao-compras', icon: ShoppingCart },
   { key: 'gestao-frota', name: 'Gestão de Frota', path: '/gestao-frota', icon: Truck },
@@ -27,6 +31,8 @@ export default function AppHeaderLayout({ children, currentPath }) {
   const { canAccessPage, isLoadingAuth } = useAuth();
 
   const visibleNavItems = navItems.filter(item => canAccessPage(item.key));
+  const visibleNotasItems = notasFiscaisItems.filter(item => canAccessPage(item.key));
+  const isNotasActive = visibleNotasItems.some(item => item.path === currentPath);
 
   if (isLoadingAuth) {
     return (
@@ -58,6 +64,54 @@ export default function AppHeaderLayout({ children, currentPath }) {
                 {visibleNavItems.map(item => {
                   const isActive = currentPath === item.path;
                   const Icon = item.icon;
+
+                  if (item.key === 'dashboard' && visibleNotasItems.length > 0) {
+                    return (
+                      <React.Fragment key={item.path}>
+                        <Link
+                          to={item.path}
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                            isActive
+                              ? 'bg-[#FDB913] text-slate-900'
+                              : 'text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {Icon && <Icon className="w-4 h-4 shrink-0" />}
+                          <span className="hidden sm:block">{item.name}</span>
+                        </Link>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all outline-none ${
+                                isNotasActive
+                                  ? 'bg-[#FDB913] text-slate-900'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              <FileText className="w-4 h-4 shrink-0" />
+                              <span className="hidden sm:block">Notas Fiscais</span>
+                              <ChevronDown className="w-4 h-4 shrink-0" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-44">
+                            {visibleNotasItems.map(sub => {
+                              const SubIcon = sub.icon;
+                              return (
+                                <DropdownMenuItem key={sub.path} asChild>
+                                  <Link to={sub.path} className="flex items-center gap-2 cursor-pointer">
+                                    {SubIcon && <SubIcon className="w-4 h-4 shrink-0" />}
+                                    <span>{sub.name}</span>
+                                  </Link>
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </React.Fragment>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.path}
