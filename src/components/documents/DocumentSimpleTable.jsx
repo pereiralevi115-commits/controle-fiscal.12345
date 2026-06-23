@@ -9,7 +9,7 @@ import { formatCNPJ } from "@/lib/formatters";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails }) {
+export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   if (!documents || documents.length === 0) {
@@ -30,6 +30,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
             <TableHead className="font-semibold">Emitente</TableHead>
             <TableHead className="font-semibold">Número</TableHead>
             <TableHead className="font-semibold">Emissão</TableHead>
+            {showDescription && <TableHead className="font-semibold">Descrição / Observações</TableHead>}
             <TableHead className="font-semibold text-right">Valor</TableHead>
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
@@ -50,6 +51,11 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
                   ? format(new Date(doc.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                   : "—"}
               </TableCell>
+              {showDescription && (
+                <TableCell className="text-sm text-slate-600 max-w-md">
+                  <span className="line-clamp-2 whitespace-pre-wrap">{doc.service_description || "—"}</span>
+                </TableCell>
+              )}
               <TableCell className="text-right font-semibold">{formatCurrency(doc.total_value)}</TableCell>
               <TableCell className="text-right">
                 {onViewDetails && (

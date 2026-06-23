@@ -59,6 +59,7 @@ export default function NFSe() {
             documents={filtered}
             branches={branches}
             emptyLabel="Nenhuma NFS-e encontrada"
+            showDescription
             onViewDetails={setSelected}
           />
         </div>

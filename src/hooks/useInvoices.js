@@ -47,6 +47,7 @@ const LIST_FIELDS = [
   "internal_notes",
   "internal_notes_list",
   "additional_info",
+  "service_description",
   "items",
   "installments",
   "payments",
