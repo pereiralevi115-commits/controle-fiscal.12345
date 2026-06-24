@@ -9,9 +9,27 @@ function getTagText(parent, tagName) {
   return elements[0]?.textContent?.trim() || "";
 }
 
+// Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
+const EVENT_LABELS = {
+  "110111": "Cancelamento",
+  "110110": "Carta de Correção",
+  "110140": "EPEC",
+  "210200": "Confirmação da Operação",
+  "210210": "Ciência da Operação",
+  "210220": "Desconhecimento da Operação",
+  "210240": "Operação não Realizada",
+  "110112": "Cancelamento por Substituição",
+  "610110": "Carta de Correção (CT-e)",
+  "110180": "Cancelamento (CT-e)",
+};
+
 function detectDocumentType(doc) {
-  if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
+  // Eventos (Cancelamento, CC-e, etc.) — não são documentos novos, são anexados.
+  if (doc.getElementsByTagName("infEvento").length > 0) return "evento";
+  // IMPORTANTE: checar CT-e ANTES de NF-e. Um CT-e referencia as NF-e transportadas
+  // dentro de <infNFe>, então a checagem de NF-e pegaria o CT-e por engano.
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
+  if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
   if (doc.getElementsByTagName("infNFSe").length > 0) return "nfse";
   const nfseTags = ["InfNfse", "Nfse", "CompNfse", "InfDeclaracaoPrestacaoServico", "Rps"];
@@ -19,6 +37,32 @@ function detectDocumentType(doc) {
     if (doc.getElementsByTagName(tag).length > 0) return "nfse";
   }
   return null;
+}
+
+function parseEvento(doc) {
+  const infEvento = doc.getElementsByTagName("infEvento")[0];
+  const tpEvento = getTagText(infEvento, "tpEvento");
+  // A chave do documento referenciado pode estar em chNFe ou chCTe.
+  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const detEvento = infEvento.getElementsByTagName("detEvento")[0];
+  const description = getTagText(detEvento, "xCorrecao")
+    || getTagText(detEvento, "xJust")
+    || getTagText(detEvento, "xMotivo")
+    || "";
+  const eventDate = getTagText(infEvento, "dhEvento");
+  const protocol = getTagText(infEvento, "nProt")
+    || (doc.getElementsByTagName("retEvento")[0] ? getTagText(doc.getElementsByTagName("retEvento")[0], "nProt") : "");
+
+  return {
+    is_event: true,
+    access_key: accessKey,
+    event_type: tpEvento,
+    event_label: EVENT_LABELS[tpEvento] || `Evento ${tpEvento}`,
+    description,
+    event_date: eventDate ? eventDate.substring(0, 10) : "",
+    protocol,
+    is_cancellation: tpEvento === "110111" || tpEvento === "110112" || tpEvento === "110180",
+  };
 }
 
 function parseNFe(doc) {
@@ -233,6 +277,13 @@ function parseXmlText(xmlText) {
   const type = detectDocumentType(doc);
 
   let parsed;
+  if (type === "evento") {
+    parsed = parseEvento(doc);
+    if (!parsed.access_key) {
+      throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
+    }
+    return parsed;
+  }
   if (type === "nfe") parsed = parseNFe(doc);
   else if (type === "cte") parsed = parseCTe(doc);
   else if (type === "nfse") parsed = parseNFSe(doc);
@@ -247,6 +298,40 @@ function parseXmlText(xmlText) {
 }
 
 // Importa um lote de XMLs diretamente (sem chamar parseXml por HTTP)
+// Aplica um evento (cancelamento, CC-e, etc.) a um documento existente.
+async function applyEvent(base44, parsed) {
+  const docs = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+  if (docs.length === 0) {
+    return { applied: false, reason: "documento_nao_encontrado" };
+  }
+  const doc = docs[0];
+  const events = Array.isArray(doc.fiscal_events) ? doc.fiscal_events : [];
+
+  // Evita duplicar o mesmo evento (mesmo tipo + data).
+  const already = events.some((e) => e.event_type === parsed.event_type && e.event_date === parsed.event_date);
+  if (already) {
+    return { applied: false, reason: "evento_duplicado" };
+  }
+
+  events.push({
+    type: parsed.event_type,
+    label: parsed.event_label,
+    description: parsed.description,
+    date: parsed.event_date,
+    protocol: parsed.protocol,
+  });
+
+  const updateData = { fiscal_events: events };
+  if (parsed.is_cancellation) {
+    updateData.cancelled = true;
+    updateData.cancellation_date = parsed.event_date || new Date().toISOString().split("T")[0];
+    updateData.cancellation_reason = parsed.description || parsed.event_label;
+  }
+
+  await base44.asServiceRole.entities.Invoice.update(doc.id, updateData);
+  return { applied: true };
+}
+
 async function importXmlBatchLocal(base44, xmlContents) {
   let success = 0;
   let errors = 0;
@@ -255,6 +340,17 @@ async function importXmlBatchLocal(base44, xmlContents) {
   for (let i = 0; i < xmlContents.length; i++) {
     try {
       const parsed = parseXmlText(xmlContents[i]);
+
+      // Eventos não criam documentos novos — são anexados ao documento existente.
+      if (parsed.is_event) {
+        const res = await applyEvent(base44, parsed);
+        if (res.applied) {
+          success++;
+        }
+        // Eventos sem documento pai ou duplicados são ignorados silenciosamente (não são erros).
+        continue;
+      }
+
       parsed.branch_cnpj = parsed.recipient_cnpj;
 
       let existing = [];
@@ -419,7 +515,7 @@ async function listAllXmlFiles(accessToken, folderId) {
 }
 
 // Importa em lotes de BATCH_SIZE arquivos por chamada para evitar timeout
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 5;
 
 async function importFolderById(base44, accessToken, folderId, skip = 0) {
   const allXmlFiles = await listAllXmlFiles(accessToken, folderId);

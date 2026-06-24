@@ -9,8 +9,10 @@ function getTagText(parent, tagName) {
 }
 
 function detectDocumentType(doc) {
-  if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
+  // IMPORTANTE: checar CT-e ANTES de NF-e. Um CT-e referencia as NF-e transportadas
+  // dentro de <infNFe>, então a checagem de NF-e pegaria o CT-e por engano.
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
+  if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
   // NFS-e padrão nacional (layout sped.fazenda.gov.br/nfse)
   if (doc.getElementsByTagName("infNFSe").length > 0) return "nfse";
   // NFS-e tem muitas variações municipais; detectamos por tags comuns.

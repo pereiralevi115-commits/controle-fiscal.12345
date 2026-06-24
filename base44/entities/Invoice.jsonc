@@ -213,6 +213,35 @@
         }
       }
     },
+    "fiscal_events": {
+      "type": "array",
+      "description": "Hist\u00f3rico de eventos fiscais oficiais (Cancelamento, Carta de Corre\u00e7\u00e3o, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "C\u00f3digo do tipo de evento (tpEvento)"
+          },
+          "label": {
+            "type": "string",
+            "description": "R\u00f3tulo leg\u00edvel do evento"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descri\u00e7\u00e3o/justificativa/corre\u00e7\u00e3o do evento"
+          },
+          "date": {
+            "type": "string",
+            "description": "Data do evento (ISO)"
+          },
+          "protocol": {
+            "type": "string",
+            "description": "N\u00famero de protocolo do evento"
+          }
+        }
+      }
+    },
     "items": {
       "type": "array",
       "description": "Itens da nota fiscal",
