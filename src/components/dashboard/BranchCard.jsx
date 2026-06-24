@@ -1,40 +1,68 @@
 import React from "react";
-import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox } from "lucide-react";
+import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox, Wallet } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-const ScreenSummaryRow = ({ label, data, color }) => {
-  if (!data || data.count === 0) return null;
-  const pct = (n) => data.count > 0 ? Math.round(n / data.count * 100) : 0;
+const compactCurrency = (value) => {
+  const v = value || 0;
+  if (v >= 1000000) return `R$ ${(v / 1000000).toFixed(1).replace(".", ",")}M`;
+  if (v >= 1000) return `R$ ${(v / 1000).toFixed(1).replace(".", ",")}k`;
+  return formatCurrency(v);
+};
+
+// Pequeno cartão de métrica por tela
+const ScreenTile = ({ icon: Icon, label, count, value, percent, accent }) => (
+  <div className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white p-3 hover:border-slate-200 hover:shadow-sm transition-all">
+    <div className="flex items-center gap-2">
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${accent.bg}`}>
+        <Icon className={`w-3.5 h-3.5 ${accent.text}`} />
+      </div>
+      <span className="text-[11px] font-semibold text-slate-500 truncate">{label}</span>
+    </div>
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-2xl font-bold text-slate-800 leading-none">{count}</span>
+      {percent != null && <span className="text-[11px] font-medium text-slate-400">{percent}%</span>}
+    </div>
+    {value != null && (
+      <span className="text-[12px] font-semibold text-emerald-600">{formatCurrency(value)}</span>
+    )}
+  </div>
+);
+
+// Mini barra de progresso para SIGV/TOPCON/Boleto
+const ProgressStat = ({ label, value, count, barColor, textColor }) => {
+  const pct = count > 0 ? Math.round((value / count) * 100) : 0;
   return (
-    <div className="flex items-center gap-4 px-4 py-3 rounded-lg bg-slate-50 border border-slate-100">
-      <span className={`text-xs font-bold w-28 flex-shrink-0 ${color}`}>{label}</span>
-      <div className="flex flex-1 justify-between items-center">
-        <div className="text-center min-w-[60px]">
-          <p className="text-sm font-bold text-green-700">{data.sigv}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">SIGV<br/><span className="text-green-600 font-semibold">{pct(data.sigv)}%</span></p>
+    <div className="flex-1 min-w-[120px]">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+        <span className={`text-[11px] font-bold ${textColor}`}>{value}/{count} · {pct}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+};
+
+// Linha de resumo por tela com barras de progresso
+const ScreenSummaryRow = ({ label, data, dotColor }) => {
+  if (!data || data.count === 0) return null;
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+          <span className="text-sm font-bold text-slate-700">{label}</span>
+          <span className="text-[11px] font-medium text-slate-400">· {data.count} notas</span>
         </div>
-        <div className="w-px h-8 bg-slate-200" />
-        <div className="text-center min-w-[60px]">
-          <p className="text-sm font-bold text-purple-700">{data.topcon}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">TOPCON<br/><span className="text-purple-600 font-semibold">{pct(data.topcon)}%</span></p>
-        </div>
-        <div className="w-px h-8 bg-slate-200" />
-        <div className="text-center min-w-[60px]">
-          <p className="text-sm font-bold text-orange-600">{data.boleto}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">Boleto<br/><span className="text-orange-500 font-semibold">{pct(data.boleto)}%</span></p>
-        </div>
-        <div className="w-px h-8 bg-slate-200" />
-        <div className="text-center min-w-[100px]">
-          <p className="text-sm font-bold text-slate-700">{formatCurrency(data.value)}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">Valor total</p>
-        </div>
-        <div className="w-px h-8 bg-slate-200" />
-        <div className="text-center min-w-[40px]">
-          <p className="text-sm font-bold text-slate-500">{data.count}</p>
-          <p className="text-[11px] text-slate-400 leading-tight">Notas</p>
-        </div>
+        <span className="text-sm font-bold text-slate-800">{formatCurrency(data.value)}</span>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <ProgressStat label="SIGV" value={data.sigv} count={data.count} barColor="bg-green-500" textColor="text-green-600" />
+        <ProgressStat label="TOPCON" value={data.topcon} count={data.count} barColor="bg-purple-500" textColor="text-purple-600" />
+        <ProgressStat label="Boleto" value={data.boleto} count={data.count} barColor="bg-orange-500" textColor="text-orange-600" />
       </div>
     </div>
   );
@@ -47,96 +75,76 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0)
     : 0;
 
-  const screenList = screens ? [
-    { icon: FileText,     iconBg: "bg-slate-800",  iconColor: "text-white",       value: screenTotal,           label: "Total",         val: totalValue },
-    { icon: FileText,     iconBg: "bg-slate-100",  iconColor: "text-slate-600",   value: screens.notas,         label: "NF-e",          val: screenStats?.notas?.value },
-    { icon: Layers,       iconBg: "bg-green-50",   iconColor: "text-green-600",   value: screens.materia_prima,  label: "Mat. Prima",    val: screenStats?.materia_prima?.value },
-    { icon: ShoppingCart, iconBg: "bg-blue-50",    iconColor: "text-blue-600",    value: screens.compras,       label: "Gest. Compras", val: screenStats?.compras?.value },
-    { icon: Truck,        iconBg: "bg-cyan-50",    iconColor: "text-cyan-600",    value: screens.frota,         label: "Gest. Frota",   val: screenStats?.frota?.value },
-    { icon: BarChart2,    iconBg: "bg-indigo-50",  iconColor: "text-indigo-600",  value: screens.controladoria, label: "Controladoria", val: screenStats?.controladoria?.value },
-    { icon: Receipt,      iconBg: "bg-amber-50",   iconColor: "text-amber-600",   value: screens.arquivadas,    label: "Arquivadas",    val: archivedValue },
+  const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
+
+  const tiles = screens ? [
+    { icon: FileText,     label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
+    { icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
+    { icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
+    { icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
+    { icon: BarChart2,    label: "Controladoria", count: screens.controladoria, value: screenStats?.controladoria?.value, percent: pctOf(screens.controladoria), accent: { bg: "bg-indigo-50",  text: "text-indigo-600" } },
+    { icon: Receipt,      label: "Arquivadas",    count: screens.arquivadas,    value: archivedValue,                     percent: pctOf(screens.arquivadas),    accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
   ] : null;
 
   const screenRowConfig = [
-    { key: "notas",         label: "Notas Fiscais", color: "text-slate-700" },
-    { key: "materia_prima", label: "Mat. Prima",    color: "text-green-700" },
-    { key: "compras",       label: "Gest. Compras", color: "text-blue-700" },
-    { key: "frota",         label: "Gest. Frota",   color: "text-cyan-700" },
-    { key: "controladoria", label: "Controladoria", color: "text-indigo-700" },
+    { key: "notas",         label: "Notas Fiscais (NF-e)", dotColor: "bg-slate-400" },
+    { key: "materia_prima", label: "Matéria Prima",        dotColor: "bg-green-500" },
+    { key: "compras",       label: "Gestão de Compras",    dotColor: "bg-blue-500" },
+    { key: "frota",         label: "Gestão de Frota",      dotColor: "bg-cyan-500" },
+    { key: "controladoria", label: "Controladoria",        dotColor: "bg-indigo-500" },
   ];
 
-  const getBadgeClass = (i) => i === 0
-    ? "flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-slate-800 border-slate-700"
-    : "flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-white border-slate-200";
-
-  const getValueClass = (i) => i === 0 ? "font-bold text-sm text-white" : "font-bold text-sm text-slate-800";
-  const getLabelClass = (i) => i === 0 ? "text-xs text-slate-400" : "text-xs text-slate-500";
-
   return (
-    <div className={`bg-white rounded-xl shadow-sm border ${highlight ? "border-slate-300 shadow-md" : "border-slate-200"} overflow-hidden`}>
+    <div className={`bg-white rounded-2xl shadow-sm border ${highlight ? "border-slate-300 shadow-lg" : "border-slate-200"} overflow-hidden`}>
       {/* Header */}
-      <div className={`px-5 py-3 flex items-center justify-between ${highlight ? "bg-slate-800" : "bg-slate-50 border-b border-slate-100"}`}>
-        <h2 className={`font-bold text-sm tracking-wide ${highlight ? "text-white" : "text-slate-700"}`}>{name}</h2>
-        {highlight && <span className="text-xs text-slate-400 font-medium">Consolidado</span>}
+      <div className={`px-6 py-4 flex items-center justify-between ${highlight ? "bg-gradient-to-r from-slate-900 to-slate-700" : "bg-slate-50 border-b border-slate-100"}`}>
+        <div className="flex items-center gap-3">
+          <h2 className={`font-bold text-base tracking-wide ${highlight ? "text-white" : "text-slate-700"}`}>{name}</h2>
+          {highlight && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 font-medium">Consolidado</span>}
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className={`text-[10px] uppercase tracking-widest ${highlight ? "text-slate-400" : "text-slate-400"}`}>Notas</p>
+            <p className={`text-lg font-bold ${highlight ? "text-white" : "text-slate-700"}`}>{screenTotal}</p>
+          </div>
+          <div className="text-right">
+            <p className={`text-[10px] uppercase tracking-widest ${highlight ? "text-slate-400" : "text-slate-400"}`}>Valor total</p>
+            <p className={`text-lg font-bold ${highlight ? "text-emerald-400" : "text-emerald-600"}`}>{formatCurrency(totalValue)}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Registros por tela */}
-      {screenList && (
-        <div className="px-5 py-4 border-b border-slate-100">
+      {/* Cartões por tela */}
+      {tiles && (
+        <div className="px-6 py-5 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
-          <div className="flex flex-wrap gap-2">
-            {screenList.map((s, i) => (
-              <div key={i} className={getBadgeClass(i)} style={{flex: '1 1 auto', minWidth: 0}}>
-                <div className={`w-5 h-5 rounded ${s.iconBg} flex items-center justify-center flex-shrink-0`}>
-                  <s.icon className={`w-3 h-3 ${s.iconColor}`} />
-                </div>
-                <span className={getValueClass(i)}>{s.value}</span>
-                {i > 0 && screenTotal > 0 && (
-                  <span className="text-[11px] font-medium text-slate-400">({Math.round(s.value / screenTotal * 100)}%)</span>
-                )}
-                <span className={getLabelClass(i)}>{s.label}</span>
-                {s.val != null && s.val > 0 && (
-                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(s.val)}</span>
-                )}
-              </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {tiles.map((t, i) => (
+              <ScreenTile key={i} {...t} />
             ))}
-
-            {nfseStats && (
-              <div className={getBadgeClass(1)} style={{flex: '1 1 auto', minWidth: 0}}>
-                <div className="w-5 h-5 rounded bg-rose-50 flex items-center justify-center flex-shrink-0">
-                  <FileSpreadsheet className="w-3 h-3 text-rose-600" />
-                </div>
-                <span className={getValueClass(1)}>{nfseStats.count}</span>
-                <span className={getLabelClass(1)}>NFS-e</span>
-                {nfseStats.value > 0 && (
-                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(nfseStats.value)}</span>
-                )}
-              </div>
-            )}
-
-            {cteStats && (
-              <div className={getBadgeClass(1)} style={{flex: '1 1 auto', minWidth: 0}}>
-                <div className="w-5 h-5 rounded bg-teal-50 flex items-center justify-center flex-shrink-0">
-                  <FileBox className="w-3 h-3 text-teal-600" />
-                </div>
-                <span className={getValueClass(1)}>{cteStats.count}</span>
-                <span className={getLabelClass(1)}>CT-e</span>
-                {cteStats.value > 0 && (
-                  <span className="text-[11px] font-semibold text-emerald-600 ml-1">{formatCurrency(cteStats.value)}</span>
-                )}
-              </div>
-            )}
           </div>
+
+          {/* CT-e e NFS-e (documentos especiais) */}
+          {(nfseStats || cteStats) && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mt-3">
+              {nfseStats && (
+                <ScreenTile icon={FileSpreadsheet} label="NFS-e" count={nfseStats.count} value={nfseStats.value} accent={{ bg: "bg-rose-50", text: "text-rose-600" }} />
+              )}
+              {cteStats && (
+                <ScreenTile icon={FileBox} label="CT-e" count={cteStats.count} value={cteStats.value} accent={{ bg: "bg-teal-50", text: "text-teal-600" }} />
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Resumo por tela */}
+      {/* Resumo por tela com barras de progresso */}
       {screenStats && (
-        <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Resumo por tela</p>
-          <div className="space-y-2">
-            {screenRowConfig.map(({ key, label, color }) => (
-              <ScreenSummaryRow key={key} label={label} data={screenStats[key]} color={color} />
+        <div className="px-6 py-5">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Progresso de lançamentos por tela</p>
+          <div className="space-y-3">
+            {screenRowConfig.map(({ key, label, dotColor }) => (
+              <ScreenSummaryRow key={key} label={label} data={screenStats[key]} dotColor={dotColor} />
             ))}
           </div>
         </div>
