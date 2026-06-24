@@ -23,7 +23,6 @@ export default function NFSe() {
   const toggleSelectAll = (checked, docs) =>
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
   const [sortConfig, setSortConfig] = useState([
-    { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
   ]);
 

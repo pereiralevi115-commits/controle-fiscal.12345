@@ -26,7 +26,6 @@ export default function NF() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
   const [sortConfig, setSortConfig] = useState([
-    { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
   ]);
 
@@ -35,7 +34,6 @@ export default function NF() {
   const [selectedNfse, setSelectedNfse] = useState(null);
   const [selectedNfseIds, setSelectedNfseIds] = useState([]);
   const [nfseSortConfig, setNfseSortConfig] = useState([
-    { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
   ]);
 

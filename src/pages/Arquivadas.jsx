@@ -28,7 +28,6 @@ export default function Arquivadas({ embedded } = {}) {
   const toggleSelectAllNfse = (checked, docs) =>
     setSelectedNfseIds(checked ? docs.map((d) => d.id) : []);
   const [sortConfig, setSortConfig] = useState([
-    { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
   ]);
 
