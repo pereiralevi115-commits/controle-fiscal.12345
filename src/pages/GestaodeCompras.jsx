@@ -104,7 +104,7 @@ export default function GestaodeCompras() {
       if (!existing) next = [{ key, direction: "asc" }, ...prev];
       else if (existing.direction === "asc") next = prev.map((s) => s.key === key ? { ...s, direction: "desc" } : s);
       else next = prev.filter((s) => s.key !== key);
-      return next.length === 0 ? [{ key: "issue_date", direction: "desc" }] : next;
+      return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
     });
   };
 

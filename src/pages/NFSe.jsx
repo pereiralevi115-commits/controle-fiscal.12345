@@ -90,7 +90,7 @@ export default function NFSe() {
       } else {
         next = prev.filter((s) => s.key !== key);
       }
-      return next.length === 0 ? [{ key: "issue_date", direction: "desc" }] : next;
+      return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
     });
   };
 
