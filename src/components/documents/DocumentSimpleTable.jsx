@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 import InvoiceActionButtons from "@/components/invoices/InvoiceActionButtons";
 import InvoiceNotesButton from "@/components/invoices/InvoiceNotesButton";
@@ -14,6 +14,61 @@ const formatCurrency = (value) =>
 
 export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showActionButtons = false }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
+
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedDocuments = useMemo(() => {
+    if (!documents || !sortKey) return documents || [];
+    const getValue = (doc) => {
+      switch (sortKey) {
+        case "filial": return getBranchName(doc.branch_cnpj).toLowerCase();
+        case "emitente": return (doc.supplier_name || "").toLowerCase();
+        case "numero": return parseInt(doc.number, 10) || 0;
+        case "emissao": return doc.issue_date || "";
+        case "descricao": return (doc.service_description || "").toLowerCase();
+        case "valor": return doc.total_value || 0;
+        default: return "";
+      }
+    };
+    return [...documents].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      let cmp = 0;
+      if (typeof va === "number" && typeof vb === "number") cmp = va - vb;
+      else cmp = String(va).localeCompare(String(vb), "pt-BR");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [documents, sortKey, sortDir, branches]);
+
+  const SortIcon = ({ column }) => {
+    if (sortKey !== column) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="w-3.5 h-3.5" />
+      : <ArrowDown className="w-3.5 h-3.5" />;
+  };
+
+  const SortableHead = ({ column, label, align = "left" }) => (
+    <TableHead className={`font-semibold ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => handleSort(column)}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${align === "right" ? "ml-auto" : ""}`}
+      >
+        {label}
+        <SortIcon column={column} />
+      </button>
+    </TableHead>
+  );
 
   if (!documents || documents.length === 0) {
     return (
@@ -29,17 +84,17 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="font-semibold">Filial</TableHead>
-            <TableHead className="font-semibold">Emitente</TableHead>
-            <TableHead className="font-semibold">Número</TableHead>
-            <TableHead className="font-semibold">Emissão</TableHead>
-            {showDescription && <TableHead className="font-semibold">Descrição / Observações</TableHead>}
-            <TableHead className="font-semibold text-right">Valor</TableHead>
+            <SortableHead column="filial" label="Filial" />
+            <SortableHead column="emitente" label="Emitente" />
+            <SortableHead column="numero" label="Número" />
+            <SortableHead column="emissao" label="Emissão" />
+            {showDescription && <SortableHead column="descricao" label="Descrição / Observações" />}
+            <SortableHead column="valor" label="Valor" align="right" />
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {documents.map((doc) => (
+          {sortedDocuments.map((doc) => (
             <TableRow key={doc.id} className={doc.cancelled ? "bg-red-50" : ""}>
               <TableCell className="font-medium">{getBranchName(doc.branch_cnpj)}</TableCell>
               <TableCell className="text-sm">
