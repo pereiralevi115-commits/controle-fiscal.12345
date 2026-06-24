@@ -29,6 +29,10 @@ export default function NFSe() {
   const filtered = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
     return documents.filter((doc) => {
+      // Esconde notas já arquivadas (manualmente ou com SIGV+TOPCON+BOLETO marcados)
+      const allRecorded = doc.sigv_recorded && doc.topcon_recorded && doc.boleto_recorded;
+      if (doc.archived || allRecorded) return false;
+      if (doc.cancelled) return false;
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
       if (filters.monthYear !== "all" && doc.issue_date) {
