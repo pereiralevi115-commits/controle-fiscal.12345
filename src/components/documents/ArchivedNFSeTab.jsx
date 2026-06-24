@@ -18,7 +18,7 @@ const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
  * Aba "NFS-e" das telas Arquivadas/Canceladas. Recebe as NFS-e já filtradas
  * pela regra da tela (arquivadas ou canceladas) e aplica busca + filtro de mês.
  */
-export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undoPending }) {
+export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undoPending, showCancellation }) {
   const [search, setSearch] = useState("");
   const [monthYear, setMonthYear] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -102,6 +102,7 @@ export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undo
                   <TableHead className="font-semibold">Fornecedor</TableHead>
                   <TableHead className="font-semibold">NF</TableHead>
                   <TableHead className="font-semibold">Emissão</TableHead>
+                  {showCancellation && <TableHead className="font-semibold">Cancelamento</TableHead>}
                   <TableHead className="font-semibold">Descrição / Observações</TableHead>
                   <TableHead className="font-semibold text-right">Valor</TableHead>
                   <TableHead className="font-semibold text-right">Ação</TableHead>
@@ -123,6 +124,13 @@ export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undo
                         ? format(new Date(doc.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                         : "—"}
                     </TableCell>
+                    {showCancellation && (
+                      <TableCell className="text-sm text-red-600 font-medium">
+                        {doc.cancellation_date
+                          ? format(new Date(doc.cancellation_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
+                          : "—"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm text-slate-600 max-w-md">
                       <span className="line-clamp-2 whitespace-pre-wrap">{doc.service_description || "—"}</span>
                     </TableCell>

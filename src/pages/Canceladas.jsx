@@ -202,6 +202,7 @@ export default function Canceladas({ embedded } = {}) {
               branches={branches}
               onUndo={(id) => undoMutation.mutate(id)}
               undoPending={undoMutation.isPending}
+              showCancellation
             />
           </TabsContent>
         </Tabs>
