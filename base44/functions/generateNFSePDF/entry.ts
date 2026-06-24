@@ -189,6 +189,28 @@ async function buildPDF(invoice) {
     posY -= 28;
   }
 
+  // ── CONTROLE INTERNO DE LANÇAMENTOS ─────────────────────────────
+  ensureSpace(56);
+  drawSectionHeader("CONTROLE INTERNO DE LANÇAMENTOS", ML, posY, W, 16, AMBER);
+  posY -= 16;
+
+  const RED = rgb(0.78, 0.07, 0.07);
+  const CTRL_COLS = [
+    { lbl: "LANÇADO SIGV", done: invoice.sigv_recorded },
+    { lbl: "LANÇADO TOPCON", done: invoice.topcon_recorded },
+    { lbl: "BOLETO EM MÃOS", done: invoice.boleto_recorded },
+  ];
+  const CTRL_H = 34;
+  const ctrlW = W / CTRL_COLS.length;
+  CTRL_COLS.forEach((col, i) => {
+    const cx = ML + i * ctrlW;
+    drawBox(cx, posY, ctrlW, CTRL_H);
+    drawText(col.lbl, cx + 4, posY, { size: 6, color: GRAY, dy: 9 });
+    const statusText = col.done ? "SIM" : "NÃO";
+    drawCenter(statusText, cx, posY, ctrlW, { size: 16, font: fB, color: RED, dy: 28 });
+  });
+  posY -= CTRL_H;
+
   return await pdfDoc.save();
 }
 
