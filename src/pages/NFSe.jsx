@@ -60,6 +60,7 @@ export default function NFSe() {
             branches={branches}
             emptyLabel="Nenhuma NFS-e encontrada"
             showDescription
+            showActionButtons
             onViewDetails={setSelected}
           />
         </div>
