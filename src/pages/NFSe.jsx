@@ -129,6 +129,7 @@ export default function NFSe() {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
+            isService={true}
           />
         </div>
 

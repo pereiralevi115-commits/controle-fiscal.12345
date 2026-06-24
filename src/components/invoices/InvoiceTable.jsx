@@ -40,7 +40,7 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
   );
 };
 
-export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
+export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false }) {
   const getBranchName = (branchCnpj) => {
     const branch = branches.find((b) => b.cnpj === branchCnpj);
     return branch?.name || "—";
@@ -96,7 +96,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 <SortableHeader label="Valor" sortKey="total_value" currentSort={sortConfig} onSort={onSort} />
               </div>
             </TableHead>
-            <TableHead className="font-semibold">Produto</TableHead>
+            <TableHead className="font-semibold">{isService ? "Serviço" : "Produto"}</TableHead>
             <TableHead className="font-semibold">Informações Adicionais</TableHead>
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
@@ -148,17 +148,29 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 </InvoiceTableTooltip>
               </TableCell>
               <TableCell className="text-sm">
-                <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 
-                  ? `PRODUTOS\n\n${invoice.items.map(item => `• ${item.description}`).join("\n")}`
-                  : "—"}>
-                  <span className="cursor-help">
-                    {invoice.items && invoice.items.length > 0
-                      ? (invoice.items.map(item => item.description).join(", ").length > 35
-                        ? invoice.items.map(item => item.description).join(", ").substring(0, 35) + "..."
-                        : invoice.items.map(item => item.description).join(", "))
-                      : "—"}
-                  </span>
-                </InvoiceTableTooltip>
+                {isService ? (
+                  <InvoiceTableTooltip content={invoice.service_description || "—"}>
+                    <span className="cursor-help">
+                      {invoice.service_description
+                        ? (invoice.service_description.length > 35
+                          ? invoice.service_description.substring(0, 35) + "..."
+                          : invoice.service_description)
+                        : "—"}
+                    </span>
+                  </InvoiceTableTooltip>
+                ) : (
+                  <InvoiceTableTooltip content={invoice.items && invoice.items.length > 0 
+                    ? `PRODUTOS\n\n${invoice.items.map(item => `• ${item.description}`).join("\n")}`
+                    : "—"}>
+                    <span className="cursor-help">
+                      {invoice.items && invoice.items.length > 0
+                        ? (invoice.items.map(item => item.description).join(", ").length > 35
+                          ? invoice.items.map(item => item.description).join(", ").substring(0, 35) + "..."
+                          : invoice.items.map(item => item.description).join(", "))
+                        : "—"}
+                    </span>
+                  </InvoiceTableTooltip>
+                )}
               </TableCell>
               <TableCell className="text-sm">
                 <InvoiceTableTooltip content={invoice.additional_info || "—"}>
