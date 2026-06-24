@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
+import ArchivedNFSeTab from "@/components/documents/ArchivedNFSeTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -31,7 +33,7 @@ export default function Canceladas({ embedded } = {}) {
     },
   });
 
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices(["nfe", "nfse"]);
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ["branches"],
@@ -55,7 +57,7 @@ export default function Canceladas({ embedded } = {}) {
     return Array.from(set).sort().reverse();
   }, [invoices]);
 
-  const filtered = useMemo(() => {
+  const cancelledAll = useMemo(() => {
     return invoices.filter(inv => {
       if (!inv.cancelled) return false;
       if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
@@ -76,6 +78,15 @@ export default function Canceladas({ embedded } = {}) {
     });
   }, [invoices, allowedCnpjs, search, branchMap, monthYear]);
 
+  const filtered = useMemo(
+    () => cancelledAll.filter(inv => (inv.document_type || "nfe") === "nfe"),
+    [cancelledAll]
+  );
+  const nfseCanceladas = useMemo(
+    () => invoices.filter(inv => inv.cancelled && inv.document_type === "nfse" && (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))),
+    [invoices, allowedCnpjs]
+  );
+
   const isLoading = loadingInvoices || loadingBranches || branchFilterLoading;
 
   if (isLoading) {
@@ -95,10 +106,17 @@ export default function Canceladas({ embedded } = {}) {
               <XCircle className="w-8 h-8 text-red-500" />
               Canceladas
             </h1>
-            <p className="text-slate-500 mt-1">Notas fiscais canceladas — {filtered.length} registros</p>
+            <p className="text-slate-500 mt-1">Notas fiscais canceladas</p>
           </div>
         </div>
 
+        <Tabs defaultValue="nfe" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="nfe">NF-e</TabsTrigger>
+            <TabsTrigger value="nfse">NFS-e</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="nfe" className="space-y-6 mt-0">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-3">
           <Input
             placeholder="Buscar por fornecedor, número ou filial..."
@@ -176,6 +194,12 @@ export default function Canceladas({ embedded } = {}) {
             </div>
           )}
         </div>
+          </TabsContent>
+
+          <TabsContent value="nfse" className="mt-0">
+            <ArchivedNFSeTab documents={nfseCanceladas} branches={branches} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

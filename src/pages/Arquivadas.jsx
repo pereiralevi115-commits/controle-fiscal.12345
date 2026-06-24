@@ -5,6 +5,8 @@ import InvoiceTable from "@/components/invoices/InvoiceTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import ArchivedNFSeTab from "@/components/documents/ArchivedNFSeTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
@@ -77,6 +79,15 @@ export default function Arquivadas({ embedded } = {}) {
     return filtered;
   }, [invoices, filters, sortConfig, allowedCnpjs]);
 
+  const nfeArquivadas = useMemo(
+    () => filteredInvoices.filter((inv) => (inv.document_type || "nfe") === "nfe"),
+    [filteredInvoices]
+  );
+  const nfseArquivadas = useMemo(
+    () => filteredInvoices.filter((inv) => inv.document_type === "nfse"),
+    [filteredInvoices]
+  );
+
   const handleSort = (key) => {
     setSortConfig((prev) => {
       const existing = prev.find((s) => s.key === key);
@@ -97,52 +108,22 @@ export default function Arquivadas({ embedded } = {}) {
     );
   }
 
-  const content = (
-    <>
-      <p className="text-slate-500 text-sm">
-        Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
-      </p>
-      <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
-      <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
-      <div className="bg-white rounded-xl shadow-lg border-0">
-        <InvoiceTable
-          invoices={filteredInvoices}
-          branches={branches}
-          onMarkReceived={() => {}}
-          onViewDetails={setSelectedInvoice}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-          selectable={isAdmin}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
-        />
-      </div>
-      <InvoiceDetailDialog
-        invoice={selectedInvoice}
-        open={!!selectedInvoice}
-        onClose={() => setSelectedInvoice(null)}
-        branches={branches}
-      />
-    </>
-  );
+  const tabs = (
+    <Tabs defaultValue="nfe" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="nfe">NF-e</TabsTrigger>
+        <TabsTrigger value="nfse">NFS-e</TabsTrigger>
+      </TabsList>
 
-  if (embedded) return <div className="space-y-4">{content}</div>;
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
-      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Arquivadas</h1>
-          <p className="text-slate-500 mt-1">
-            Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
-          </p>
-        </div>
+      <TabsContent value="nfe" className="space-y-6 mt-0">
+        <p className="text-slate-500 text-sm">
+          Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {nfeArquivadas.length} nota{nfeArquivadas.length !== 1 ? "s" : ""}
+        </p>
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable
-            invoices={filteredInvoices}
+            invoices={nfeArquivadas}
             branches={branches}
             onMarkReceived={() => {}}
             onViewDetails={setSelectedInvoice}
@@ -160,6 +141,23 @@ export default function Arquivadas({ embedded } = {}) {
           onClose={() => setSelectedInvoice(null)}
           branches={branches}
         />
+      </TabsContent>
+
+      <TabsContent value="nfse" className="mt-0">
+        <ArchivedNFSeTab documents={nfseArquivadas} branches={branches} />
+      </TabsContent>
+    </Tabs>
+  );
+
+  if (embedded) return <div className="space-y-4">{tabs}</div>;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
+      <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Arquivadas</h1>
+        </div>
+        {tabs}
       </div>
     </div>
   );
