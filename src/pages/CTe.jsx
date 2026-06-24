@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DocumentSimpleTable from "@/components/documents/DocumentSimpleTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
-import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import CTeDetailDialog from "@/components/invoices/CTeDetailDialog";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
@@ -87,7 +87,7 @@ export default function CTe() {
           />
         </div>
 
-        <InvoiceDetailDialog
+        <CTeDetailDialog
           invoice={selected}
           open={!!selected}
           onClose={() => setSelected(null)}
