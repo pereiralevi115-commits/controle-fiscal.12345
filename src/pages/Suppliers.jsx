@@ -58,8 +58,19 @@ export default function Suppliers({ embedded } = {}) {
     mutationFn: async () => {
       const normalize = (cnpj) => (cnpj || "").replace(/\D/g, "");
 
+      // Busca TODAS as notas (NF-e, NFS-e e CT-e) paginando, sem o limite de 500.
+      const allInvoices = [];
+      let skip = 0;
+      const pageSize = 500;
+      while (true) {
+        const page = await base44.entities.Invoice.list("-issue_date", pageSize, skip);
+        allInvoices.push(...page);
+        if (page.length < pageSize) break;
+        skip += pageSize;
+      }
+
       const uniqueSuppliers = new Map();
-      invoices.forEach((inv) => {
+      allInvoices.forEach((inv) => {
         const key = normalize(inv.supplier_cnpj);
         if (key && !uniqueSuppliers.has(key)) {
           uniqueSuppliers.set(key, {
