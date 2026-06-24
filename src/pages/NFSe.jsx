@@ -1,72 +1,98 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { FileText, Calendar, Eye } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
+import InvoiceTable from "@/components/invoices/InvoiceTable";
+import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
+import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
+import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
-import { formatCNPJ } from "@/lib/formatters";
-
-const formatCurrency = (v) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
-
-const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+import { useAuth } from "@/lib/AuthContext";
 
 export default function NFSe() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
+  const [selected, setSelected] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSelectAll = (checked, docs) =>
+    setSelectedIds(checked ? docs.map((d) => d.id) : []);
+  const [sortConfig, setSortConfig] = useState([
+    { key: "branch_cnpj", direction: "asc" },
+    { key: "issue_date", direction: "desc" }
+  ]);
+
   const { data: documents = [], isLoading } = useInvoices("nfse");
+
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => base44.entities.Branch.list(),
   });
-  const [search, setSearch] = useState("");
-  const [monthYear, setMonthYear] = useState("all");
-  const [selected, setSelected] = useState(null);
 
-  const branchMap = useMemo(() => {
-    const m = {};
-    branches.forEach((b) => { m[b.cnpj] = b.name; });
-    return m;
-  }, [branches]);
+  const filteredInvoices = useMemo(() => {
+    let filtered = documents.filter((inv) => {
+      // Esconde notas já arquivadas (manualmente ou com SIGV+TOPCON+BOLETO marcados)
+      const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
+      if (inv.archived || allRecorded) return false;
 
-  const availableMonths = useMemo(() => {
-    const set = new Set();
-    documents.forEach((inv) => {
-      if (inv.issue_date) {
-        const d = new Date(inv.issue_date + "T12:00:00");
-        set.add(`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`);
-      }
+      const searchMatch =
+        filters.search === "" ||
+        inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        inv.number?.includes(filters.search);
+      const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
+
+      let cancelledMatch = true;
+      if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
+      else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
+
+      const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
+      const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
+      const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
+
+      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
+        const date = new Date(inv.issue_date + "T12:00:00");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${month}-${year}` === filters.monthYear;
+      })());
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+
+      return searchMatch && branchMatch && cancelledMatch && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch;
     });
-    return Array.from(set).sort().reverse();
-  }, [documents]);
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return documents.filter((doc) => {
-      // Esconde notas já arquivadas (manualmente ou com SIGV+TOPCON+BOLETO marcados) e canceladas
-      const allRecorded = doc.sigv_recorded && doc.topcon_recorded && doc.boleto_recorded;
-      if (doc.archived || allRecorded || doc.cancelled) return false;
-      if (monthYear !== "all") {
-        if (!doc.issue_date) return false;
-        const d = new Date(doc.issue_date + "T12:00:00");
-        if (`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}` !== monthYear) return false;
+    filtered.sort((a, b) => {
+      for (let config of sortConfig) {
+        const aValue = a[config.key];
+        const bValue = b[config.key];
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        let comparison = typeof aValue === "string" ? aValue.localeCompare(bValue) : aValue - bValue;
+        if (comparison !== 0) return config.direction === "asc" ? comparison : -comparison;
       }
-      if (term) {
-        return (
-          doc.supplier_name?.toLowerCase().includes(term) ||
-          doc.number?.includes(term) ||
-          (branchMap[doc.branch_cnpj] || "").toLowerCase().includes(term)
+      return 0;
+    });
+
+    return filtered;
+  }, [documents, filters, sortConfig, allowedCnpjs]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      const existing = prev.find((s) => s.key === key);
+      if (existing) {
+        return prev.map((s) =>
+          s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s
         );
       }
-      return true;
+      return [{ key, direction: "asc" }, ...prev];
     });
-  }, [documents, search, monthYear, branchMap]);
+  };
 
-  if (isLoading) {
+  if (isLoading || branchFilterLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -83,83 +109,27 @@ export default function NFSe() {
             NFS-e
           </h1>
           <p className="text-slate-500 mt-1">
-            {filtered.length} nota{filtered.length !== 1 ? "s" : ""} de serviço
+            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} de serviço
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap gap-3">
-          <Input
-            placeholder="Buscar por fornecedor, número ou filial..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
-          />
-          <Select value={monthYear} onValueChange={setMonthYear}>
-            <SelectTrigger className="w-[180px]">
-              <Calendar className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Mês/Ano" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os meses</SelectItem>
-              {availableMonths.map((my) => {
-                const [m, y] = my.split("-");
-                return <SelectItem key={my} value={my}>{MONTH_NAMES[parseInt(m, 10) - 1]} {y}</SelectItem>;
-              })}
-            </SelectContent>
-          </Select>
-        </div>
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={documents} showCancelledFilter={true} />
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          {filtered.length === 0 ? (
-            <div className="py-16 text-center text-slate-400">
-              <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">Nenhuma NFS-e encontrada</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="font-semibold">Filial</TableHead>
-                    <TableHead className="font-semibold">Fornecedor</TableHead>
-                    <TableHead className="font-semibold">NF</TableHead>
-                    <TableHead className="font-semibold">Emissão</TableHead>
-                    <TableHead className="font-semibold">Descrição / Observações</TableHead>
-                    <TableHead className="font-semibold text-right">Valor</TableHead>
-                    <TableHead className="font-semibold text-right">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((doc) => (
-                    <TableRow key={doc.id}>
-                      <TableCell className="font-medium">{branchMap[doc.branch_cnpj] || "—"}</TableCell>
-                      <TableCell className="text-sm">
-                        <div>{doc.supplier_name}</div>
-                        <div className="text-xs text-muted-foreground">{formatCNPJ(doc.supplier_cnpj)}</div>
-                      </TableCell>
-                      <TableCell className="font-medium text-sm">
-                        {doc.series ? `${doc.series}/${doc.number}` : doc.number}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {doc.issue_date
-                          ? format(new Date(doc.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 max-w-md">
-                        <span className="line-clamp-2 whitespace-pre-wrap">{doc.service_description || "—"}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(doc.total_value)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(doc)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+        <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
+
+        <div className="bg-white rounded-xl shadow-lg border-0">
+          <InvoiceTable
+            invoices={filteredInvoices}
+            branches={branches}
+            onMarkReceived={() => {}}
+            onViewDetails={setSelected}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+          />
         </div>
 
         <NFSeDetailDialog
