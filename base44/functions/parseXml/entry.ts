@@ -308,6 +308,8 @@ function parseNFSeNacional(doc) {
   const recipientDistrict = tomaEnd ? getTagText(tomaEnd, "xBairro") : "";
   const tomaEndNac = tomaEnd?.getElementsByTagName("endNac")[0];
   const recipientZip = tomaEndNac ? getTagText(tomaEndNac, "CEP") : "";
+  const recipientState = tomaEnd ? getTagText(tomaEnd, "UF") : "";
+  const recipientCity = tomaEnd ? getTagText(tomaEnd, "xMun") : "";
 
   // Valores (nó <valores> direto sob infNFSe)
   const valoresEls = inf.getElementsByTagName("valores");
@@ -343,6 +345,8 @@ function parseNFSeNacional(doc) {
     recipient_address: recipientAddress,
     recipient_number: recipientNumber,
     recipient_district: recipientDistrict,
+    recipient_city: recipientCity,
+    recipient_state: recipientState,
     recipient_zip: recipientZip,
     total_value: totalValue,
     issue_date: issueDate,

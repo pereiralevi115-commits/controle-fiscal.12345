@@ -144,7 +144,9 @@ export default function NFSeDetailDialog({ invoice: invoiceProp, open, onClose, 
           <div className="border rounded-lg overflow-hidden">
             <SectionHeader title="DISCRIMINAÇÃO DOS SERVIÇOS" />
             <div className="p-6">
-              <p className="text-sm text-foreground whitespace-pre-wrap">{invoice.service_description || "—"}</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">
+                {(invoice.service_description || "—").replace(/\\n/g, "\n")}
+              </p>
             </div>
           </div>
 
