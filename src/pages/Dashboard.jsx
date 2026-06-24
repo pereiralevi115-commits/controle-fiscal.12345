@@ -251,7 +251,13 @@ export default function Dashboard() {
   const filteredCte = cteList.filter(filterByMonth);
   const filteredNfse = nfseList.filter(filterByMonth);
   const cteStats = { count: filteredCte.length, value: filteredCte.reduce((s, i) => s + (i.total_value || 0), 0) };
-  const nfseStats = { count: filteredNfse.length, value: filteredNfse.reduce((s, i) => s + (i.total_value || 0), 0) };
+  const nfseStats = {
+    count: filteredNfse.length,
+    value: filteredNfse.reduce((s, i) => s + (i.total_value || 0), 0),
+    sigv: filteredNfse.filter(i => i.sigv_recorded).length,
+    topcon: filteredNfse.filter(i => i.topcon_recorded).length,
+    boleto: filteredNfse.filter(i => i.boleto_recorded).length,
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">

@@ -91,8 +91,8 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ] : null;
 
   const screenRowConfig = [
-    { key: "notas",         label: "Notas Fiscais (NF-e)", dotColor: "bg-slate-400" },
-    { key: "materia_prima", label: "Matéria Prima",        dotColor: "bg-green-500" },
+    { key: "notas",         label: "Notas Fiscais (NF-e)", dotColor: "bg-slate-400", data: screenStats?.notas },
+    { key: "nfse",          label: "NFS-e",                dotColor: "bg-rose-500",  data: nfseStats },
     { key: "compras",       label: "Gestão de Compras",    dotColor: "bg-blue-500" },
     { key: "frota",         label: "Gestão de Frota",      dotColor: "bg-cyan-500" },
     { key: "controladoria", label: "Controladoria",        dotColor: "bg-indigo-500" },
@@ -135,8 +135,8 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
         <div className="px-6 py-5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Progresso de lançamentos por tela</p>
           <div className="space-y-3">
-            {screenRowConfig.map(({ key, label, dotColor }) => (
-              <ScreenSummaryRow key={key} label={label} data={screenStats[key]} dotColor={dotColor} />
+            {screenRowConfig.map(({ key, label, dotColor, data }) => (
+              <ScreenSummaryRow key={key} label={label} data={data !== undefined ? data : screenStats[key]} dotColor={dotColor} />
             ))}
           </div>
         </div>
