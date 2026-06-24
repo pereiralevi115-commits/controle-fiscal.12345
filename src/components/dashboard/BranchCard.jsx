@@ -69,10 +69,12 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
 };
 
 export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, cteStats, nfseStats, highlight }) {
-  const screenTotal = screens ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas) : 0;
+  const screenTotal = screens
+    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas + (nfseStats?.count || 0) + (cteStats?.count || 0))
+    : 0;
 
   const totalValue = screenStats
-    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0)
+    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (nfseStats?.value || 0) + (cteStats?.value || 0)
     : 0;
 
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
