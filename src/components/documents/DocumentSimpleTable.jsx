@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import TablePagination from "@/components/documents/TablePagination";
+
+const PAGE_SIZE = 50;
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
@@ -51,6 +54,19 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
     });
   }, [documents, sortKey, sortDir, branches]);
 
+  const [page, setPage] = useState(0);
+  const pageCount = Math.ceil(sortedDocuments.length / PAGE_SIZE);
+
+  useEffect(() => { setPage(0); }, [sortedDocuments.length, sortKey, sortDir]);
+  useEffect(() => {
+    if (page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+
+  const pageDocuments = useMemo(
+    () => sortedDocuments.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [sortedDocuments, page]
+  );
+
   const SortIcon = ({ column }) => {
     if (sortKey !== column) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
     return sortDir === "asc"
@@ -88,8 +104,8 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
             {selectable && (
               <TableHead className="w-10">
                 <Checkbox
-                  checked={sortedDocuments.length > 0 && selectedIds.length === sortedDocuments.length}
-                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, sortedDocuments)}
+                  checked={pageDocuments.length > 0 && pageDocuments.every((d) => selectedIds.includes(d.id))}
+                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, pageDocuments)}
                   aria-label="Selecionar todos"
                 />
               </TableHead>
@@ -104,7 +120,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedDocuments.map((doc) => (
+          {pageDocuments.map((doc) => (
             <TableRow key={doc.id} className={doc.cancelled ? "bg-red-50" : (selectedIds.includes(doc.id) ? "bg-blue-50" : "")}>
               {selectable && (
                 <TableCell className="w-10">
@@ -150,6 +166,13 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        page={page}
+        pageCount={pageCount}
+        total={sortedDocuments.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import TablePagination from "@/components/documents/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -40,7 +41,28 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
   );
 };
 
+const PAGE_SIZE = 50;
+
 export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false }) {
+  const [page, setPage] = useState(0);
+
+  const pageCount = Math.ceil(invoices.length / PAGE_SIZE);
+
+  // Volta para a primeira página quando o conjunto de notas muda (filtros, ordenação, etc.)
+  useEffect(() => {
+    setPage(0);
+  }, [invoices.length, sortConfig]);
+
+  // Garante que a página atual continue válida se a lista diminuir
+  useEffect(() => {
+    if (page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+
+  const pageInvoices = useMemo(
+    () => invoices.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [invoices, page]
+  );
+
   const getBranchName = (branchCnpj) => {
     const branch = branches.find((b) => b.cnpj === branchCnpj);
     return branch?.name || "—";
@@ -70,8 +92,8 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
             {selectable && (
               <TableHead className="w-10">
                 <Checkbox
-                  checked={invoices.length > 0 && selectedIds.length === invoices.length}
-                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, invoices)}
+                  checked={pageInvoices.length > 0 && pageInvoices.every((inv) => selectedIds.includes(inv.id))}
+                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, pageInvoices)}
                   aria-label="Selecionar todos"
                 />
               </TableHead>
@@ -102,7 +124,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
           </TableRow>
         </TableHeader>
         <TableBody>
-          {invoices.map((invoice) => (
+          {pageInvoices.map((invoice) => (
             <TableRow key={invoice.id} className={`group ${invoice.cancelled ? "bg-red-50" : (selectedIds.includes(invoice.id) ? "bg-blue-50" : "")}`}>
               {selectable && (
                 <TableCell className="w-10">
@@ -209,6 +231,13 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        page={page}
+        pageCount={pageCount}
+        total={invoices.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
