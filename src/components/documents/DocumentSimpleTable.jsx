@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 import InvoiceActionButtons from "@/components/invoices/InvoiceActionButtons";
@@ -12,7 +13,7 @@ import InvoiceDeleteButton from "@/components/invoices/InvoiceDeleteButton";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showActionButtons = false }) {
+export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   const [sortKey, setSortKey] = useState(null);
@@ -84,6 +85,15 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            {selectable && (
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={sortedDocuments.length > 0 && selectedIds.length === sortedDocuments.length}
+                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, sortedDocuments)}
+                  aria-label="Selecionar todos"
+                />
+              </TableHead>
+            )}
             <SortableHead column="filial" label="Filial" />
             <SortableHead column="emitente" label="Emitente" />
             <SortableHead column="numero" label="Número" />
@@ -95,7 +105,16 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
         </TableHeader>
         <TableBody>
           {sortedDocuments.map((doc) => (
-            <TableRow key={doc.id} className={doc.cancelled ? "bg-red-50" : ""}>
+            <TableRow key={doc.id} className={doc.cancelled ? "bg-red-50" : (selectedIds.includes(doc.id) ? "bg-blue-50" : "")}>
+              {selectable && (
+                <TableCell className="w-10">
+                  <Checkbox
+                    checked={selectedIds.includes(doc.id)}
+                    onCheckedChange={() => onToggleSelect?.(doc.id)}
+                    aria-label="Selecionar nota"
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">{getBranchName(doc.branch_cnpj)}</TableCell>
               <TableCell className="text-sm">
                 <div>{doc.supplier_name}</div>

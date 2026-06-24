@@ -2,9 +2,11 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import DocumentSimpleTable from "@/components/documents/DocumentSimpleTable";
+import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function NFSe() {
   const { data: documents = [], isLoading } = useInvoices("nfse");
@@ -14,6 +16,15 @@ export default function NFSe() {
   });
   const [filters, setFilters] = useState({ search: "", branch: "all", monthYear: "all", sigv: "all", topcon: "all", boleto: "all" });
   const [selected, setSelected] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAll = (checked, docs) =>
+    setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
   const filtered = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
@@ -60,6 +71,8 @@ export default function NFSe() {
           invoices={documents}
         />
 
+        <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
+
         <div className="bg-white rounded-xl shadow-lg border-0">
           <DocumentSimpleTable
             documents={filtered}
@@ -68,6 +81,10 @@ export default function NFSe() {
             showDescription
             showActionButtons
             onViewDetails={setSelected}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
           />
         </div>
 
