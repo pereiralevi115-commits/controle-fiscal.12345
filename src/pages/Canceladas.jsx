@@ -197,7 +197,12 @@ export default function Canceladas({ embedded } = {}) {
           </TabsContent>
 
           <TabsContent value="nfse" className="mt-0">
-            <ArchivedNFSeTab documents={nfseCanceladas} branches={branches} />
+            <ArchivedNFSeTab
+              documents={nfseCanceladas}
+              branches={branches}
+              onUndo={(id) => undoMutation.mutate(id)}
+              undoPending={undoMutation.isPending}
+            />
           </TabsContent>
         </Tabs>
       </div>

@@ -18,7 +18,7 @@ const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
  * Aba "NFS-e" das telas Arquivadas/Canceladas. Recebe as NFS-e já filtradas
  * pela regra da tela (arquivadas ou canceladas) e aplica busca + filtro de mês.
  */
-export default function ArchivedNFSeTab({ documents, branches = [] }) {
+export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undoPending }) {
   const [search, setSearch] = useState("");
   const [monthYear, setMonthYear] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -128,9 +128,20 @@ export default function ArchivedNFSeTab({ documents, branches = [] }) {
                     </TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(doc.total_value)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(doc)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {onUndo && (
+                          <button
+                            onClick={() => onUndo(doc.id)}
+                            disabled={undoPending}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-300 hover:bg-blue-50 rounded px-2 py-1 transition-all"
+                          >
+                            Desfazer
+                          </button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(doc)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
