@@ -295,8 +295,8 @@ function parseNFSeNacional(doc) {
   const supplierCity = getTagText(inf, "xLocEmi");
   const supplierState = emitEnder ? getTagText(emitEnder, "UF") : "";
   const supplierZip = emitEnder ? getTagText(emitEnder, "CEP") : "";
-  const supplierPhone = emit ? getTagText(emit, "fone") : "";
-  const supplierEmail = emit ? getTagText(emit, "email") : "";
+  const supplierPhone = getTagText(emit, "fone");
+  const supplierEmail = getTagText(emit, "email");
 
   // Tomador
   const toma = inf.getElementsByTagName("toma")[0];
@@ -307,9 +307,9 @@ function parseNFSeNacional(doc) {
   const recipientNumber = tomaEnd ? getTagText(tomaEnd, "nro") : "";
   const recipientDistrict = tomaEnd ? getTagText(tomaEnd, "xBairro") : "";
   const tomaEndNac = tomaEnd?.getElementsByTagName("endNac")[0];
-  const recipientZip = tomaEndNac ? getTagText(tomaEndNac, "CEP") : "";
+  const recipientZip = tomaEndNac ? getTagText(tomaEndNac, "CEP") : (tomaEnd ? getTagText(tomaEnd, "CEP") : "");
   const recipientState = tomaEnd ? getTagText(tomaEnd, "UF") : "";
-  const recipientCity = tomaEnd ? getTagText(tomaEnd, "xMun") : "";
+  const recipientCity = getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid");
 
   // Valores (nó <valores> direto sob infNFSe)
   const valoresEls = inf.getElementsByTagName("valores");

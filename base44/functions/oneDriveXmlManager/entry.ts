@@ -190,8 +190,14 @@ function parseNFSeNacional(doc) {
   const accessKey = (inf.getAttribute("Id") || "").replace(/^NFS/, "");
   const issueDateRaw = getTagText(inf, "dhProc") || getTagText(inf, "dhEmi");
 
+  // Emitente / Prestador
   const emit = inf.getElementsByTagName("emit")[0];
+  const emitEnder = emit?.getElementsByTagName("enderNac")[0];
+
+  // Tomador
   const toma = inf.getElementsByTagName("toma")[0];
+  const tomaEnd = toma?.getElementsByTagName("end")[0];
+
   const valores = inf.getElementsByTagName("valores")[0];
   const serv = inf.getElementsByTagName("serv")[0];
   const dps = inf.getElementsByTagName("infDPS")[0];
@@ -204,9 +210,21 @@ function parseNFSeNacional(doc) {
     supplier_name: getTagText(emit, "xNome"),
     supplier_cnpj: getTagText(emit, "CNPJ") || getTagText(emit, "CPF"),
     supplier_ie: getTagText(emit, "IM"),
+    supplier_address: emitEnder ? getTagText(emitEnder, "xLgr") : "",
+    supplier_number: emitEnder ? getTagText(emitEnder, "nro") : "",
+    supplier_district: emitEnder ? getTagText(emitEnder, "xBairro") : "",
     supplier_city: getTagText(inf, "xLocEmi"),
+    supplier_state: emitEnder ? getTagText(emitEnder, "UF") : "",
+    supplier_zip: emitEnder ? getTagText(emitEnder, "CEP") : "",
+    supplier_phone: getTagText(emit, "fone"),
+    supplier_email: getTagText(emit, "email"),
     recipient_name: getTagText(toma, "xNome"),
     recipient_cnpj: getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    recipient_address: tomaEnd ? getTagText(tomaEnd, "xLgr") : "",
+    recipient_number: tomaEnd ? getTagText(tomaEnd, "nro") : "",
+    recipient_district: tomaEnd ? getTagText(tomaEnd, "xBairro") : "",
+    recipient_city: getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid"),
+    recipient_zip: tomaEnd ? getTagText(tomaEnd, "CEP") : "",
     total_value: parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0,
     issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
     due_date: "",
