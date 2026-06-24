@@ -26,7 +26,7 @@ export default function Arquivadas({ embedded } = {}) {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: invoices = [], isLoading } = useInvoices();
+  const { data: invoices = [], isLoading } = useInvoices(["nfe", "nfse"]);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],

@@ -72,9 +72,10 @@ async function fetchAllInvoices() {
 // próprias, então filtramos aqui para preservar o comportamento das telas existentes.
 function filterByType(invoices, type) {
   if (!type) return invoices;
+  const types = Array.isArray(type) ? type : [type];
   return invoices.filter((inv) => {
     const docType = inv.document_type || "nfe"; // legado: notas antigas sem o campo são NF-e
-    return docType === type;
+    return types.includes(docType);
   });
 }
 
