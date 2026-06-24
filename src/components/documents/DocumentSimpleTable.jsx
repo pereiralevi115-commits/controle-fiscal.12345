@@ -7,6 +7,7 @@ import { Eye } from "lucide-react";
 import { formatCNPJ } from "@/lib/formatters";
 import InvoiceActionButtons from "@/components/invoices/InvoiceActionButtons";
 import InvoiceNotesButton from "@/components/invoices/InvoiceNotesButton";
+import InvoiceDeleteButton from "@/components/invoices/InvoiceDeleteButton";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -63,6 +64,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
                 <div className="flex items-center justify-end gap-2">
                   {showActionButtons && <InvoiceActionButtons invoiceId={doc.id} invoice={doc} />}
                   <InvoiceNotesButton invoice={doc} />
+                  <InvoiceDeleteButton invoice={doc} />
                   {onViewDetails && (
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onViewDetails(doc)}>
                       <Eye className="w-4 h-4" />

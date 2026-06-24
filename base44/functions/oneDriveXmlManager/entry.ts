@@ -353,6 +353,23 @@ async function importXmlBatchLocal(base44, xmlContents) {
 
       parsed.branch_cnpj = parsed.recipient_cnpj;
 
+      // Pula notas que foram excluídas manualmente pelo admin (não devem voltar).
+      let blocked = [];
+      if (parsed.access_key) {
+        blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
+      }
+      if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
+        blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({
+          number: parsed.number,
+          supplier_cnpj: parsed.supplier_cnpj,
+        });
+      }
+      if (blocked.length > 0) {
+        errors++;
+        errorDetails.push({ index: i, error: `Documento #${parsed.number} foi excluído e não será reimportado` });
+        continue;
+      }
+
       let existing = [];
       if (parsed.access_key) {
         existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });

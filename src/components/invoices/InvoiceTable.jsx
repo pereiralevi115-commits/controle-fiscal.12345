@@ -10,6 +10,7 @@ import CellTooltip from "./CellTooltip";
 import InvoiceTableTooltip from "./InvoiceTableTooltip";
 import InvoiceActionButtons from "./InvoiceActionButtons";
 import InvoiceNotesButton from "./InvoiceNotesButton";
+import InvoiceDeleteButton from "./InvoiceDeleteButton";
 import DueDateCell from "./DueDateCell";
 import { formatCNPJ } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -155,6 +156,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                 <div className="flex items-center justify-end gap-2">
                   <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />
                   <InvoiceNotesButton invoice={invoice} />
+                  <InvoiceDeleteButton invoice={invoice} />
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

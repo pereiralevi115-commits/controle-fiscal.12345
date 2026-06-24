@@ -1,0 +1,19 @@
+{
+  "name": "DeletedInvoiceKey",
+  "type": "object",
+  "properties": {
+    "access_key": {
+      "type": "string",
+      "description": "Chave de acesso da nota exclu\u00edda (NF-e/CT-e/NFS-e nacional)"
+    },
+    "number": {
+      "type": "string",
+      "description": "N\u00famero da nota exclu\u00edda"
+    },
+    "supplier_cnpj": {
+      "type": "string",
+      "description": "CNPJ do fornecedor da nota exclu\u00edda"
+    }
+  },
+  "required": []
+}
