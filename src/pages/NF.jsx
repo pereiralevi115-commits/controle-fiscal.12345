@@ -164,29 +164,21 @@ export default function NF() {
     return sortInvoices(filtered, nfseSortConfig);
   }, [nfseDocuments, nfseFilters, nfseSortConfig, allowedCnpjs]);
 
-  const handleSort = (key) => {
-    setSortConfig((prev) => {
-      const existing = prev.find((s) => s.key === key);
-      if (existing) {
-        return prev.map((s) =>
-          s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s
-        );
-      }
-      return [{ key, direction: "asc" }, ...prev];
-    });
+  const cycleSort = (prev, key) => {
+    const existing = prev.find((s) => s.key === key);
+    let next;
+    if (!existing) {
+      next = [{ key, direction: "asc" }, ...prev];
+    } else if (existing.direction === "asc") {
+      next = prev.map((s) => (s.key === key ? { ...s, direction: "desc" } : s));
+    } else {
+      next = prev.filter((s) => s.key !== key);
+    }
+    return next.length === 0 ? [{ key: "issue_date", direction: "desc" }] : next;
   };
 
-  const handleNfseSort = (key) => {
-    setNfseSortConfig((prev) => {
-      const existing = prev.find((s) => s.key === key);
-      if (existing) {
-        return prev.map((s) =>
-          s.key === key ? { ...s, direction: s.direction === "asc" ? "desc" : "asc" } : s
-        );
-      }
-      return [{ key, direction: "asc" }, ...prev];
-    });
-  };
+  const handleSort = (key) => setSortConfig((prev) => cycleSort(prev, key));
+  const handleNfseSort = (key) => setNfseSortConfig((prev) => cycleSort(prev, key));
 
   if (isLoading || isLoadingNfse || branchFilterLoading) {
     return (
