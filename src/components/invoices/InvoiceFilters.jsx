@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Calendar } from "lucide-react";
@@ -50,6 +50,18 @@ const sortBranches = (branches) => {
 
 export default function InvoiceFilters({ filters, onFilterChange, branches, invoices = [], showCancelledFilter }) {
   const availableMonthsAndYears = getAvailableMonthsAndYears(invoices);
+
+  // Se o mês selecionado não existe mais na lista de notas, volta para "Todos os meses"
+  useEffect(() => {
+    if (
+      filters.monthYear &&
+      filters.monthYear !== "all" &&
+      invoices.length > 0 &&
+      !availableMonthsAndYears.includes(filters.monthYear)
+    ) {
+      onFilterChange({ ...filters, monthYear: "all" });
+    }
+  }, [filters.monthYear, availableMonthsAndYears, invoices.length]);
 
   return (
     <div className="flex flex-wrap gap-3">
