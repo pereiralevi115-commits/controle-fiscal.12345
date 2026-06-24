@@ -1,4 +1,376 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { DOMParser } from 'npm:xmldom@0.6.0';
+
+// ---------- Parser de XML embutido (espelha a lógica de oneDriveXmlManager) ----------
+function getTagText(parent, tagName) {
+  if (!parent) return "";
+  const elements = parent.getElementsByTagName(tagName);
+  if (elements.length === 0) return "";
+  return elements[0]?.textContent?.trim() || "";
+}
+
+const EVENT_LABELS = {
+  "110111": "Cancelamento",
+  "110110": "Carta de Correção",
+  "110140": "EPEC",
+  "210200": "Confirmação da Operação",
+  "210210": "Ciência da Operação",
+  "210220": "Desconhecimento da Operação",
+  "210240": "Operação não Realizada",
+  "110112": "Cancelamento por Substituição",
+  "610110": "Carta de Correção (CT-e)",
+  "110180": "Cancelamento (CT-e)",
+};
+
+function detectDocumentType(doc) {
+  if (doc.getElementsByTagName("infEvento").length > 0) return "evento";
+  if (doc.getElementsByTagName("infCte").length > 0) return "cte";
+  if (doc.getElementsByTagName("infNFe").length > 0) return "nfe";
+  if (doc.getElementsByTagName("infNFSe").length > 0) return "nfse";
+  const nfseTags = ["InfNfse", "Nfse", "CompNfse", "InfDeclaracaoPrestacaoServico", "Rps"];
+  for (const tag of nfseTags) {
+    if (doc.getElementsByTagName(tag).length > 0) return "nfse";
+  }
+  return null;
+}
+
+function parseEvento(doc) {
+  const infEvento = doc.getElementsByTagName("infEvento")[0];
+  const tpEvento = getTagText(infEvento, "tpEvento");
+  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const detEvento = infEvento.getElementsByTagName("detEvento")[0];
+  const description = getTagText(detEvento, "xCorrecao")
+    || getTagText(detEvento, "xJust")
+    || getTagText(detEvento, "xMotivo")
+    || "";
+  const eventDate = getTagText(infEvento, "dhEvento");
+  const protocol = getTagText(infEvento, "nProt")
+    || (doc.getElementsByTagName("retEvento")[0] ? getTagText(doc.getElementsByTagName("retEvento")[0], "nProt") : "");
+
+  return {
+    is_event: true,
+    access_key: accessKey,
+    event_type: tpEvento,
+    event_label: EVENT_LABELS[tpEvento] || `Evento ${tpEvento}`,
+    description,
+    event_date: eventDate ? eventDate.substring(0, 10) : "",
+    protocol,
+    is_cancellation: tpEvento === "110111" || tpEvento === "110112" || tpEvento === "110180",
+  };
+}
+
+function parseNFe(doc) {
+  const inf = doc.getElementsByTagName("infNFe")[0];
+  const ide = inf.getElementsByTagName("ide")[0];
+  const number = getTagText(ide, "nNF");
+  const series = getTagText(ide, "serie");
+  const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
+  const operationNature = getTagText(ide, "natOp");
+
+  let accessKey = "";
+  const infId = inf.getAttribute("Id") || "";
+  if (infId.startsWith("NFe")) accessKey = infId.substring(3);
+  if (!accessKey) {
+    const protNFe = doc.getElementsByTagName("protNFe");
+    if (protNFe.length > 0) accessKey = getTagText(protNFe[0], "chNFe");
+  }
+
+  const emit = inf.getElementsByTagName("emit")[0];
+  const supplierName = getTagText(emit, "xNome") || getTagText(emit, "xFant");
+  const supplierCnpj = getTagText(emit, "CNPJ");
+  const supplierIe = getTagText(emit, "IE");
+  const emitEnder = emit?.getElementsByTagName("enderEmit")[0];
+  const supplierAddress = emitEnder ? getTagText(emitEnder, "xLgr") : "";
+  const supplierCity = emitEnder ? getTagText(emitEnder, "xMun") : "";
+  const supplierState = emitEnder ? getTagText(emitEnder, "UF") : "";
+
+  const dest = inf.getElementsByTagName("dest")[0];
+  const recipientName = getTagText(dest, "xNome");
+  const recipientCnpj = getTagText(dest, "CNPJ");
+
+  const total = inf.getElementsByTagName("total")[0];
+  const ICMSTot = total?.getElementsByTagName("ICMSTot")[0];
+  const totalValue = parseFloat(getTagText(ICMSTot, "vNF")) || 0;
+  const totalICMS = parseFloat(getTagText(ICMSTot, "vICMS")) || 0;
+  const totalIPI = parseFloat(getTagText(ICMSTot, "vIPI")) || 0;
+  const totalPIS = parseFloat(getTagText(ICMSTot, "vPIS")) || 0;
+  const totalProducts = parseFloat(getTagText(ICMSTot, "vProd")) || 0;
+
+  const cobr = inf.getElementsByTagName("cobr")[0];
+  const dupElements = cobr?.getElementsByTagName("dup") || [];
+  const installments = [];
+  let dueDate = "";
+  for (let i = 0; i < dupElements.length; i++) {
+    const dup = dupElements[i];
+    const dVenc = getTagText(dup, "dVenc");
+    if (dVenc) {
+      const normalized = dVenc.substring(0, 10);
+      installments.push({ number: getTagText(dup, "nDup") || `${i + 1}`, due_date: normalized, value: parseFloat(getTagText(dup, "vDup")) || 0 });
+      if (i === 0) dueDate = normalized;
+    }
+  }
+
+  const infAdic = inf.getElementsByTagName("infAdic")[0];
+  const complementInfo = getTagText(infAdic, "infCpl") || "";
+
+  const detElements = inf.getElementsByTagName("det");
+  const items = [];
+  for (let i = 0; i < detElements.length; i++) {
+    const prod = detElements[i].getElementsByTagName("prod")[0];
+    if (prod) {
+      items.push({
+        code: getTagText(prod, "cProd"),
+        description: getTagText(prod, "xProd"),
+        unit: getTagText(prod, "uCom"),
+        quantity: parseFloat(getTagText(prod, "qCom")) || 0,
+        unit_value: parseFloat(getTagText(prod, "vUnCom")) || 0,
+        total: parseFloat(getTagText(prod, "vProd")) || 0,
+        ncm: getTagText(prod, "NCM"),
+        cfop: getTagText(prod, "CFOP"),
+      });
+    }
+  }
+
+  return {
+    document_type: "nfe",
+    number, series, access_key: accessKey, operation_nature: operationNature,
+    supplier_name: supplierName, supplier_cnpj: supplierCnpj, supplier_ie: supplierIe,
+    supplier_address: supplierAddress, supplier_city: supplierCity, supplier_state: supplierState,
+    recipient_name: recipientName, recipient_cnpj: recipientCnpj,
+    total_value: totalValue, issue_date: issueDate ? issueDate.substring(0, 10) : "", due_date: dueDate,
+    items, status: "pendente",
+    tax_icms: totalICMS, tax_ipi: totalIPI, tax_pis: totalPIS,
+    total_products: totalProducts,
+    additional_info: complementInfo, installments,
+  };
+}
+
+function parseCTe(doc) {
+  const inf = doc.getElementsByTagName("infCte")[0];
+  const ide = inf.getElementsByTagName("ide")[0];
+  const number = getTagText(ide, "nCT");
+  const series = getTagText(ide, "serie");
+  const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
+
+  let accessKey = "";
+  const infId = inf.getAttribute("Id") || "";
+  if (infId.startsWith("CTe")) accessKey = infId.substring(3);
+
+  const emit = inf.getElementsByTagName("emit")[0];
+  const dest = inf.getElementsByTagName("dest")[0];
+  const vPrest = inf.getElementsByTagName("vPrest")[0];
+
+  return {
+    document_type: "cte",
+    number, series, access_key: accessKey,
+    operation_nature: getTagText(ide, "natOp"),
+    cte_cfop: getTagText(ide, "CFOP"),
+    cte_modal: getTagText(ide, "modal"),
+    supplier_name: getTagText(emit, "xNome"),
+    supplier_cnpj: getTagText(emit, "CNPJ"),
+    recipient_name: getTagText(dest, "xNome"),
+    recipient_cnpj: getTagText(dest, "CNPJ") || getTagText(dest, "CPF"),
+    total_value: parseFloat(getTagText(vPrest, "vTPrest")) || 0,
+    issue_date: issueDate ? issueDate.substring(0, 10) : "",
+    due_date: "",
+    status: "pendente",
+    items: [], installments: [], payments: [],
+  };
+}
+
+function parseNFSeNacional(doc) {
+  const inf = doc.getElementsByTagName("infNFSe")[0];
+  const number = getTagText(inf, "nNFSe");
+  const accessKey = (inf.getAttribute("Id") || "").replace(/^NFS/, "");
+  const issueDateRaw = getTagText(inf, "dhProc") || getTagText(inf, "dhEmi");
+
+  const emit = inf.getElementsByTagName("emit")[0];
+  const toma = inf.getElementsByTagName("toma")[0];
+  const valores = inf.getElementsByTagName("valores")[0];
+  const serv = inf.getElementsByTagName("serv")[0];
+  const dps = inf.getElementsByTagName("infDPS")[0];
+
+  return {
+    document_type: "nfse",
+    number: number || "",
+    series: dps ? getTagText(dps, "serie") : "",
+    access_key: accessKey,
+    supplier_name: getTagText(emit, "xNome"),
+    supplier_cnpj: getTagText(emit, "CNPJ") || getTagText(emit, "CPF"),
+    supplier_ie: getTagText(emit, "IM"),
+    supplier_city: getTagText(inf, "xLocEmi"),
+    recipient_name: getTagText(toma, "xNome"),
+    recipient_cnpj: getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    total_value: parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0,
+    issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
+    due_date: "",
+    status: "pendente",
+    tax_iss: parseFloat(getTagText(valores, "vISSQN")) || 0,
+    service_description: getTagText(serv, "xDescServ") || getTagText(inf, "xTribNac"),
+    items: [], installments: [], payments: [],
+  };
+}
+
+function parseNFSe(doc) {
+  if (doc.getElementsByTagName("infNFSe").length > 0) {
+    return parseNFSeNacional(doc);
+  }
+  const infRoot = doc.getElementsByTagName("InfNfse")[0]
+    || doc.getElementsByTagName("Nfse")[0]
+    || doc.getElementsByTagName("InfDeclaracaoPrestacaoServico")[0]
+    || doc.getElementsByTagName("CompNfse")[0]
+    || doc.getElementsByTagName("Rps")[0]
+    || doc.documentElement;
+
+  const number = getTagText(infRoot, "Numero") || getTagText(infRoot, "NumeroNfse") || getTagText(infRoot, "Nro");
+  const issueDateRaw = getTagText(infRoot, "DataEmissao") || getTagText(infRoot, "DataEmissaoRps");
+
+  const prestador = doc.getElementsByTagName("PrestadorServico")[0]
+    || doc.getElementsByTagName("Prestador")[0]
+    || doc.getElementsByTagName("IdentificacaoPrestador")[0];
+  const tomador = doc.getElementsByTagName("TomadorServico")[0]
+    || doc.getElementsByTagName("Tomador")[0]
+    || doc.getElementsByTagName("IdentificacaoTomador")[0];
+
+  const servico = doc.getElementsByTagName("Servico")[0];
+  const valores = servico?.getElementsByTagName("Valores")[0] || doc.getElementsByTagName("Valores")[0];
+
+  return {
+    document_type: "nfse",
+    number: number || "",
+    series: getTagText(infRoot, "Serie") || "",
+    access_key: getTagText(infRoot, "CodigoVerificacao"),
+    supplier_name: getTagText(prestador, "RazaoSocial") || getTagText(prestador, "Nome"),
+    supplier_cnpj: getTagText(prestador, "Cnpj") || getTagText(prestador, "CNPJ"),
+    recipient_name: getTagText(tomador, "RazaoSocial") || getTagText(tomador, "Nome"),
+    recipient_cnpj: getTagText(tomador, "Cnpj") || getTagText(tomador, "CNPJ") || getTagText(tomador, "Cpf") || getTagText(tomador, "CPF"),
+    total_value: parseFloat(
+      getTagText(valores, "ValorLiquidoNfse") || getTagText(valores, "ValorServicos") || getTagText(valores, "ValorTotal")
+    ) || 0,
+    issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
+    due_date: "",
+    status: "pendente",
+    tax_iss: parseFloat(getTagText(valores, "ValorIss")) || 0,
+    service_description: getTagText(servico, "Discriminacao"),
+    items: [], installments: [], payments: [],
+  };
+}
+
+function cleanXmlText(xmlText) {
+  if (typeof xmlText !== "string") return "";
+  let cleaned = xmlText.replace(/^\uFEFF/, "").replace(/^\s+/, "");
+  const firstTag = cleaned.indexOf("<");
+  if (firstTag > 0) cleaned = cleaned.substring(firstTag);
+  return cleaned;
+}
+
+function parseXmlText(xmlText) {
+  const cleaned = cleanXmlText(xmlText);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleaned, "text/xml");
+  const type = detectDocumentType(doc);
+
+  let parsed;
+  if (type === "evento") {
+    parsed = parseEvento(doc);
+    if (!parsed.access_key) {
+      throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
+    }
+    return parsed;
+  }
+  if (type === "nfe") parsed = parseNFe(doc);
+  else if (type === "cte") parsed = parseCTe(doc);
+  else if (type === "nfse") parsed = parseNFSe(doc);
+  else throw new Error("XML não reconhecido. Esperado NF-e, CT-e ou NFS-e.");
+
+  if (!parsed.number && !parsed.supplier_name && !parsed.access_key) {
+    throw new Error("XML inválido ou ilegível — não foi possível extrair os dados do documento.");
+  }
+
+  return parsed;
+}
+
+async function applyEvent(base44, parsed) {
+  const docs = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+  if (docs.length === 0) return { applied: false };
+  const doc = docs[0];
+  const events = Array.isArray(doc.fiscal_events) ? doc.fiscal_events : [];
+  const already = events.some((e) => e.event_type === parsed.event_type && e.event_date === parsed.event_date);
+  if (already) return { applied: false };
+
+  events.push({
+    type: parsed.event_type,
+    label: parsed.event_label,
+    description: parsed.description,
+    date: parsed.event_date,
+    protocol: parsed.protocol,
+  });
+
+  const updateData = { fiscal_events: events };
+  if (parsed.is_cancellation) {
+    updateData.cancelled = true;
+    updateData.cancellation_date = parsed.event_date || new Date().toISOString().split("T")[0];
+    updateData.cancellation_reason = parsed.description || parsed.event_label;
+  }
+
+  await base44.asServiceRole.entities.Invoice.update(doc.id, updateData);
+  return { applied: true };
+}
+
+// Parseia e cria as notas diretamente com service-role (sem invocar parseXml por HTTP,
+// que falhava com 403 no contexto do webhook por não haver usuário autenticado).
+async function importXmlContents(base44, xmlContents) {
+  let success = 0;
+  let errors = 0;
+
+  for (const xml of xmlContents) {
+    try {
+      const parsed = parseXmlText(xml);
+
+      if (parsed.is_event) {
+        const res = await applyEvent(base44, parsed);
+        if (res.applied) success++;
+        continue;
+      }
+
+      parsed.branch_cnpj = parsed.recipient_cnpj;
+
+      // Pula notas excluídas manualmente pelo admin (não devem voltar).
+      let blocked = [];
+      if (parsed.access_key) {
+        blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
+      }
+      if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
+        blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({
+          number: parsed.number,
+          supplier_cnpj: parsed.supplier_cnpj,
+        });
+      }
+      if (blocked.length > 0) continue;
+
+      let existing = [];
+      if (parsed.access_key) {
+        existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+      }
+      if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
+        existing = await base44.asServiceRole.entities.Invoice.filter({
+          number: parsed.number,
+          supplier_cnpj: parsed.supplier_cnpj,
+        });
+      }
+      if (existing.length > 0) continue;
+
+      await base44.asServiceRole.entities.Invoice.create(parsed);
+      success++;
+    } catch (_) {
+      errors++;
+    }
+    // Pequena pausa entre notas para não estourar o rate limit do banco.
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  return { success, errors, total: xmlContents.length };
+}
 
 async function graphRequest(accessToken, path, options = {}) {
   const response = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
@@ -35,7 +407,6 @@ async function getSettings(base44) {
   return settings[0] || null;
 }
 
-// Retorna a lista de pastas conectadas, considerando o campo legado de pasta única.
 function getConnectedFolders(settings) {
   if (!settings) return [];
   if (Array.isArray(settings.folders) && settings.folders.length > 0) {
@@ -60,103 +431,39 @@ async function saveResult(base44, settings, result, message) {
   });
 }
 
-function normalizeParseResponse(response) {
-  return response?.data || response;
-}
-
-async function importXmlContents(base44, xmlContents) {
-  const batchSize = 5;
-  let success = 0;
-  let errors = 0;
-  let errorDetails = [];
-
-  for (let index = 0; index < xmlContents.length; index += batchSize) {
-    const batch = xmlContents.slice(index, index + batchSize);
-    const response = await base44.functions.invoke('parseXml', { xml_contents: batch });
-    const data = normalizeParseResponse(response);
-
-    success += data.success || 0;
-    errors += data.errors || 0;
-    errorDetails = errorDetails.concat(
-      (data.error_details || []).map((item) => ({
-        ...item,
-        index: item.index + index,
-      }))
-    );
-  }
-
-  return {
-    success,
-    errors,
-    error_details: errorDetails,
-    total: xmlContents.length,
-  };
-}
-
-async function importFolder(base44, accessToken, folderId) {
+// O webhook dispara quando algo muda. Em vez de reprocessar a pasta inteira
+// (centenas de arquivos -> timeout), pegamos apenas os XMLs modificados
+// recentemente (últimas 6h), no máx. 15 por pasta. A deduplicação ignora repetidos.
+async function importRecentXmls(base44, accessToken, folderId) {
   const children = await graphRequest(
     accessToken,
-    `/me/drive/items/${folderId}/children?$select=id,name,file&$top=200`
+    `/me/drive/items/${folderId}/children?$select=id,name,file,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=30`
   );
 
-  const xmlFiles = (children?.value || []).filter(
-    (item) => item.file && item.name?.toLowerCase().endsWith('.xml')
-  );
+  const cutoff = Date.now() - 6 * 60 * 60 * 1000;
+  const xmlFiles = (children?.value || []).filter((item) => {
+    if (!item.file || !item.name?.toLowerCase().endsWith('.xml')) return false;
+    const modified = item.lastModifiedDateTime ? new Date(item.lastModifiedDateTime).getTime() : 0;
+    return modified >= cutoff;
+  }).slice(0, 15);
 
   if (xmlFiles.length === 0) {
-    return { success: 0, errors: 0, error_details: [], total: 0 };
+    return { success: 0, errors: 0, total: 0 };
   }
 
   const xmlContents = [];
-  const fileErrors = [];
-
   for (const file of xmlFiles) {
     try {
       xmlContents.push(await downloadFileText(accessToken, file.id));
-    } catch (error) {
-      fileErrors.push({ error: `${file.name}: ${error.message}` });
-    }
+    } catch (_) { /* ignora falha de download individual */ }
   }
 
-  const result = xmlContents.length > 0
-    ? await importXmlContents(base44, xmlContents)
-    : { success: 0, errors: 0, error_details: [], total: 0 };
-
-  return {
-    ...result,
-    total: xmlFiles.length,
-    errors: result.errors + fileErrors.length,
-    error_details: result.error_details.concat(
-      fileErrors.map((item, index) => ({ index: result.total + index, error: item.error }))
-    ),
-  };
-}
-
-async function hasRelevantChange(accessToken, folderId, notifications) {
-  if (!Array.isArray(notifications) || notifications.length === 0) {
-    return true;
-  }
-
-  for (const notification of notifications) {
-    const itemId = notification?.resourceData?.id;
-    if (!itemId) continue;
-    try {
-      const item = await graphRequest(accessToken, `/me/drive/items/${itemId}?$select=id,name,parentReference,folder,file`);
-      if (item?.id === folderId || item?.parentReference?.id === folderId) {
-        return true;
-      }
-    } catch (_) {
-      return true;
-    }
-  }
-
-  return false;
+  return await importXmlContents(base44, xmlContents);
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const payload = await req.json();
     const settings = await getSettings(base44);
     const connectedFolders = getConnectedFolders(settings);
 
@@ -165,36 +472,18 @@ Deno.serve(async (req) => {
     }
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('one_drive');
-    const notifications = payload?.data?.value || [];
 
-    // Verifica se a alteração pertence a alguma das pastas monitoradas.
-    let anyRelevant = notifications.length === 0;
-    if (!anyRelevant) {
-      for (const folder of connectedFolders) {
-        if (await hasRelevantChange(accessToken, folder.folder_id, notifications)) {
-          anyRelevant = true;
-          break;
-        }
-      }
-    }
-
-    if (!anyRelevant) {
-      return Response.json({ skipped: true, reason: 'Alteração fora das pastas monitoradas.' });
-    }
-
-    // Importa todas as pastas conectadas e acumula os resultados.
-    const totals = { success: 0, errors: 0, total: 0, error_details: [] };
+    const totals = { success: 0, errors: 0, total: 0 };
     for (const folder of connectedFolders) {
-      const result = await importFolder(base44, accessToken, folder.folder_id);
+      const result = await importRecentXmls(base44, accessToken, folder.folder_id);
       totals.success += result.success || 0;
       totals.errors += result.errors || 0;
       totals.total += result.total || 0;
-      totals.error_details = totals.error_details.concat(result.error_details || []);
     }
 
     const message = totals.total === 0
-      ? 'Nenhum XML encontrado nas pastas monitoradas.'
-      : `${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))`;
+      ? 'Automático: nenhum XML novo nas últimas 24h.'
+      : `Automático: ${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))`;
 
     await saveResult(base44, settings, totals, message);
     return Response.json({ ok: true, result: totals });
