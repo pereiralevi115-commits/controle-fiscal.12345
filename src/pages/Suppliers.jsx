@@ -28,6 +28,36 @@ export default function Suppliers({ embedded } = {}) {
     queryFn: () => base44.entities.Invoice.list("-issue_date", 500),
   });
 
+  // CNPJs (normalizados) de fornecedores que emitem NFS-e. Esses fornecedores
+  // não devem ter a opção "Matéria Prima".
+  const { data: nfseCnpjs = new Set() } = useQuery({
+    queryKey: ["nfse-supplier-cnpjs"],
+    queryFn: async () => {
+      const normalize = (cnpj) => (cnpj || "").replace(/\D/g, "");
+      const set = new Set();
+      let skip = 0;
+      const pageSize = 500;
+      while (true) {
+        const page = await base44.entities.Invoice.filter(
+          { document_type: "nfse" },
+          "-issue_date",
+          pageSize,
+          skip
+        );
+        page.forEach((inv) => {
+          const key = normalize(inv.supplier_cnpj);
+          if (key) set.add(key);
+        });
+        if (page.length < pageSize) break;
+        skip += pageSize;
+      }
+      return set;
+    },
+  });
+
+  const isNfseSupplier = (supplier) =>
+    nfseCnpjs.has((supplier.cnpj || "").replace(/\D/g, ""));
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Supplier.create(data),
     onSuccess: () => {
@@ -298,7 +328,9 @@ export default function Suppliers({ embedded } = {}) {
                         { field: "gestao_compras", icon: <ShoppingCart className="w-4 h-4" />, color: "text-blue-500", title: "Gestão de Compras" },
                         { field: "gestao_frota", icon: <Truck className="w-4 h-4" />, color: "text-green-500", title: "Gestão de Frota" },
                         { field: "controladoria", icon: <BarChart2 className="w-4 h-4" />, color: "text-purple-500", title: "Controladoria" },
-                      ].map(({ field, icon, color, title }) => {
+                      ]
+                        .filter(({ field }) => !(field === "materia_prima" && isNfseSupplier(supplier)))
+                        .map(({ field, icon, color, title }) => {
                         const isActive = supplier[field];
                         return (
                           <Button
