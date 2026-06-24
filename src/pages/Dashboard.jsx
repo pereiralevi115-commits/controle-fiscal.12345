@@ -38,11 +38,11 @@ export default function Dashboard() {
   // CT-e e NFS-e têm telas próprias; buscamos contagem/valor consolidados para o Dashboard.
   const { data: cteList = [] } = useQuery({
     queryKey: ["invoices", "cte"],
-    queryFn: () => base44.entities.Invoice.filter({ document_type: "cte", cancelled: false }, "-issue_date", 5000, ["id", "total_value", "issue_date"]),
+    queryFn: () => base44.entities.Invoice.filter({ document_type: "cte", cancelled: false }, "-issue_date", 5000),
   });
   const { data: nfseList = [] } = useQuery({
     queryKey: ["invoices", "nfse"],
-    queryFn: () => base44.entities.Invoice.filter({ document_type: "nfse", cancelled: false }, "-issue_date", 5000, ["id", "total_value", "issue_date"]),
+    queryFn: () => base44.entities.Invoice.filter({ document_type: "nfse", cancelled: false }, "-issue_date", 5000),
   });
 
   const isLoading = loadingInvoices || loadingBranches || loadingSuppliers || branchFilterLoading;
