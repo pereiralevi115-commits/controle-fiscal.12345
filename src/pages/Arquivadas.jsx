@@ -2,15 +2,25 @@ import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
+import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Arquivadas({ embedded } = {}) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSelectAll = (checked, docs) =>
+    setSelectedIds(checked ? docs.map((d) => d.id) : []);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
@@ -93,6 +103,7 @@ export default function Arquivadas({ embedded } = {}) {
         Notas arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""}
       </p>
       <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
+      <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
       <div className="bg-white rounded-xl shadow-lg border-0">
         <InvoiceTable
           invoices={filteredInvoices}
@@ -101,6 +112,10 @@ export default function Arquivadas({ embedded } = {}) {
           onViewDetails={setSelectedInvoice}
           sortConfig={sortConfig}
           onSort={handleSort}
+          selectable={isAdmin}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
         />
       </div>
       <InvoiceDetailDialog
@@ -124,6 +139,7 @@ export default function Arquivadas({ embedded } = {}) {
           </p>
         </div>
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
+        <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable
             invoices={filteredInvoices}
@@ -132,6 +148,10 @@ export default function Arquivadas({ embedded } = {}) {
             onViewDetails={setSelectedInvoice}
             sortConfig={sortConfig}
             onSort={handleSort}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
           />
         </div>
         <InvoiceDetailDialog
