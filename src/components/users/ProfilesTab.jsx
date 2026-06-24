@@ -10,25 +10,46 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, ShieldCheck } from "lucide-react";
 
-const ALL_PAGES = [
-  { key: "dashboard", label: "Dashboard", path: "/" },
-  { key: "nf", label: "NF", path: "/nf" },
-  { key: "notas", label: "Notas Fiscais", path: "/notas" },
-  { key: "materia-prima", label: "Matéria Prima", path: "/materia-prima" },
-  { key: "gestao-compras", label: "Gestão de Compras", path: "/gestao-compras" },
-  { key: "gestao-frota", label: "Gestão de Frota", path: "/gestao-frota" },
-  { key: "controladoria", label: "Controladoria", path: "/controladoria" },
-  { key: "cte", label: "CT-e", path: "/cte" },
-  { key: "nfse", label: "NFS-e", path: "/nfse" },
-  { key: "arquivadas", label: "Arquivadas", path: "/arquivadas" },
-  { key: "canceladas", label: "Canceladas", path: "/canceladas" },
-  { key: "criciuma", label: "Criciúma", path: "/criciuma" },
-  { key: "notas-para-verificar", label: "Gerencial", path: "/notas-para-verificar" },
-  { key: "importar", label: "Importar XML", path: "/importar" },
-  { key: "fornecedores", label: "Fornecedores", path: "/fornecedores" },
-  { key: "filiais", label: "Filiais", path: "/filiais" },
-  { key: "usuarios", label: "Usuários", path: "/usuarios" },
+const PAGE_GROUPS = [
+  {
+    group: "Dashboard",
+    pages: [{ key: "dashboard", label: "Dashboard", path: "/" }],
+  },
+  {
+    group: "Notas Fiscais",
+    pages: [
+      { key: "nf", label: "NF", path: "/nf" },
+      { key: "cte", label: "CT-e", path: "/cte" },
+      { key: "nfse", label: "NFS-e", path: "/nfse" },
+      { key: "notas", label: "NF-e", path: "/notas" },
+    ],
+  },
+  {
+    group: "NF/Setores",
+    pages: [
+      { key: "materia-prima", label: "Matéria Prima", path: "/materia-prima" },
+      { key: "gestao-compras", label: "Gestão de Compras", path: "/gestao-compras" },
+      { key: "gestao-frota", label: "Gestão de Frota", path: "/gestao-frota" },
+      { key: "controladoria", label: "Controladoria", path: "/controladoria" },
+      { key: "arquivadas", label: "Arquivadas", path: "/arquivadas" },
+    ],
+  },
+  {
+    group: "Gerencial",
+    pages: [
+      { key: "canceladas", label: "Canceladas", path: "/canceladas" },
+      { key: "fornecedores", label: "Fornecedores", path: "/fornecedores" },
+      { key: "filiais", label: "Filiais", path: "/filiais" },
+      { key: "usuarios", label: "Usuários", path: "/usuarios" },
+    ],
+  },
+  {
+    group: "Integração",
+    pages: [{ key: "importar", label: "Integração", path: "/importar" }],
+  },
 ];
+
+const ALL_PAGES = PAGE_GROUPS.flatMap((g) => g.pages);
 
 const ALL_PERMISSIONS = [
   { key: "edit_due_date", label: "Editar data de vencimento", description: "Permite alterar a coluna Vencimento nas tabelas" },
@@ -110,6 +131,17 @@ export default function ProfilesTab() {
     } else {
       setForm((prev) => ({ ...prev, pages: ALL_PAGES.map((p) => p.key) }));
     }
+  };
+
+  const toggleGroup = (groupPages) => {
+    const keys = groupPages.map((p) => p.key);
+    const allSelected = keys.every((k) => form.pages.includes(k));
+    setForm((prev) => ({
+      ...prev,
+      pages: allSelected
+        ? prev.pages.filter((p) => !keys.includes(p))
+        : [...new Set([...prev.pages, ...keys])],
+    }));
   };
 
   const togglePermission = (key) => {
@@ -254,19 +286,37 @@ export default function ProfilesTab() {
                 </button>
               </div>
               <div className="border rounded-lg divide-y">
-                {ALL_PAGES.map((page) => (
-                  <label
-                    key={page.key}
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
-                  >
-                    <Checkbox
-                      checked={form.pages.includes(page.key)}
-                      onCheckedChange={() => togglePage(page.key)}
-                    />
-                    <span className="text-sm font-medium text-slate-700">{page.label}</span>
-                    <span className="text-xs text-slate-400 ml-auto">{page.path}</span>
-                  </label>
-                ))}
+                {PAGE_GROUPS.map((group) => {
+                  const groupKeys = group.pages.map((p) => p.key);
+                  const allSelected = groupKeys.every((k) => form.pages.includes(k));
+                  return (
+                    <div key={group.group}>
+                      <div className="flex items-center justify-between px-4 py-2 bg-slate-50">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{group.group}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.pages)}
+                          className="text-xs text-slate-500 hover:text-slate-800 underline"
+                        >
+                          {allSelected ? "Desmarcar grupo" : "Marcar grupo"}
+                        </button>
+                      </div>
+                      {group.pages.map((page) => (
+                        <label
+                          key={page.key}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                        >
+                          <Checkbox
+                            checked={form.pages.includes(page.key)}
+                            onCheckedChange={() => togglePage(page.key)}
+                          />
+                          <span className="text-sm font-medium text-slate-700">{page.label}</span>
+                          <span className="text-xs text-slate-400 ml-auto">{page.path}</span>
+                        </label>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="space-y-3">
