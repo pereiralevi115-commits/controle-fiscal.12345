@@ -78,7 +78,9 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
 
   const tiles = screens ? [
-    { icon: FileText,     label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
+    { icon: FileText,        label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
+    ...(nfseStats ? [{ icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
+    ...(cteStats ? [{ icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
     { icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
     { icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
     { icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
@@ -123,18 +125,6 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               <ScreenTile key={i} {...t} />
             ))}
           </div>
-
-          {/* CT-e e NFS-e (documentos especiais) */}
-          {(nfseStats || cteStats) && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mt-3">
-              {nfseStats && (
-                <ScreenTile icon={FileSpreadsheet} label="NFS-e" count={nfseStats.count} value={nfseStats.value} accent={{ bg: "bg-rose-50", text: "text-rose-600" }} />
-              )}
-              {cteStats && (
-                <ScreenTile icon={FileBox} label="CT-e" count={cteStats.count} value={cteStats.value} accent={{ bg: "bg-teal-50", text: "text-teal-600" }} />
-              )}
-            </div>
-          )}
         </div>
       )}
 

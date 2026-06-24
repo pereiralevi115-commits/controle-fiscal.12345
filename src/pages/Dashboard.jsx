@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [selectedMonthYear, setSelectedMonthYear] = useState("all");
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices(["nfe", "nfse"]);
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ["branches"],
@@ -139,7 +139,7 @@ export default function Dashboard() {
   const isCompleted = (inv) => inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
 
   const screenSummary = (invs, mpInvs) => {
-    const screens = { materia_prima: [], notas: [], compras: [], frota: [], controladoria: [] };
+    const screens = { materia_prima: [], notas: [], nfse: [], compras: [], frota: [], controladoria: [] };
     // Matéria Prima: usa pool separado que inclui concluídas (igual à tela MateriaPrima)
     if (mpInvs) {
       screens.materia_prima = mpInvs;
@@ -147,10 +147,13 @@ export default function Dashboard() {
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
       if (isCompleted(inv)) return;
+      // Telas de tela (Compras/Frota/Controladoria) incluem NF-e e NFS-e do mesmo fornecedor
       if (s?.materia_prima) { if (!mpInvs) screens.materia_prima.push(inv); return; }
       if (s?.gestao_compras) { screens.compras.push(inv); return; }
       if (s?.gestao_frota)   { screens.frota.push(inv);   return; }
       if (s?.controladoria)  { screens.controladoria.push(inv); return; }
+      // Sem tela específica: separa por tipo de documento
+      if ((inv.document_type || "nfe") === "nfse") { screens.nfse.push(inv); return; }
       screens.notas.push(inv);
     });
     const summarize = (arr) => ({
@@ -163,6 +166,7 @@ export default function Dashboard() {
     return {
       materia_prima: summarize(screens.materia_prima),
       notas: summarize(screens.notas),
+      nfse: summarize(screens.nfse),
       compras: summarize(screens.compras),
       frota: summarize(screens.frota),
       controladoria: summarize(screens.controladoria),
@@ -170,7 +174,7 @@ export default function Dashboard() {
   };
 
   const countByScreen = (invs, archivedInvs, mpInvs) => {
-    let materia_prima = mpInvs ? mpInvs.length : 0, notas = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
+    let materia_prima = mpInvs ? mpInvs.length : 0, notas = 0, nfse = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
       if (s?.materia_prima) return; // contado separadamente via mpInvs
@@ -178,7 +182,9 @@ export default function Dashboard() {
       if (s?.gestao_compras) { if (!completed) compras++; return; }
       if (s?.gestao_frota)   { if (!completed) frota++;   return; }
       if (s?.controladoria)  { if (!completed) controladoria++; return; }
-      if (!completed) notas++;
+      if (completed) return;
+      if ((inv.document_type || "nfe") === "nfse") { nfse++; return; }
+      notas++;
     });
     if (archivedInvs) {
       archivedInvs.forEach(inv => {
@@ -186,7 +192,7 @@ export default function Dashboard() {
         if (!s?.materia_prima) arquivadas++;
       });
     }
-    return { materia_prima, notas, compras, frota, controladoria, arquivadas };
+    return { materia_prima, notas, nfse, compras, frota, controladoria, arquivadas };
   };
 
   // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
