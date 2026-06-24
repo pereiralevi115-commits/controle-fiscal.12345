@@ -5,7 +5,6 @@ import InvoiceTable from "@/components/invoices/InvoiceTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
-import ArchivedNFSeTab from "@/components/documents/ArchivedNFSeTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
@@ -18,11 +17,16 @@ export default function Arquivadas({ embedded } = {}) {
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "all", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedNfseIds, setSelectedNfseIds] = useState([]);
 
   const toggleSelect = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const toggleSelectAll = (checked, docs) =>
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
+  const toggleSelectNfse = (id) =>
+    setSelectedNfseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSelectAllNfse = (checked, docs) =>
+    setSelectedNfseIds(checked ? docs.map((d) => d.id) : []);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
@@ -143,8 +147,32 @@ export default function Arquivadas({ embedded } = {}) {
         />
       </TabsContent>
 
-      <TabsContent value="nfse" className="mt-0">
-        <ArchivedNFSeTab documents={nfseArquivadas} branches={branches} />
+      <TabsContent value="nfse" className="space-y-6 mt-0">
+        <p className="text-slate-500 text-sm">
+          Notas de serviço arquivadas (SIGV+TOPCON+BOLETO ou arquivadas manualmente) — {nfseArquivadas.length} nota{nfseArquivadas.length !== 1 ? "s" : ""}
+        </p>
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={false} />
+        <BatchDeleteBar selectedIds={selectedNfseIds} onClear={() => setSelectedNfseIds([])} />
+        <div className="bg-white rounded-xl shadow-lg border-0">
+          <InvoiceTable
+            invoices={nfseArquivadas}
+            branches={branches}
+            onMarkReceived={() => {}}
+            onViewDetails={setSelectedInvoice}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            selectable={isAdmin}
+            selectedIds={selectedNfseIds}
+            onToggleSelect={toggleSelectNfse}
+            onToggleSelectAll={toggleSelectAllNfse}
+          />
+        </div>
+        <InvoiceDetailDialog
+          invoice={selectedInvoice}
+          open={!!selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          branches={branches}
+        />
       </TabsContent>
     </Tabs>
   );
