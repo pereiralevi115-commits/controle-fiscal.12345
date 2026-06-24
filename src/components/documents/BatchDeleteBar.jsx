@@ -23,9 +23,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      for (const id of selectedIds) {
-        await base44.functions.invoke("deleteInvoice", { invoiceId: id });
-      }
+      await base44.functions.invoke("deleteInvoicesBatch", { invoiceIds: selectedIds });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
