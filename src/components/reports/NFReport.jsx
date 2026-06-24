@@ -74,9 +74,10 @@ export default function NFReport({ open, onClose, invoices, branches }) {
 
       // Colunas (larguras em mm)
       const cols = [
-        { key: "branch", label: "Filial", w: 28 },
-        { key: "supplier", label: "Fornecedor", w: 75 },
-        { key: "nf", label: "NF", w: 20 },
+        { key: "branch", label: "Filial", w: 26 },
+        { key: "type", label: "Tipo", w: 15, align: "center" },
+        { key: "supplier", label: "Fornecedor", w: 64 },
+        { key: "nf", label: "NF", w: 19 },
         { key: "issue", label: "Emissão", w: 20 },
         { key: "due", label: "Vencimento", w: 22 },
         { key: "value", label: "Valor", w: 24, align: "right" },
@@ -146,8 +147,9 @@ export default function NFReport({ open, onClose, invoices, branches }) {
         pdf.setTextColor(15, 23, 42);
         const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
         const values = {
-          branch: truncate(branchName(inv), 20),
-          supplier: truncate(inv.supplier_name, 55),
+          branch: truncate(branchName(inv), 18),
+          type: inv.document_type === "nfse" ? "NFS-e" : "NF-e",
+          supplier: truncate(inv.supplier_name, 48),
           nf: truncate(nf, 14),
           issue: formatDate(inv.issue_date),
           due: formatDate(inv.due_date),
@@ -243,6 +245,7 @@ export default function NFReport({ open, onClose, invoices, branches }) {
               <thead>
                 <tr className="bg-slate-800 text-white">
                   <th className="px-3 py-2 text-left font-semibold">Filial</th>
+                  <th className="px-3 py-2 text-center font-semibold">Tipo</th>
                   <th className="px-3 py-2 text-left font-semibold">Fornecedor</th>
                   <th className="px-3 py-2 text-left font-semibold">NF</th>
                   <th className="px-3 py-2 text-left font-semibold">Emissão</th>
@@ -257,6 +260,11 @@ export default function NFReport({ open, onClose, invoices, branches }) {
                 {periodInvoices.map((inv) => (
                   <tr key={inv.id} className="border-b border-slate-100 even:bg-slate-50">
                     <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{branchName(inv)}</td>
+                    <td className="px-3 py-2 text-center whitespace-nowrap">
+                      {inv.document_type === "nfse"
+                        ? <span className="text-purple-600 font-semibold">NFS-e</span>
+                        : <span className="text-blue-600 font-semibold">NF-e</span>}
+                    </td>
                     <td className="px-3 py-2 text-slate-700">{inv.supplier_name}</td>
                     <td className="px-3 py-2 font-medium text-blue-600 whitespace-nowrap">
                       {inv.series ? `${inv.series}/${inv.number}` : inv.number}

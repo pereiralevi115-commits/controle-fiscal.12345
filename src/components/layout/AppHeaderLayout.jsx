@@ -12,8 +12,6 @@ const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/pub
 const notasFiscaisItems = [
   { key: 'nf', name: 'NF', path: '/nf', icon: FileText },
   { key: 'cte', name: 'CT-e', path: '/cte', icon: Package },
-  { key: 'nfse', name: 'NFS-e', path: '/nfse', icon: Receipt },
-  { key: 'notas', name: 'NF-e', path: '/notas', icon: FileText },
 ];
 
 const gestaoItems = [

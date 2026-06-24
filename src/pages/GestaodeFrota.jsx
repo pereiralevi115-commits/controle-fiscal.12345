@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
-import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import DocumentDetailDialog from "@/components/invoices/DocumentDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
@@ -15,7 +15,7 @@ export default function GestaodeFrota() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const { allowedCnpjs } = useBranchFilter();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all", docType: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -28,7 +28,7 @@ export default function GestaodeFrota() {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: invoices = [], isLoading } = useInvoices();
+  const { data: invoices = [], isLoading } = useInvoices(["nfe", "nfse"]);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -61,6 +61,7 @@ export default function GestaodeFrota() {
         inv.number?.includes(filters.search);
       const statusMatch = filters.status === "all" || inv.status === filters.status;
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
+      const docTypeMatch = !filters.docType || filters.docType === "all" || (inv.document_type || "nfe") === filters.docType;
       let cancelledMatch = true;
       if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
       else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
@@ -78,7 +79,7 @@ export default function GestaodeFrota() {
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
       const notArchived = !inv.archived;
       const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived && notCompleted;
+      return searchMatch && statusMatch && branchMatch && docTypeMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived && notCompleted;
     });
 
     filtered.sort((a, b) => {
@@ -122,7 +123,7 @@ export default function GestaodeFrota() {
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} showTypeFilter={true} />
 
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 
@@ -141,7 +142,7 @@ export default function GestaodeFrota() {
           />
         </div>
 
-        <InvoiceDetailDialog
+        <DocumentDetailDialog
           invoice={selectedInvoice}
           open={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
