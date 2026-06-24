@@ -9,8 +9,9 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    base44.auth.me()
-      .then(async (currentUser) => {
+    const loadAuth = async () => {
+      try {
+        const currentUser = await base44.auth.me();
         setUser(currentUser);
         if (currentUser?.profile_id) {
           try {
@@ -20,14 +21,14 @@ export const AuthProvider = ({ children }) => {
             setUserProfile(null);
           }
         }
-      })
-      .catch(() => {
+      } catch {
         // No preview do editor, auth falha com 403 — tratamos como admin para não bloquear o app
         setUser({ role: 'admin' });
-      })
-      .finally(() => {
+      } finally {
         setIsLoadingAuth(false);
-      });
+      }
+    };
+    loadAuth();
   }, []);
 
   const canAccessPage = (pageKey) => {
