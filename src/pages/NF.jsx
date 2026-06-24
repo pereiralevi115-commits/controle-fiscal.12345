@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import InvoiceTable from "@/components/invoices/InvoiceTable";
+import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import NFReport from "@/components/reports/NFReport";
@@ -10,13 +11,23 @@ import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function NF() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAll = (checked, docs) =>
+    setSelectedIds(checked ? docs.map((d) => d.id) : []);
   const [sortConfig, setSortConfig] = useState([
     { key: "branch_cnpj", direction: "asc" },
     { key: "issue_date", direction: "desc" }
@@ -144,6 +155,8 @@ export default function NF() {
 
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
 
+        <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
+
         <div className="bg-white rounded-xl shadow-lg border-0">
           <InvoiceTable
             invoices={filteredInvoices}
@@ -152,6 +165,10 @@ export default function NF() {
             onViewDetails={setSelectedInvoice}
             sortConfig={sortConfig}
             onSort={handleSort}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
           />
         </div>
 

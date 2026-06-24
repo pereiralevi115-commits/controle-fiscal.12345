@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
@@ -39,7 +40,7 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
   );
 };
 
-export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort }) {
+export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
   const getBranchName = (branchCnpj) => {
     const branch = branches.find((b) => b.cnpj === branchCnpj);
     return branch?.name || "—";
@@ -66,6 +67,15 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            {selectable && (
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={invoices.length > 0 && selectedIds.length === invoices.length}
+                  onCheckedChange={(checked) => onToggleSelectAll?.(checked, invoices)}
+                  aria-label="Selecionar todos"
+                />
+              </TableHead>
+            )}
             <TableHead className="font-semibold">
               <SortableHeader label="Filial" sortKey="branch_cnpj" currentSort={sortConfig} onSort={onSort} />
             </TableHead>
@@ -93,7 +103,16 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
         </TableHeader>
         <TableBody>
           {invoices.map((invoice) => (
-            <TableRow key={invoice.id} className={`group ${invoice.cancelled ? "bg-red-50" : ""}`}>
+            <TableRow key={invoice.id} className={`group ${invoice.cancelled ? "bg-red-50" : (selectedIds.includes(invoice.id) ? "bg-blue-50" : "")}`}>
+              {selectable && (
+                <TableCell className="w-10">
+                  <Checkbox
+                    checked={selectedIds.includes(invoice.id)}
+                    onCheckedChange={() => onToggleSelect?.(invoice.id)}
+                    aria-label="Selecionar nota"
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">
                 <InvoiceTableTooltip content={`Destinatário: ${invoice.recipient_name}\nCNPJ: ${formatCNPJ(invoice.recipient_cnpj)}`}>
                   <span>{getBranchName(invoice.branch_cnpj)}</span>
