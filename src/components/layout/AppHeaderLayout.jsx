@@ -74,63 +74,59 @@ export default function AppHeaderLayout({ children, currentPath }) {
             {/* Nav + Sair */}
             <div className="flex items-center gap-3">
               <nav className="flex items-center gap-1">
-                {visibleNavItems.map(item => {
+                {visibleNavItems.filter(i => i.key === 'dashboard').map(item => {
                   const isActive = currentPath === item.path;
                   const Icon = item.icon;
-
-                  if (item.key === 'dashboard') {
-                    return (
-                      <React.Fragment key={item.path}>
-                        <Link
-                          to={item.path}
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                            isActive
-                              ? 'bg-[#FDB913] text-slate-900'
-                              : 'text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {Icon && <Icon className="w-4 h-4 shrink-0" />}
-                          <span className="hidden sm:block">{item.name}</span>
-                        </Link>
-
-                        {visibleNotasItems.length > 0 && (
-                          <NavDropdown
-                            label="Notas Fiscais"
-                            triggerIcon={FileText}
-                            isActive={isNotasActive}
-                            items={visibleNotasItems}
-                          />
-                        )}
-
-                        {visibleGestaoItems.length > 0 && (
-                          <NavDropdown
-                            label="NF/Setores"
-                            triggerIcon={BarChart2}
-                            isActive={isGestaoActive}
-                            items={visibleGestaoItems}
-                          />
-                        )}
-
-                        {visibleGerencialItems.length > 0 && (
-                          <NavDropdown
-                            label="Gerencial"
-                            triggerIcon={ClipboardCheck}
-                            isActive={isGerencialActive}
-                            items={visibleGerencialItems}
-                          />
-                        )}
-                      </React.Fragment>
-                    );
-                  }
-
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
                       className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-[#FDB913] text-slate-900'
-                          : 'text-slate-600 hover:bg-slate-100'
+                        isActive ? 'bg-[#FDB913] text-slate-900' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {Icon && <Icon className="w-4 h-4 shrink-0" />}
+                      <span className="hidden sm:block">{item.name}</span>
+                    </Link>
+                  );
+                })}
+
+                {visibleNotasItems.length > 0 && (
+                  <NavDropdown
+                    label="Notas Fiscais"
+                    triggerIcon={FileText}
+                    isActive={isNotasActive}
+                    items={visibleNotasItems}
+                  />
+                )}
+
+                {visibleGestaoItems.length > 0 && (
+                  <NavDropdown
+                    label="NF/Setores"
+                    triggerIcon={BarChart2}
+                    isActive={isGestaoActive}
+                    items={visibleGestaoItems}
+                  />
+                )}
+
+                {visibleGerencialItems.length > 0 && (
+                  <NavDropdown
+                    label="Gerencial"
+                    triggerIcon={ClipboardCheck}
+                    isActive={isGerencialActive}
+                    items={visibleGerencialItems}
+                  />
+                )}
+
+                {visibleNavItems.filter(i => i.key !== 'dashboard').map(item => {
+                  const isActive = currentPath === item.path;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                        isActive ? 'bg-[#FDB913] text-slate-900' : 'text-slate-600 hover:bg-slate-100'
                       }`}
                     >
                       {Icon && <Icon className="w-4 h-4 shrink-0" />}
