@@ -305,8 +305,10 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-5">
-          {/* Card consolidado — todas as filiais */}
-          <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
+          {/* Card consolidado — todas as filiais (oculto para perfis Líder) */}
+          {!isLider && (
+            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
+          )}
 
           {rows.map((row) => (
             <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
