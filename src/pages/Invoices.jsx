@@ -143,7 +143,7 @@ export default function Invoices() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Notas Fiscais</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">NF-e</h1>
           <p className="text-slate-500 mt-1">
             {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
           </p>
