@@ -206,6 +206,28 @@ export default function Dashboard() {
     return s?.materia_prima === true;
   });
 
+  // CT-e e NFS-e consolidados (aplicando o mesmo filtro de mês e filiais permitidas)
+  const filteredCte = cteList.filter(filterByMonth).filter(i => !allowedCnpjs || allowedCnpjs.includes(i.branch_cnpj));
+  const filteredNfse = nfseList.filter(filterByMonth).filter(i => !allowedCnpjs || allowedCnpjs.includes(i.branch_cnpj));
+  const cteStatsOf = (arr) => ({ count: arr.length, value: arr.reduce((s, i) => s + (i.total_value || 0), 0) });
+  const nfseStatsOf = (arr) => ({
+    count: arr.length,
+    value: arr.reduce((s, i) => s + (i.total_value || 0), 0),
+    sigv: arr.filter(i => i.sigv_recorded).length,
+    topcon: arr.filter(i => i.topcon_recorded).length,
+    boleto: arr.filter(i => i.boleto_recorded).length,
+  });
+  const cteByBranch = {};
+  filteredCte.forEach(i => {
+    const key = i.branch_cnpj || "__sem_filial__";
+    (cteByBranch[key] = cteByBranch[key] || []).push(i);
+  });
+  const nfseByBranch = {};
+  filteredNfse.forEach(i => {
+    const key = i.branch_cnpj || "__sem_filial__";
+    (nfseByBranch[key] = nfseByBranch[key] || []).push(i);
+  });
+
   // Group invoices by branch (visible + archived)
   const grouped = {};
   visibleInvoices.forEach(inv => {
@@ -217,6 +239,11 @@ export default function Dashboard() {
     const key = inv.branch_cnpj || "__sem_filial__";
     if (!grouped[key]) grouped[key] = { visible: [], archived: [] };
     grouped[key].archived.push(inv);
+  });
+  // Garante que filiais que só tenham CT-e/NFS-e também apareçam
+  [...filteredCte, ...filteredNfse].forEach(inv => {
+    const key = inv.branch_cnpj || "__sem_filial__";
+    if (!grouped[key]) grouped[key] = { visible: [], archived: [] };
   });
 
   // Build rows: one per branch that has invoices
@@ -231,7 +258,7 @@ export default function Dashboard() {
     const screens = countByScreen(invs, archInvs, branchMPInvoices);
     const screenStats = screenSummary(invs, branchMPInvoices);
     const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
-    return { name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
+    return { cnpj, name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
   });
 
   // Sort by branch name
@@ -247,17 +274,8 @@ export default function Dashboard() {
   const allScreenStats = screenSummary(visibleInvoices, allMateriaPrimaInvoices);
   const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
 
-  // CT-e e NFS-e consolidados (aplicando o mesmo filtro de mês)
-  const filteredCte = cteList.filter(filterByMonth);
-  const filteredNfse = nfseList.filter(filterByMonth);
-  const cteStats = { count: filteredCte.length, value: filteredCte.reduce((s, i) => s + (i.total_value || 0), 0) };
-  const nfseStats = {
-    count: filteredNfse.length,
-    value: filteredNfse.reduce((s, i) => s + (i.total_value || 0), 0),
-    sigv: filteredNfse.filter(i => i.sigv_recorded).length,
-    topcon: filteredNfse.filter(i => i.topcon_recorded).length,
-    boleto: filteredNfse.filter(i => i.boleto_recorded).length,
-  };
+  const cteStats = cteStatsOf(filteredCte);
+  const nfseStats = nfseStatsOf(filteredNfse);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -291,7 +309,7 @@ export default function Dashboard() {
           <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
           ))}
 
           {rows.length === 0 && (
