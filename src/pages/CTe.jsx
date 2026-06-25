@@ -4,7 +4,10 @@ import { base44 } from "@/api/base44Client";
 import DocumentSimpleTable from "@/components/documents/DocumentSimpleTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import CTeDetailDialog from "@/components/invoices/CTeDetailDialog";
+import CTeReport from "@/components/reports/CTeReport";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
+import { Button } from "@/components/ui/button";
+import { FileBarChart } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -17,6 +20,7 @@ export default function CTe() {
   const [filters, setFilters] = useState({ search: "", branch: "all", monthYear: "all", sigv: "all", topcon: "all", boleto: "all" });
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showReport, setShowReport] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -57,11 +61,17 @@ export default function CTe() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">CT-e</h1>
-          <p className="text-slate-500 mt-1">
-            {filtered.length} conhecimento{filtered.length !== 1 ? "s" : ""} de transporte
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">CT-e</h1>
+            <p className="text-slate-500 mt-1">
+              {filtered.length} conhecimento{filtered.length !== 1 ? "s" : ""} de transporte
+            </p>
+          </div>
+          <Button onClick={() => setShowReport(true)} className="gap-2">
+            <FileBarChart className="w-4 h-4" />
+            Gerar Relatório
+          </Button>
         </div>
 
         <InvoiceFilters
@@ -91,6 +101,13 @@ export default function CTe() {
           invoice={selected}
           open={!!selected}
           onClose={() => setSelected(null)}
+          branches={branches}
+        />
+
+        <CTeReport
+          open={showReport}
+          onClose={() => setShowReport(false)}
+          invoices={filtered}
           branches={branches}
         />
       </div>

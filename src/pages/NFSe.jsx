@@ -6,6 +6,9 @@ import InvoiceTable from "@/components/invoices/InvoiceTable";
 import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
+import NFSeReport from "@/components/reports/NFSeReport";
+import { Button } from "@/components/ui/button";
+import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
@@ -17,6 +20,7 @@ export default function NFSe() {
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showReport, setShowReport] = useState(false);
 
   const toggleSelect = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -125,14 +129,20 @@ export default function NFSe() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-            <FileText className="w-8 h-8 text-slate-600" />
-            NFS-e
-          </h1>
-          <p className="text-slate-500 mt-1">
-            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} de serviço
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+              <FileText className="w-8 h-8 text-slate-600" />
+              NFS-e
+            </h1>
+            <p className="text-slate-500 mt-1">
+              {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} de serviço
+            </p>
+          </div>
+          <Button onClick={() => setShowReport(true)} className="gap-2">
+            <FileBarChart className="w-4 h-4" />
+            Gerar Relatório
+          </Button>
         </div>
 
         <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={documents} showCancelledFilter={true} />
@@ -159,6 +169,13 @@ export default function NFSe() {
           invoice={selected}
           open={!!selected}
           onClose={() => setSelected(null)}
+          branches={branches}
+        />
+
+        <NFSeReport
+          open={showReport}
+          onClose={() => setShowReport(false)}
+          invoices={filteredInvoices}
           branches={branches}
         />
       </div>
