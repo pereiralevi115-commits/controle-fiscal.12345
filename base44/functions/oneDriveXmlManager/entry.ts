@@ -11,16 +11,25 @@ function getTagText(parent, tagName) {
 
 // Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
 const EVENT_LABELS = {
-  "110111": "Cancelamento",
   "110110": "Carta de Correção",
+  "110111": "Cancelamento",
+  "110112": "Cancelamento por Substituição",
+  "110113": "EPEC",
   "110140": "EPEC",
+  "110150": "Pedido de Prorrogação",
+  "110160": "Pedido de Prorrogação",
+  "110170": "Manifestação do Fisco",
   "210200": "Confirmação da Operação",
   "210210": "Ciência da Operação",
   "210220": "Desconhecimento da Operação",
   "210240": "Operação não Realizada",
-  "110112": "Cancelamento por Substituição",
+  "240130": "Comprovante de Entrega",
+  "240140": "Cancelamento do Comprovante de Entrega",
   "610110": "Carta de Correção (CT-e)",
+  "610111": "Cancelamento (CT-e)",
   "110180": "Cancelamento (CT-e)",
+  "310610": "Comprovante de Entrega (CT-e)",
+  "310620": "Cancelamento do Comprovante de Entrega (CT-e)",
 };
 
 function detectDocumentType(doc) {
@@ -325,8 +334,13 @@ async function applyEvent(base44, parsed) {
   const doc = docs[0];
   const events = Array.isArray(doc.fiscal_events) ? doc.fiscal_events : [];
 
-  // Evita duplicar o mesmo evento (mesmo tipo + data).
-  const already = events.some((e) => e.event_type === parsed.event_type && e.event_date === parsed.event_date);
+  // Evita duplicar o mesmo evento. Os eventos são gravados com as chaves
+  // type/date/protocol, então a comparação precisa usar essas chaves.
+  const already = events.some((e) =>
+    e.type === parsed.event_type &&
+    e.date === parsed.event_date &&
+    (e.protocol || "") === (parsed.protocol || "")
+  );
   if (already) {
     return { applied: false, reason: "evento_duplicado" };
   }
