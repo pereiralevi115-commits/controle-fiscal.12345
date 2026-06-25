@@ -33,11 +33,31 @@ export default function NFSe() {
     queryFn: () => base44.entities.Branch.list(),
   });
 
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => base44.entities.Supplier.list(),
+  });
+
+  // CNPJs de fornecedores que já têm categoria de gestão atribuída — suas notas
+  // aparecem apenas na aba específica, não na NFS-e geral.
+  const managedCnpjs = useMemo(
+    () =>
+      new Set(
+        suppliers
+          .filter((s) => s.gestao_frota || s.gestao_compras || s.controladoria)
+          .map((s) => s.cnpj)
+      ),
+    [suppliers]
+  );
+
   const filteredInvoices = useMemo(() => {
     let filtered = documents.filter((inv) => {
       // Esconde notas já arquivadas (manualmente ou com SIGV+TOPCON+BOLETO marcados)
       const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
       if (inv.archived || allRecorded) return false;
+
+      // Esconde fornecedores que já têm categoria de gestão (aparecem só na aba específica)
+      if (managedCnpjs.has(inv.supplier_cnpj)) return false;
 
       const searchMatch =
         filters.search === "" ||
@@ -77,7 +97,7 @@ export default function NFSe() {
     });
 
     return filtered;
-  }, [documents, filters, sortConfig, allowedCnpjs]);
+  }, [documents, filters, sortConfig, allowedCnpjs, managedCnpjs]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
