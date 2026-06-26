@@ -166,7 +166,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
         <div className="px-6 py-5 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {[...nfeTiles, ...nfseTiles].map((t) => (
+            {nfeTiles.map((t) => (
               <ScreenTile
                 key={t.key}
                 {...t}
@@ -175,6 +175,14 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               />
             ))}
           </div>
+
+          {nfseTiles.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {nfseTiles.map((t) => (
+                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              ))}
+            </div>
+          )}
 
           {materiaPrimaTiles.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
