@@ -16,20 +16,20 @@ const ScreenTile = ({ icon: Icon, label, count, value, percent, accent, selected
   <button
     type="button"
     onClick={onClick}
-    className={`text-left flex flex-col gap-1 rounded-xl border bg-white p-3 hover:shadow-sm transition-all ${selected ? "border-slate-800 ring-2 ring-slate-800/20 shadow-sm" : "border-slate-100 hover:border-slate-200"}`}
+    className={`text-left flex flex-col gap-0.5 rounded-lg border bg-white px-2.5 py-2 hover:shadow-sm transition-all ${selected ? "border-slate-800 ring-2 ring-slate-800/20 shadow-sm" : "border-slate-100 hover:border-slate-200"}`}
   >
-    <div className="flex items-center gap-2">
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${accent.bg}`}>
-        <Icon className={`w-3.5 h-3.5 ${accent.text}`} />
+    <div className="flex items-center gap-1.5">
+      <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${accent.bg}`}>
+        <Icon className={`w-3 h-3 ${accent.text}`} />
       </div>
-      <span className="text-[11px] font-semibold text-slate-500 truncate">{label}</span>
+      <span className="text-[10px] font-semibold text-slate-500 truncate">{label}</span>
     </div>
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-2xl font-bold text-slate-800 leading-none">{count}</span>
-      {percent != null && <span className="text-[11px] font-medium text-slate-400">{percent}%</span>}
+    <div className="flex items-baseline gap-1">
+      <span className="text-lg font-bold text-slate-800 leading-none">{count}</span>
+      {percent != null && <span className="text-[10px] font-medium text-slate-400">{percent}%</span>}
     </div>
     {value != null && (
-      <span className="text-[12px] font-semibold text-emerald-600">{formatCurrency(value)}</span>
+      <span className="text-[11px] font-semibold text-emerald-600">{formatCurrency(value)}</span>
     )}
   </button>
 );
