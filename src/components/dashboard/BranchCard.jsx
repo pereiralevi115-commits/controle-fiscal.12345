@@ -72,7 +72,7 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
   );
 };
 
-export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, cteStats, nfseStats, highlight }) {
+export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cteStats, nfseStats, highlight }) {
   const [selectedTiles, setSelectedTiles] = useState([]);
 
   const toggleTile = (key) =>
@@ -95,7 +95,8 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     { key: "compras",       icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
     { key: "frota",         icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
     { key: "controladoria", icon: BarChart2,    label: "Controladoria", count: screens.controladoria, value: screenStats?.controladoria?.value, percent: pctOf(screens.controladoria), accent: { bg: "bg-indigo-50",  text: "text-indigo-600" } },
-    { key: "arquivadas",    icon: Receipt,      label: "Arquivadas",    count: screens.arquivadas,    value: archivedValue,                     percent: pctOf(screens.arquivadas),    accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
+    { key: "arquivadas_nfe",  icon: Receipt,    label: "Arq. NF-e",     count: screens.arquivadas_nfe,  value: archivedNfeValue,  percent: pctOf(screens.arquivadas_nfe),  accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
+    { key: "arquivadas_nfse", icon: Receipt,    label: "Arq. NFS-e",    count: screens.arquivadas_nfse, value: archivedNfseValue, percent: pctOf(screens.arquivadas_nfse), accent: { bg: "bg-orange-50",  text: "text-orange-600" } },
   ] : null;
 
   const activeTiles = tiles?.filter((t) => selectedTiles.includes(t.key)) || [];

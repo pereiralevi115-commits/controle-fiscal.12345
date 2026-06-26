@@ -172,13 +172,17 @@ export default function Dashboard() {
       if ((inv.document_type || "nfe") === "nfse") { nfse++; return; }
       notas++;
     });
+    let arquivadas_nfe = 0, arquivadas_nfse = 0;
     if (archivedInvs) {
       archivedInvs.forEach(inv => {
         const s = supplierMap[inv.supplier_cnpj];
-        if (!s?.materia_prima) arquivadas++;
+        if (s?.materia_prima) return;
+        arquivadas++;
+        if ((inv.document_type || "nfe") === "nfse") arquivadas_nfse++;
+        else arquivadas_nfe++;
       });
     }
-    return { materia_prima, notas, nfse, compras, frota, controladoria, arquivadas };
+    return { materia_prima, notas, nfse, compras, frota, controladoria, arquivadas, arquivadas_nfe, arquivadas_nfse };
   };
 
   // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
@@ -243,8 +247,11 @@ export default function Dashboard() {
     const branchMPInvoices = allMateriaPrimaInvoices.filter(inv => (inv.branch_cnpj || '__sem_filial__') === cnpj);
     const screens = countByScreen(invs, archInvs, branchMPInvoices);
     const screenStats = screenSummary(invs, branchMPInvoices);
+    const nonMpArch = archInvs.filter(i => !supplierMap[i.supplier_cnpj]?.materia_prima);
     const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
-    return { cnpj, name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue };
+    const archivedNfeValue = nonMpArch.filter(i => (i.document_type || "nfe") !== "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
+    const archivedNfseValue = nonMpArch.filter(i => (i.document_type || "nfe") === "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
+    return { cnpj, name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue };
   });
 
   // Sort by branch name
@@ -259,6 +266,9 @@ export default function Dashboard() {
   const allScreens = countByScreen(visibleInvoices, archivedInvoices, allMateriaPrimaInvoices);
   const allScreenStats = screenSummary(visibleInvoices, allMateriaPrimaInvoices);
   const allArchivedValue = archivedInvoices.reduce((s, i) => s + (i.total_value || 0), 0);
+  const allNonMpArch = archivedInvoices.filter(i => !supplierMap[i.supplier_cnpj]?.materia_prima);
+  const allArchivedNfeValue = allNonMpArch.filter(i => (i.document_type || "nfe") !== "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
+  const allArchivedNfseValue = allNonMpArch.filter(i => (i.document_type || "nfe") === "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
 
   const cteStats = cteStatsOf(filteredCte);
   const nfseStats = nfseStatsOf(filteredNfse);
@@ -311,11 +321,11 @@ export default function Dashboard() {
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais (oculto para perfis Líder) */}
           {!isLider && (
-            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
+            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} archivedNfeValue={allArchivedNfeValue} archivedNfseValue={allArchivedNfseValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
           )}
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} archivedNfeValue={row.archivedNfeValue} archivedNfseValue={row.archivedNfseValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
           ))}
 
           {rows.length === 0 && (
