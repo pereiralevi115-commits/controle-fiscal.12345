@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Calendar, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import BranchCard from "@/components/dashboard/BranchCard";
@@ -12,15 +14,9 @@ import { useAuth } from "@/lib/AuthContext";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-const months = [
-  { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" }, { value: "03", label: "Março" },
-  { value: "04", label: "Abril" }, { value: "05", label: "Maio" }, { value: "06", label: "Junho" },
-  { value: "07", label: "Julho" }, { value: "08", label: "Agosto" }, { value: "09", label: "Setembro" },
-  { value: "10", label: "Outubro" }, { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" },
-];
-
 export default function Dashboard() {
-  const [selectedMonthYear, setSelectedMonthYear] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices(["nfe", "nfse"]);
@@ -55,23 +51,13 @@ export default function Dashboard() {
     );
   }
 
-  // Meses disponíveis
-  const availableMonths = Array.from(new Set(
-    invoices
-      .filter(inv => inv.issue_date)
-      .map(inv => {
-        const d = new Date(inv.issue_date + "T12:00:00");
-        return `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-      })
-  )).sort().reverse();
-
-  // Filtro por mês
+  // Filtro por intervalo de datas (data inicial / data final)
   const filterByMonth = (inv) => {
-    if (selectedMonthYear === "all") return true;
+    if (!startDate && !endDate) return true;
     if (!inv.issue_date) return false;
-    const d = new Date(inv.issue_date + "T12:00:00");
-    const my = `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-    return my === selectedMonthYear;
+    if (startDate && inv.issue_date < startDate) return false;
+    if (endDate && inv.issue_date > endDate) return false;
+    return true;
   };
 
   // Map CNPJ -> branch name, include "sem filial"
@@ -285,21 +271,39 @@ export default function Dashboard() {
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
             <p className="text-slate-500 mt-1">Controle de lançamentos por filial</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={selectedMonthYear} onValueChange={setSelectedMonthYear}>
-              <SelectTrigger className="w-[180px]">
-                <Calendar className="w-4 h-4 mr-1" />
-                <SelectValue placeholder="Mês/Ano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os meses</SelectItem>
-                {availableMonths.map(my => {
-                  const [m, y] = my.split("-");
-                  const label = months.find(x => x.value === m)?.label || m;
-                  return <SelectItem key={my} value={my}>{label} {y}</SelectItem>;
-                })}
-              </SelectContent>
-            </Select>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-slate-500 flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Data inicial
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-slate-500 flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Data final
+              </Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-[160px]"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="gap-1 text-slate-500"
+              >
+                <X className="w-4 h-4" /> Limpar
+              </Button>
+            )}
           </div>
 
         </div>
