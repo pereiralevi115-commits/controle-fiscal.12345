@@ -107,6 +107,31 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const selectionCount = activeTiles.reduce((acc, t) => acc + (t.count || 0), 0);
   const selectionValue = activeTiles.reduce((acc, t) => acc + (t.value || 0), 0);
 
+  // Totais consolidados por tipo de documento (somando todas as telas)
+  const totalsByType = screens ? [
+    {
+      key: "all_nfe",
+      label: "Todos NF-e",
+      accent: { bg: "bg-slate-100", text: "text-slate-600" },
+      count: screens.notas + screens.materia_prima + screens.compras_nfe + screens.frota_nfe + screens.controladoria_nfe + (screens.arquivadas_nfe || 0),
+      value: (screenStats?.notas?.value || 0) + (screenStats?.materia_prima?.value || 0) + (screenStats?.compras_split?.nfe?.value || 0) + (screenStats?.frota_split?.nfe?.value || 0) + (screenStats?.controladoria_split?.nfe?.value || 0) + (archivedNfeValue || 0),
+    },
+    {
+      key: "all_nfse",
+      label: "Todos NFS-e",
+      accent: { bg: "bg-rose-50", text: "text-rose-600" },
+      count: (nfseStats?.count || 0) + screens.compras_nfse + screens.frota_nfse + screens.controladoria_nfse + (screens.arquivadas_nfse || 0),
+      value: (nfseStats?.value || 0) + (screenStats?.compras_split?.nfse?.value || 0) + (screenStats?.frota_split?.nfse?.value || 0) + (screenStats?.controladoria_split?.nfse?.value || 0) + (archivedNfseValue || 0),
+    },
+    {
+      key: "all_cte",
+      label: "CT-e",
+      accent: { bg: "bg-teal-50", text: "text-teal-600" },
+      count: cteStats?.count || 0,
+      value: cteStats?.value || 0,
+    },
+  ] : null;
+
   // Quebra por filial das telas selecionadas (apenas no card consolidado)
   const branchSelection = (branchBreakdown && selectedTiles.length > 0)
     ? branchBreakdown
@@ -164,6 +189,20 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               />
             ))}
           </div>
+
+          {totalsByType && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {totalsByType.map((t) => (
+                <div key={t.key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${t.accent.bg} ${t.accent.text}`}>{t.label}</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-800 leading-none">{t.count}</p>
+                    <p className="text-[12px] font-semibold text-emerald-600 mt-0.5">{formatCurrency(t.value)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {activeTiles.length > 0 && (
             <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4">
