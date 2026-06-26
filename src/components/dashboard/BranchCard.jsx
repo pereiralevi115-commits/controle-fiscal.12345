@@ -1,5 +1,5 @@
-import React from "react";
-import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox, Wallet } from "lucide-react";
+import React, { useState } from "react";
+import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox, Wallet, X } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -12,8 +12,12 @@ const compactCurrency = (value) => {
 };
 
 // Pequeno cartão de métrica por tela
-const ScreenTile = ({ icon: Icon, label, count, value, percent, accent }) => (
-  <div className="flex flex-col gap-1 rounded-xl border border-slate-100 bg-white p-3 hover:border-slate-200 hover:shadow-sm transition-all">
+const ScreenTile = ({ icon: Icon, label, count, value, percent, accent, selected, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`text-left flex flex-col gap-1 rounded-xl border bg-white p-3 hover:shadow-sm transition-all ${selected ? "border-slate-800 ring-2 ring-slate-800/20 shadow-sm" : "border-slate-100 hover:border-slate-200"}`}
+  >
     <div className="flex items-center gap-2">
       <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${accent.bg}`}>
         <Icon className={`w-3.5 h-3.5 ${accent.text}`} />
@@ -27,7 +31,7 @@ const ScreenTile = ({ icon: Icon, label, count, value, percent, accent }) => (
     {value != null && (
       <span className="text-[12px] font-semibold text-emerald-600">{formatCurrency(value)}</span>
     )}
-  </div>
+  </button>
 );
 
 // Mini barra de progresso para SIGV/TOPCON/Boleto
@@ -69,6 +73,7 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
 };
 
 export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, cteStats, nfseStats, highlight }) {
+  const [selectedTile, setSelectedTile] = useState(null);
   const screenTotal = screens
     ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas + (nfseStats?.count || 0) + (cteStats?.count || 0))
     : 0;
@@ -80,15 +85,17 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
 
   const tiles = screens ? [
-    { icon: FileText,        label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
-    ...(nfseStats ? [{ icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
-    ...(cteStats ? [{ icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
-    { icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
-    { icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
-    { icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
-    { icon: BarChart2,    label: "Controladoria", count: screens.controladoria, value: screenStats?.controladoria?.value, percent: pctOf(screens.controladoria), accent: { bg: "bg-indigo-50",  text: "text-indigo-600" } },
-    { icon: Receipt,      label: "Arquivadas",    count: screens.arquivadas,    value: archivedValue,                     percent: pctOf(screens.arquivadas),    accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
+    { key: "notas",         icon: FileText,        label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
+    ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
+    ...(cteStats ? [{ key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
+    { key: "materia_prima", icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
+    { key: "compras",       icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
+    { key: "frota",         icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
+    { key: "controladoria", icon: BarChart2,    label: "Controladoria", count: screens.controladoria, value: screenStats?.controladoria?.value, percent: pctOf(screens.controladoria), accent: { bg: "bg-indigo-50",  text: "text-indigo-600" } },
+    { key: "arquivadas",    icon: Receipt,      label: "Arquivadas",    count: screens.arquivadas,    value: archivedValue,                     percent: pctOf(screens.arquivadas),    accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
   ] : null;
+
+  const activeTile = tiles?.find((t) => t.key === selectedTile) || null;
 
   const screenRowConfig = [
     { key: "notas",         label: "NF-e",                 dotColor: "bg-slate-400", data: screenStats?.notas },
@@ -123,10 +130,42 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
         <div className="px-6 py-5 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {tiles.map((t, i) => (
-              <ScreenTile key={i} {...t} />
+            {tiles.map((t) => (
+              <ScreenTile
+                key={t.key}
+                {...t}
+                selected={selectedTile === t.key}
+                onClick={() => setSelectedTile(selectedTile === t.key ? null : t.key)}
+              />
             ))}
           </div>
+
+          {activeTile && (
+            <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${activeTile.accent.bg}`}>
+                  <activeTile.icon className={`w-4 h-4 ${activeTile.accent.text}`} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Soma · {activeTile.label}</p>
+                  <p className="text-sm font-medium text-slate-600">{activeTile.count} nota(s)</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Valor total</p>
+                  <p className="text-2xl font-bold text-emerald-600 leading-none">{formatCurrency(activeTile.value || 0)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTile(null)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
