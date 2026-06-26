@@ -88,23 +88,31 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
 
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
 
-  const tiles = screens ? [
-    // Grupo NF-e
+  const nfeTiles = screens ? [
     { key: "notas",         icon: FileText,        label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
-    { key: "materia_prima", icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
     { key: "compras_nfe",        icon: ShoppingCart, label: "Compras NF-e",  count: screens.compras_nfe,        value: screenStats?.compras_split?.nfe?.value,        percent: pctOf(screens.compras_nfe),        accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
     { key: "frota_nfe",          icon: Truck,        label: "Frota NF-e",    count: screens.frota_nfe,          value: screenStats?.frota_split?.nfe?.value,          percent: pctOf(screens.frota_nfe),          accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
     { key: "controladoria_nfe",  icon: BarChart2,    label: "Controlad. NF-e",  count: screens.controladoria_nfe,  value: screenStats?.controladoria_split?.nfe?.value,  percent: pctOf(screens.controladoria_nfe),  accent: { bg: "bg-indigo-50",   text: "text-indigo-600" } },
     { key: "arquivadas_nfe",  icon: Receipt,    label: "Arq. NF-e",     count: screens.arquivadas_nfe,  value: archivedNfeValue,  percent: pctOf(screens.arquivadas_nfe),  accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
-    // Grupo NFS-e
+  ] : [];
+
+  const nfseTiles = screens ? [
     ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
     { key: "compras_nfse",       icon: ShoppingCart, label: "Compras NFS-e", count: screens.compras_nfse,       value: screenStats?.compras_split?.nfse?.value,       percent: pctOf(screens.compras_nfse),       accent: { bg: "bg-blue-50/60", text: "text-blue-500" } },
     { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
     { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
     { key: "arquivadas_nfse", icon: Receipt,    label: "Arq. NFS-e",    count: screens.arquivadas_nfse, value: archivedNfseValue, percent: pctOf(screens.arquivadas_nfse), accent: { bg: "bg-orange-50",  text: "text-orange-600" } },
-    // Grupo CT-e
-    ...(cteStats ? [{ key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
-  ] : null;
+  ] : [];
+
+  const materiaPrimaTiles = screens ? [
+    { key: "materia_prima", icon: Layers, label: "Mat. Prima", count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50", text: "text-green-600" } },
+  ] : [];
+
+  const cteTiles = (screens && cteStats) ? [
+    { key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } },
+  ] : [];
+
+  const tiles = screens ? [...nfeTiles, ...nfseTiles, ...materiaPrimaTiles, ...cteTiles] : null;
 
   const activeTiles = tiles?.filter((t) => selectedTiles.includes(t.key)) || [];
   const selectionCount = activeTiles.reduce((acc, t) => acc + (t.count || 0), 0);
@@ -158,7 +166,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
         <div className="px-6 py-5 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {tiles.map((t) => (
+            {[...nfeTiles, ...nfseTiles].map((t) => (
               <ScreenTile
                 key={t.key}
                 {...t}
@@ -167,6 +175,22 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               />
             ))}
           </div>
+
+          {materiaPrimaTiles.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {materiaPrimaTiles.map((t) => (
+                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              ))}
+            </div>
+          )}
+
+          {cteTiles.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {cteTiles.map((t) => (
+                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              ))}
+            </div>
+          )}
 
           {activeTiles.length > 0 && (
             <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4">
