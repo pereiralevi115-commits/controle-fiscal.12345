@@ -72,7 +72,7 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
   );
 };
 
-export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cteStats, nfseStats, highlight }) {
+export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cteStats, nfseStats, branchBreakdown, highlight }) {
   const [selectedTiles, setSelectedTiles] = useState([]);
 
   const toggleTile = (key) =>
@@ -102,6 +102,18 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const activeTiles = tiles?.filter((t) => selectedTiles.includes(t.key)) || [];
   const selectionCount = activeTiles.reduce((acc, t) => acc + (t.count || 0), 0);
   const selectionValue = activeTiles.reduce((acc, t) => acc + (t.value || 0), 0);
+
+  // Quebra por filial das telas selecionadas (apenas no card consolidado)
+  const branchSelection = (branchBreakdown && selectedTiles.length > 0)
+    ? branchBreakdown
+        .map((b) => {
+          const count = selectedTiles.reduce((acc, k) => acc + (b.tiles[k]?.count || 0), 0);
+          const value = selectedTiles.reduce((acc, k) => acc + (b.tiles[k]?.value || 0), 0);
+          return { name: b.name, count, value };
+        })
+        .filter((b) => b.count > 0 || b.value > 0)
+        .sort((a, b) => b.value - a.value)
+    : [];
 
   const screenRowConfig = [
     { key: "notas",         label: "NF-e",                 dotColor: "bg-slate-400", data: screenStats?.notas },
@@ -179,6 +191,23 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
                   </button>
                 </div>
               </div>
+
+              {branchSelection.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Valores por filial</p>
+                  <div className="space-y-1">
+                    {branchSelection.map((b) => (
+                      <div key={b.name} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-lg hover:bg-white transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-slate-700 truncate">{b.name}</span>
+                          <span className="text-[11px] font-medium text-slate-400 flex-shrink-0">· {b.count} notas</span>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-600 flex-shrink-0">{formatCurrency(b.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

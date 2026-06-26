@@ -273,6 +273,22 @@ export default function Dashboard() {
   const cteStats = cteStatsOf(filteredCte);
   const nfseStats = nfseStatsOf(filteredNfse);
 
+  // Quebra por filial × tela (usado no card consolidado para mostrar valores por filial ao selecionar telas)
+  const branchBreakdown = rows.map((row) => ({
+    name: row.name,
+    tiles: {
+      notas:          { count: row.screens.notas,          value: row.screenStats?.notas?.value || 0 },
+      nfse:           { count: nfseStatsOf(nfseByBranch[row.cnpj] || []).count, value: nfseStatsOf(nfseByBranch[row.cnpj] || []).value },
+      cte:            { count: cteStatsOf(cteByBranch[row.cnpj] || []).count,   value: cteStatsOf(cteByBranch[row.cnpj] || []).value },
+      materia_prima:  { count: row.screens.materia_prima,  value: row.screenStats?.materia_prima?.value || 0 },
+      compras:        { count: row.screens.compras,        value: row.screenStats?.compras?.value || 0 },
+      frota:          { count: row.screens.frota,          value: row.screenStats?.frota?.value || 0 },
+      controladoria:  { count: row.screens.controladoria,  value: row.screenStats?.controladoria?.value || 0 },
+      arquivadas_nfe: { count: row.screens.arquivadas_nfe, value: row.archivedNfeValue || 0 },
+      arquivadas_nfse:{ count: row.screens.arquivadas_nfse,value: row.archivedNfseValue || 0 },
+    },
+  }));
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
@@ -321,7 +337,7 @@ export default function Dashboard() {
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais (oculto para perfis Líder) */}
           {!isLider && (
-            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} archivedNfeValue={allArchivedNfeValue} archivedNfseValue={allArchivedNfseValue} cteStats={cteStats} nfseStats={nfseStats} highlight />
+            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} archivedNfeValue={allArchivedNfeValue} archivedNfseValue={allArchivedNfseValue} cteStats={cteStats} nfseStats={nfseStats} branchBreakdown={branchBreakdown} highlight />
           )}
 
           {rows.map((row) => (
