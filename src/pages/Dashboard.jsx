@@ -149,6 +149,11 @@ export default function Dashboard() {
       boleto: arr.filter(i => i.boleto_recorded).length,
       value: arr.reduce((s, i) => s + (i.total_value || 0), 0),
     });
+    const isNfse = (i) => (i.document_type || "nfe") === "nfse";
+    const splitDoc = (arr) => ({
+      nfe: summarize(arr.filter(i => !isNfse(i))),
+      nfse: summarize(arr.filter(i => isNfse(i))),
+    });
     return {
       materia_prima: summarize(screens.materia_prima),
       notas: summarize(screens.notas),
@@ -156,20 +161,25 @@ export default function Dashboard() {
       compras: summarize(screens.compras),
       frota: summarize(screens.frota),
       controladoria: summarize(screens.controladoria),
+      compras_split: splitDoc(screens.compras),
+      frota_split: splitDoc(screens.frota),
+      controladoria_split: splitDoc(screens.controladoria),
     };
   };
 
   const countByScreen = (invs, archivedInvs, mpInvs) => {
     let materia_prima = mpInvs ? mpInvs.length : 0, notas = 0, nfse = 0, compras = 0, frota = 0, controladoria = 0, arquivadas = 0;
+    let compras_nfe = 0, compras_nfse = 0, frota_nfe = 0, frota_nfse = 0, controladoria_nfe = 0, controladoria_nfse = 0;
     invs.forEach(inv => {
       const s = supplierMap[inv.supplier_cnpj];
       if (s?.materia_prima) return; // contado separadamente via mpInvs
       const completed = isCompleted(inv);
-      if (s?.gestao_compras) { if (!completed) compras++; return; }
-      if (s?.gestao_frota)   { if (!completed) frota++;   return; }
-      if (s?.controladoria)  { if (!completed) controladoria++; return; }
+      const docNfse = (inv.document_type || "nfe") === "nfse";
+      if (s?.gestao_compras) { if (!completed) { compras++; if (docNfse) compras_nfse++; else compras_nfe++; } return; }
+      if (s?.gestao_frota)   { if (!completed) { frota++;   if (docNfse) frota_nfse++; else frota_nfe++; } return; }
+      if (s?.controladoria)  { if (!completed) { controladoria++; if (docNfse) controladoria_nfse++; else controladoria_nfe++; } return; }
       if (completed) return;
-      if ((inv.document_type || "nfe") === "nfse") { nfse++; return; }
+      if (docNfse) { nfse++; return; }
       notas++;
     });
     let arquivadas_nfe = 0, arquivadas_nfse = 0;
@@ -182,7 +192,7 @@ export default function Dashboard() {
         else arquivadas_nfe++;
       });
     }
-    return { materia_prima, notas, nfse, compras, frota, controladoria, arquivadas, arquivadas_nfe, arquivadas_nfse };
+    return { materia_prima, notas, nfse, compras, frota, controladoria, arquivadas, arquivadas_nfe, arquivadas_nfse, compras_nfe, compras_nfse, frota_nfe, frota_nfse, controladoria_nfe, controladoria_nfse };
   };
 
   // Pool completo de Matéria Prima: não canceladas, não arquivadas, fornecedor materia_prima, não ocultos, filiais permitidas
@@ -281,9 +291,12 @@ export default function Dashboard() {
       nfse:           { count: nfseStatsOf(nfseByBranch[row.cnpj] || []).count, value: nfseStatsOf(nfseByBranch[row.cnpj] || []).value },
       cte:            { count: cteStatsOf(cteByBranch[row.cnpj] || []).count,   value: cteStatsOf(cteByBranch[row.cnpj] || []).value },
       materia_prima:  { count: row.screens.materia_prima,  value: row.screenStats?.materia_prima?.value || 0 },
-      compras:        { count: row.screens.compras,        value: row.screenStats?.compras?.value || 0 },
-      frota:          { count: row.screens.frota,          value: row.screenStats?.frota?.value || 0 },
-      controladoria:  { count: row.screens.controladoria,  value: row.screenStats?.controladoria?.value || 0 },
+      compras_nfe:        { count: row.screens.compras_nfe,        value: row.screenStats?.compras_split?.nfe?.value || 0 },
+      compras_nfse:       { count: row.screens.compras_nfse,       value: row.screenStats?.compras_split?.nfse?.value || 0 },
+      frota_nfe:          { count: row.screens.frota_nfe,          value: row.screenStats?.frota_split?.nfe?.value || 0 },
+      frota_nfse:         { count: row.screens.frota_nfse,         value: row.screenStats?.frota_split?.nfse?.value || 0 },
+      controladoria_nfe:  { count: row.screens.controladoria_nfe,  value: row.screenStats?.controladoria_split?.nfe?.value || 0 },
+      controladoria_nfse: { count: row.screens.controladoria_nfse, value: row.screenStats?.controladoria_split?.nfse?.value || 0 },
       arquivadas_nfe: { count: row.screens.arquivadas_nfe, value: row.archivedNfeValue || 0 },
       arquivadas_nfse:{ count: row.screens.arquivadas_nfse,value: row.archivedNfseValue || 0 },
     },

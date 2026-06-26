@@ -84,6 +84,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const totalValue = screenStats
     ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (nfseStats?.value || 0) + (cteStats?.value || 0)
     : 0;
+  // screenTotal/totalValue continuam consolidados (compras/frota/controladoria somam NF-e + NFS-e), só a exibição é dividida.
 
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
 
@@ -92,9 +93,12 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
     ...(cteStats ? [{ key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
     { key: "materia_prima", icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
-    { key: "compras",       icon: ShoppingCart, label: "Gest. Compras", count: screens.compras,       value: screenStats?.compras?.value,       percent: pctOf(screens.compras),       accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
-    { key: "frota",         icon: Truck,        label: "Gest. Frota",   count: screens.frota,         value: screenStats?.frota?.value,         percent: pctOf(screens.frota),         accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
-    { key: "controladoria", icon: BarChart2,    label: "Controladoria", count: screens.controladoria, value: screenStats?.controladoria?.value, percent: pctOf(screens.controladoria), accent: { bg: "bg-indigo-50",  text: "text-indigo-600" } },
+    { key: "compras_nfe",        icon: ShoppingCart, label: "Compras NF-e",  count: screens.compras_nfe,        value: screenStats?.compras_split?.nfe?.value,        percent: pctOf(screens.compras_nfe),        accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
+    { key: "compras_nfse",       icon: ShoppingCart, label: "Compras NFS-e", count: screens.compras_nfse,       value: screenStats?.compras_split?.nfse?.value,       percent: pctOf(screens.compras_nfse),       accent: { bg: "bg-blue-50/60", text: "text-blue-500" } },
+    { key: "frota_nfe",          icon: Truck,        label: "Frota NF-e",    count: screens.frota_nfe,          value: screenStats?.frota_split?.nfe?.value,          percent: pctOf(screens.frota_nfe),          accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
+    { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
+    { key: "controladoria_nfe",  icon: BarChart2,    label: "Controlad. NF-e",  count: screens.controladoria_nfe,  value: screenStats?.controladoria_split?.nfe?.value,  percent: pctOf(screens.controladoria_nfe),  accent: { bg: "bg-indigo-50",   text: "text-indigo-600" } },
+    { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
     { key: "arquivadas_nfe",  icon: Receipt,    label: "Arq. NF-e",     count: screens.arquivadas_nfe,  value: archivedNfeValue,  percent: pctOf(screens.arquivadas_nfe),  accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
     { key: "arquivadas_nfse", icon: Receipt,    label: "Arq. NFS-e",    count: screens.arquivadas_nfse, value: archivedNfseValue, percent: pctOf(screens.arquivadas_nfse), accent: { bg: "bg-orange-50",  text: "text-orange-600" } },
   ] : null;
@@ -116,11 +120,14 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     : [];
 
   const screenRowConfig = [
-    { key: "notas",         label: "NF-e",                 dotColor: "bg-slate-400", data: screenStats?.notas },
-    { key: "nfse",          label: "NFS-e",                dotColor: "bg-rose-500",  data: nfseStats },
-    { key: "compras",       label: "Gestão de Compras",    dotColor: "bg-blue-500" },
-    { key: "frota",         label: "Gestão de Frota",      dotColor: "bg-cyan-500" },
-    { key: "controladoria", label: "Controladoria",        dotColor: "bg-indigo-500" },
+    { key: "notas",         label: "NF-e",                   dotColor: "bg-slate-400", data: screenStats?.notas },
+    { key: "nfse",          label: "NFS-e",                  dotColor: "bg-rose-500",  data: nfseStats },
+    { key: "compras_nfe",       label: "Compras · NF-e",     dotColor: "bg-blue-500",   data: screenStats?.compras_split?.nfe },
+    { key: "compras_nfse",      label: "Compras · NFS-e",    dotColor: "bg-blue-400",   data: screenStats?.compras_split?.nfse },
+    { key: "frota_nfe",         label: "Frota · NF-e",       dotColor: "bg-cyan-500",   data: screenStats?.frota_split?.nfe },
+    { key: "frota_nfse",        label: "Frota · NFS-e",      dotColor: "bg-cyan-400",   data: screenStats?.frota_split?.nfse },
+    { key: "controladoria_nfe", label: "Controladoria · NF-e",  dotColor: "bg-indigo-500", data: screenStats?.controladoria_split?.nfe },
+    { key: "controladoria_nfse",label: "Controladoria · NFS-e", dotColor: "bg-indigo-400", data: screenStats?.controladoria_split?.nfse },
   ];
 
   return (
