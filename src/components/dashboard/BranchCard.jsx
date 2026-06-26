@@ -73,7 +73,10 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
 };
 
 export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, cteStats, nfseStats, highlight }) {
-  const [selectedTile, setSelectedTile] = useState(null);
+  const [selectedTiles, setSelectedTiles] = useState([]);
+
+  const toggleTile = (key) =>
+    setSelectedTiles((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const screenTotal = screens
     ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas + (nfseStats?.count || 0) + (cteStats?.count || 0))
     : 0;
@@ -95,7 +98,9 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     { key: "arquivadas",    icon: Receipt,      label: "Arquivadas",    count: screens.arquivadas,    value: archivedValue,                     percent: pctOf(screens.arquivadas),    accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
   ] : null;
 
-  const activeTile = tiles?.find((t) => t.key === selectedTile) || null;
+  const activeTiles = tiles?.filter((t) => selectedTiles.includes(t.key)) || [];
+  const selectionCount = activeTiles.reduce((acc, t) => acc + (t.count || 0), 0);
+  const selectionValue = activeTiles.reduce((acc, t) => acc + (t.value || 0), 0);
 
   const screenRowConfig = [
     { key: "notas",         label: "NF-e",                 dotColor: "bg-slate-400", data: screenStats?.notas },
@@ -134,35 +139,44 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               <ScreenTile
                 key={t.key}
                 {...t}
-                selected={selectedTile === t.key}
-                onClick={() => setSelectedTile(selectedTile === t.key ? null : t.key)}
+                selected={selectedTiles.includes(t.key)}
+                onClick={() => toggleTile(t.key)}
               />
             ))}
           </div>
 
-          {activeTile && (
-            <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${activeTile.accent.bg}`}>
-                  <activeTile.icon className={`w-4 h-4 ${activeTile.accent.text}`} />
-                </div>
+          {activeTiles.length > 0 && (
+            <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Soma · {activeTile.label}</p>
-                  <p className="text-sm font-medium text-slate-600">{activeTile.count} nota(s)</p>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Soma de {activeTiles.length} tela(s) selecionada(s)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {activeTiles.map((t) => (
+                      <span key={t.key} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${t.accent.bg} ${t.accent.text}`}>
+                        {t.label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Valor total</p>
-                  <p className="text-2xl font-bold text-emerald-600 leading-none">{formatCurrency(activeTile.value || 0)}</p>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Notas</p>
+                    <p className="text-xl font-bold text-slate-700 leading-none">{selectionCount}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Valor total</p>
+                    <p className="text-2xl font-bold text-emerald-600 leading-none">{formatCurrency(selectionValue)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTiles([])}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTile(null)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             </div>
           )}
