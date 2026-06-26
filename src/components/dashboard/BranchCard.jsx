@@ -89,48 +89,26 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const pctOf = (n) => screenTotal > 0 ? Math.round((n / screenTotal) * 100) : 0;
 
   const tiles = screens ? [
+    // Grupo NF-e
     { key: "notas",         icon: FileText,        label: "NF-e",          count: screens.notas,         value: screenStats?.notas?.value,         percent: pctOf(screens.notas),         accent: { bg: "bg-slate-100",  text: "text-slate-600" } },
-    ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
-    ...(cteStats ? [{ key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
     { key: "materia_prima", icon: Layers,       label: "Mat. Prima",    count: screens.materia_prima, value: screenStats?.materia_prima?.value, percent: pctOf(screens.materia_prima), accent: { bg: "bg-green-50",   text: "text-green-600" } },
     { key: "compras_nfe",        icon: ShoppingCart, label: "Compras NF-e",  count: screens.compras_nfe,        value: screenStats?.compras_split?.nfe?.value,        percent: pctOf(screens.compras_nfe),        accent: { bg: "bg-blue-50",    text: "text-blue-600" } },
-    { key: "compras_nfse",       icon: ShoppingCart, label: "Compras NFS-e", count: screens.compras_nfse,       value: screenStats?.compras_split?.nfse?.value,       percent: pctOf(screens.compras_nfse),       accent: { bg: "bg-blue-50/60", text: "text-blue-500" } },
     { key: "frota_nfe",          icon: Truck,        label: "Frota NF-e",    count: screens.frota_nfe,          value: screenStats?.frota_split?.nfe?.value,          percent: pctOf(screens.frota_nfe),          accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
-    { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
     { key: "controladoria_nfe",  icon: BarChart2,    label: "Controlad. NF-e",  count: screens.controladoria_nfe,  value: screenStats?.controladoria_split?.nfe?.value,  percent: pctOf(screens.controladoria_nfe),  accent: { bg: "bg-indigo-50",   text: "text-indigo-600" } },
-    { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
     { key: "arquivadas_nfe",  icon: Receipt,    label: "Arq. NF-e",     count: screens.arquivadas_nfe,  value: archivedNfeValue,  percent: pctOf(screens.arquivadas_nfe),  accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
+    // Grupo NFS-e
+    ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
+    { key: "compras_nfse",       icon: ShoppingCart, label: "Compras NFS-e", count: screens.compras_nfse,       value: screenStats?.compras_split?.nfse?.value,       percent: pctOf(screens.compras_nfse),       accent: { bg: "bg-blue-50/60", text: "text-blue-500" } },
+    { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
+    { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
     { key: "arquivadas_nfse", icon: Receipt,    label: "Arq. NFS-e",    count: screens.arquivadas_nfse, value: archivedNfseValue, percent: pctOf(screens.arquivadas_nfse), accent: { bg: "bg-orange-50",  text: "text-orange-600" } },
+    // Grupo CT-e
+    ...(cteStats ? [{ key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } }] : []),
   ] : null;
 
   const activeTiles = tiles?.filter((t) => selectedTiles.includes(t.key)) || [];
   const selectionCount = activeTiles.reduce((acc, t) => acc + (t.count || 0), 0);
   const selectionValue = activeTiles.reduce((acc, t) => acc + (t.value || 0), 0);
-
-  // Totais consolidados por tipo de documento (somando todas as telas)
-  const totalsByType = screens ? [
-    {
-      key: "all_nfe",
-      label: "Todos NF-e",
-      accent: { bg: "bg-slate-100", text: "text-slate-600" },
-      count: screens.notas + screens.materia_prima + screens.compras_nfe + screens.frota_nfe + screens.controladoria_nfe + (screens.arquivadas_nfe || 0),
-      value: (screenStats?.notas?.value || 0) + (screenStats?.materia_prima?.value || 0) + (screenStats?.compras_split?.nfe?.value || 0) + (screenStats?.frota_split?.nfe?.value || 0) + (screenStats?.controladoria_split?.nfe?.value || 0) + (archivedNfeValue || 0),
-    },
-    {
-      key: "all_nfse",
-      label: "Todos NFS-e",
-      accent: { bg: "bg-rose-50", text: "text-rose-600" },
-      count: (nfseStats?.count || 0) + screens.compras_nfse + screens.frota_nfse + screens.controladoria_nfse + (screens.arquivadas_nfse || 0),
-      value: (nfseStats?.value || 0) + (screenStats?.compras_split?.nfse?.value || 0) + (screenStats?.frota_split?.nfse?.value || 0) + (screenStats?.controladoria_split?.nfse?.value || 0) + (archivedNfseValue || 0),
-    },
-    {
-      key: "all_cte",
-      label: "CT-e",
-      accent: { bg: "bg-teal-50", text: "text-teal-600" },
-      count: cteStats?.count || 0,
-      value: cteStats?.value || 0,
-    },
-  ] : null;
 
   // Quebra por filial das telas selecionadas (apenas no card consolidado)
   const branchSelection = (branchBreakdown && selectedTiles.length > 0)
@@ -189,20 +167,6 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
               />
             ))}
           </div>
-
-          {totalsByType && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {totalsByType.map((t) => (
-                <div key={t.key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${t.accent.bg} ${t.accent.text}`}>{t.label}</span>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-slate-800 leading-none">{t.count}</p>
-                    <p className="text-[12px] font-semibold text-emerald-600 mt-0.5">{formatCurrency(t.value)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
           {activeTiles.length > 0 && (
             <div className="mt-4 rounded-xl border border-slate-800/20 bg-slate-50 p-4">
