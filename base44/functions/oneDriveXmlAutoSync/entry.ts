@@ -480,20 +480,41 @@ function accessKeyFromName(name) {
   return match ? match[0] : null;
 }
 
+// Busca, EM LOTE, quais chaves de acesso já existem no banco. Em vez de uma
+// consulta por arquivo (que estourava o tempo em pastas grandes), fazemos
+// poucas consultas usando $in e comparamos em memória.
+async function fetchExistingKeys(base44, keys) {
+  const existing = new Set();
+  const CHUNK = 200;
+  for (let i = 0; i < keys.length; i += CHUNK) {
+    const slice = keys.slice(i, i + CHUNK);
+    const rows = await base44.asServiceRole.entities.Invoice.filter({ access_key: { $in: slice } });
+    for (const row of rows) {
+      if (row.access_key) existing.add(row.access_key);
+    }
+  }
+  return existing;
+}
+
 async function importPendingXmls(base44, accessToken, folderId, budget) {
   if (budget <= 0) return { success: 0, errors: 0, total: 0, remaining: 1 };
 
   const allFiles = await listAllXmlFiles(accessToken, folderId);
 
-  // 1ª passada (barata, sem download): separa os candidatos cujo nome traz uma
-  // chave de acesso já existente no banco — esses são pulados sem baixar nada.
+  // 1ª passada (barata, SEM download e SEM consulta por arquivo): consulta o
+  // banco UMA vez em lote para descobrir quais chaves já existem, e descarta
+  // os arquivos cujo nome já corresponde a um documento importado.
+  const keysFromNames = [];
+  for (const file of allFiles) {
+    const key = accessKeyFromName(file.name);
+    if (key) keysFromNames.push(key);
+  }
+  const existingKeys = await fetchExistingKeys(base44, keysFromNames);
+
   const candidates = [];
   for (const file of allFiles) {
     const key = accessKeyFromName(file.name);
-    if (key) {
-      const existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: key });
-      if (existing.length > 0) continue; // documento já importado, pula sem baixar
-    }
+    if (key && existingKeys.has(key)) continue; // já importado, pula sem baixar
     candidates.push(file);
     // Limita o nº de candidatos avaliados para não percorrer milhares de arquivos
     // por execução — o restante entra na próxima passada.
@@ -566,7 +587,7 @@ Deno.serve(async (req) => {
 
     // Trava global: se já houver uma importação manual (upload) ou outra rodando,
     // pula esta execução para não gerar notas duplicadas.
-    const LOCK_STALE_MS = 15 * 60 * 1000;
+    const LOCK_STALE_MS = 3 * 60 * 1000;
     if (settings.import_locked) {
       const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
       if (Date.now() - lockedAt < LOCK_STALE_MS) {
