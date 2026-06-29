@@ -471,24 +471,61 @@ async function listAllXmlFiles(accessToken, folderId) {
 // entram na passada seguinte (webhook ou agendamento de backup).
 const MAX_PER_RUN = 40;
 
+// Extrai a chave de acesso (44 dígitos) do nome do arquivo XML. Os XMLs fiscais
+// são nomeados pela chave de acesso, então conseguimos saber se já foi importado
+// SEM precisar baixar o conteúdo — o que torna a varredura muito mais rápida.
+function accessKeyFromName(name) {
+  const digits = (name || "").replace(/\D/g, "");
+  const match = digits.match(/\d{44}/);
+  return match ? match[0] : null;
+}
+
 async function importPendingXmls(base44, accessToken, folderId, budget) {
   if (budget <= 0) return { success: 0, errors: 0, total: 0, remaining: 1 };
 
   const allFiles = await listAllXmlFiles(accessToken, folderId);
 
+  // 1ª passada (barata, sem download): separa os candidatos cujo nome traz uma
+  // chave de acesso já existente no banco — esses são pulados sem baixar nada.
+  const candidates = [];
+  for (const file of allFiles) {
+    const key = accessKeyFromName(file.name);
+    if (key) {
+      const existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: key });
+      if (existing.length > 0) continue; // documento já importado, pula sem baixar
+    }
+    candidates.push(file);
+    // Limita o nº de candidatos avaliados para não percorrer milhares de arquivos
+    // por execução — o restante entra na próxima passada.
+    if (candidates.length >= budget * 4) break;
+  }
+
+  // 2ª passada (com download, limitada ao orçamento): baixa e confirma pendência.
   const xmlContents = [];
   let downloaded = 0;
-  for (const file of allFiles) {
+  for (const file of candidates) {
     if (downloaded >= budget) break;
     let content;
     try {
       content = await downloadFileText(accessToken, file.id);
     } catch (_) { continue; }
 
-    // Só processa o que ainda não existe — evita rebaixar arquivos já importados.
     try {
       const parsed = parseXmlText(content);
-      if (!parsed.is_event) {
+      if (parsed.is_event) {
+        // Evento só é "pendente" se o documento-pai existe e ainda não foi gravado.
+        const docs = parsed.access_key
+          ? await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key })
+          : [];
+        if (docs.length === 0) continue;
+        const events = Array.isArray(docs[0].fiscal_events) ? docs[0].fiscal_events : [];
+        const already = events.some((e) =>
+          e.type === parsed.event_type &&
+          e.date === parsed.event_date &&
+          (e.protocol || "") === (parsed.protocol || "")
+        );
+        if (already) continue;
+      } else {
         let existing = [];
         if (parsed.access_key) {
           existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
@@ -499,7 +536,7 @@ async function importPendingXmls(base44, accessToken, folderId, budget) {
             supplier_cnpj: parsed.supplier_cnpj,
           });
         }
-        if (existing.length > 0) continue; // já importado, pula
+        if (existing.length > 0) continue;
       }
     } catch (_) { /* deixa importXmlContents tratar/contar o erro */ }
 
@@ -508,11 +545,11 @@ async function importPendingXmls(base44, accessToken, folderId, budget) {
   }
 
   if (xmlContents.length === 0) {
-    return { success: 0, errors: 0, total: 0, remaining: 0 };
+    // Se ainda há candidatos não baixados, sinaliza pendência para a próxima passada.
+    return { success: 0, errors: 0, total: 0, remaining: candidates.length > 0 ? 1 : 0 };
   }
 
   const result = await importXmlContents(base44, xmlContents);
-  // Se enchemos o orçamento, provavelmente ainda há pendentes para a próxima execução.
   result.remaining = downloaded >= budget ? 1 : 0;
   return result;
 }
