@@ -9,6 +9,7 @@ import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
+import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 export default function Invoices() {
   const queryClient = useQueryClient();
@@ -53,31 +54,41 @@ export default function Invoices() {
     },
   });
 
-  const filteredInvoices = useMemo(() => {
-    let filtered = invoices.filter((inv) => {
+  // Notas que passam em TODOS os filtros, exceto o de mês. Serve de base tanto
+  // para a lista exibida (aplicando o mês depois) quanto para os meses do seletor.
+  const filteredWithoutMonth = useMemo(() => {
+    return invoices.filter((inv) => {
       const searchMatch =
         filters.search === "" ||
         inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
         inv.number?.includes(filters.search);
       const statusMatch = filters.status === "all" || inv.status === filters.status;
       const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
-      
-      // Filter by cancellation status
+
       let cancelledMatch = true;
       if (filters.cancelled === "ativas") {
         cancelledMatch = !inv.cancelled;
       } else if (filters.cancelled === "canceladas") {
         cancelledMatch = inv.cancelled;
       }
-      
-      // Filter out invoices from hidden suppliers and show only suppliers with NO category
+
       const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
       const supplierNotHidden = !supplier || !supplier.hidden;
       const supplierHasNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
-      
+
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
+
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+      const notArchived = !inv.archived;
+      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierHasNoCategory && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived && notCompleted;
+    });
+  }, [invoices, filters.search, filters.status, filters.branch, filters.cancelled, filters.sigv, filters.topcon, filters.boleto, suppliers, allowedCnpjs]);
+
+  const filteredInvoices = useMemo(() => {
+    let filtered = filteredWithoutMonth.filter((inv) => {
       const monthMatch = !filters.monthYear || filters.monthYear === "all" || (() => {
         if (!inv.issue_date) return false;
         const date = new Date(inv.issue_date + "T12:00:00");
@@ -85,11 +96,7 @@ export default function Invoices() {
         const year = date.getFullYear();
         return `${month}-${year}` === filters.monthYear;
       })();
-
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived;
-      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierHasNoCategory && sigvMatch && topconMatch && boletoMatch && monthMatch && liderBranchMatch && notArchived && notCompleted;
+      return monthMatch;
     });
 
     // Sort by multiple criteria
@@ -116,7 +123,7 @@ export default function Invoices() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
+  }, [filteredWithoutMonth, filters.monthYear, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
@@ -128,6 +135,14 @@ export default function Invoices() {
       return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
     });
   };
+
+  // Meses disponíveis para o seletor: derivados das notas que de fato aparecem
+  // nesta tela. Reaplicamos os mesmos filtros, exceto o de mês, para que o
+  // seletor mostre apenas meses com registro no contexto atual.
+  const availableMonths = useMemo(
+    () => getMonthsFromInvoices(filteredWithoutMonth),
+    [filteredWithoutMonth]
+  );
 
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
@@ -149,7 +164,7 @@ export default function Invoices() {
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} availableMonths={availableMonths} showCancelledFilter={true} />
 
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 

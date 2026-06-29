@@ -48,8 +48,10 @@ const sortBranches = (branches) => {
   });
 };
 
-export default function InvoiceFilters({ filters, onFilterChange, branches, invoices = [], showCancelledFilter }) {
-  const availableMonthsAndYears = getAvailableMonthsAndYears(invoices);
+export default function InvoiceFilters({ filters, onFilterChange, branches, invoices = [], availableMonths, showCancelledFilter }) {
+  // Se a tela já calcula os meses com base nas notas realmente exibidas, usamos
+  // essa lista; caso contrário, derivamos da lista bruta recebida (fallback).
+  const availableMonthsAndYears = availableMonths || getAvailableMonthsAndYears(invoices);
 
   // Se o mês selecionado não existe mais na lista de notas, volta para "Todos os meses"
   useEffect(() => {

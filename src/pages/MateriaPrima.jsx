@@ -12,6 +12,7 @@ import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
+import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 export default function MateriaPrima() {
   const queryClient = useQueryClient();
@@ -56,8 +57,8 @@ export default function MateriaPrima() {
     },
   });
 
-  const filteredInvoices = useMemo(() => {
-    let filtered = invoices.filter((inv) => {
+  const filteredWithoutMonth = useMemo(() => {
+    return invoices.filter((inv) => {
       const searchMatch =
         filters.search === "" ||
         inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -72,15 +73,22 @@ export default function MateriaPrima() {
       const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
       const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
+      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
+      const notArchived = !inv.archived;
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived;
+    });
+  }, [invoices, filters.search, filters.status, filters.branch, filters.cancelled, filters.sigv, filters.topcon, filters.boleto, suppliers, allowedCnpjs]);
+
+  const availableMonths = useMemo(() => getMonthsFromInvoices(filteredWithoutMonth), [filteredWithoutMonth]);
+
+  const filteredInvoices = useMemo(() => {
+    let filtered = filteredWithoutMonth.filter((inv) => {
+      return filters.monthYear === "all" || (inv.issue_date && (() => {
         const date = new Date(inv.issue_date + "T12:00:00");
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const year = date.getFullYear();
         return `${month}-${year}` === filters.monthYear;
       })());
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived;
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived;
     });
 
     filtered.sort((a, b) => {
@@ -96,7 +104,7 @@ export default function MateriaPrima() {
     });
 
     return filtered;
-  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
+  }, [filteredWithoutMonth, filters.monthYear, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
@@ -133,7 +141,7 @@ export default function MateriaPrima() {
           </Button>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} availableMonths={availableMonths} showCancelledFilter={true} />
 
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 
