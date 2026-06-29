@@ -500,60 +500,89 @@ Deno.serve(async (req) => {
       return Response.json({ error: "xml_contents deve ser um array de strings XML" }, { status: 400 });
     }
 
-    const results = [];
     const errors = [];
 
+    // 1) Parse de todos os XMLs em memória (sem tocar no banco).
+    const parsedDocs = [];
     for (let i = 0; i < xml_contents.length; i++) {
       try {
         const parsed = parseXmlDocument(xml_contents[i]);
         parsed.branch_cnpj = parsed.recipient_cnpj;
-
-        // Pula notas que foram excluídas manualmente pelo admin (não devem voltar).
-        let blocked = [];
-        if (parsed.access_key) {
-          blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
-        }
-        if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
-          blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({
-            number: parsed.number,
-            supplier_cnpj: parsed.supplier_cnpj,
-          });
-        }
-        if (blocked.length > 0) {
-          errors.push({ index: i, error: `Documento #${parsed.number} foi excluído e não será reimportado` });
-          continue;
-        }
-
-        let existing = [];
-        if (parsed.access_key) {
-          existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
-        }
-        if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
-          existing = await base44.asServiceRole.entities.Invoice.filter({
-            number: parsed.number,
-            supplier_cnpj: parsed.supplier_cnpj,
-          });
-        }
-
-        if (existing.length > 0) {
-          errors.push({ index: i, error: `Documento #${parsed.number} já importado` });
-          continue;
-        }
-
-        const created = await base44.asServiceRole.entities.Invoice.create(parsed);
-        results.push(created);
-
-        await new Promise(resolve => setTimeout(resolve, 400));
-        if ((i + 1) % 5 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
+        parsedDocs.push({ index: i, parsed });
       } catch (err) {
         errors.push({ index: i, error: err.message });
       }
     }
 
+    // 2) Carrega de uma só vez as chaves já existentes e as excluídas, em vez
+    //    de 2-3 queries por XML. Paginamos para cobrir bases grandes.
+    const loadKeySets = async (entityName) => {
+      const accessKeys = new Set();
+      const numberCnpj = new Set();
+      let skip = 0;
+      const pageSize = 500;
+      while (true) {
+        const page = await base44.asServiceRole.entities[entityName].list("-created_date", pageSize, skip);
+        for (const rec of page) {
+          if (rec.access_key) accessKeys.add(rec.access_key);
+          if (rec.number && rec.supplier_cnpj) numberCnpj.add(`${rec.number}|${rec.supplier_cnpj}`);
+        }
+        if (page.length < pageSize) break;
+        skip += pageSize;
+      }
+      return { accessKeys, numberCnpj };
+    };
+
+    const existingKeys = await loadKeySets("Invoice");
+    const deletedKeys = await loadKeySets("DeletedInvoiceKey");
+
+    const isInSet = (keySets, parsed) => {
+      if (parsed.access_key && keySets.accessKeys.has(parsed.access_key)) return true;
+      if (parsed.number && parsed.supplier_cnpj && keySets.numberCnpj.has(`${parsed.number}|${parsed.supplier_cnpj}`)) return true;
+      return false;
+    };
+
+    // 3) Filtra em memória: descarta duplicados e excluídos. Dedupe também
+    //    dentro do próprio lote (XMLs repetidos no mesmo upload).
+    const toCreate = [];
+    const seenInBatch = new Set();
+    for (const { index, parsed } of parsedDocs) {
+      if (isInSet(deletedKeys, parsed)) {
+        errors.push({ index, error: `Documento #${parsed.number} foi excluído e não será reimportado` });
+        continue;
+      }
+      if (isInSet(existingKeys, parsed)) {
+        errors.push({ index, error: `Documento #${parsed.number} já importado` });
+        continue;
+      }
+      const dedupeKey = parsed.access_key || `${parsed.number}|${parsed.supplier_cnpj}`;
+      if (dedupeKey && seenInBatch.has(dedupeKey)) {
+        errors.push({ index, error: `Documento #${parsed.number} duplicado no lote` });
+        continue;
+      }
+      if (dedupeKey) seenInBatch.add(dedupeKey);
+      toCreate.push(parsed);
+    }
+
+    // 4) Cria em lotes via bulkCreate — 1 chamada por ~100 notas em vez de
+    //    1 chamada por nota, eliminando o gargalo de rate limit.
+    let success = 0;
+    const chunkSize = 100;
+    for (let i = 0; i < toCreate.length; i += chunkSize) {
+      const chunk = toCreate.slice(i, i + chunkSize);
+      try {
+        await base44.asServiceRole.entities.Invoice.bulkCreate(chunk);
+        success += chunk.length;
+      } catch (err) {
+        errors.push({ index: -1, error: `Falha ao gravar lote: ${err.message}` });
+      }
+      if (i + chunkSize < toCreate.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
     return Response.json({
-      success: results.length,
+      success,
       errors: errors.length,
       error_details: errors,
       total: xml_contents.length,

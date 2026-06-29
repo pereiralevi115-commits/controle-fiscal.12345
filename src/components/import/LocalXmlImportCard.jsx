@@ -65,7 +65,10 @@ export default function LocalXmlImportCard() {
         }))
       );
 
-      const batchSize = 5;
+      // O servidor agora processa cada lote inteiro de forma eficiente
+      // (dedupe em memória + bulkCreate), então enviamos blocos grandes.
+      // Mantemos blocos de 250 para não estourar o limite de payload da função.
+      const batchSize = 250;
       const totalBatches = Math.ceil(xmlContents.length / batchSize);
       let totalSuccess = 0;
       let totalErrors = 0;
@@ -85,9 +88,6 @@ export default function LocalXmlImportCard() {
           }))
         );
         setProgress({ current: Math.min((batchIndex + 1) * batchSize, xmlContents.length), total: xmlContents.length });
-        if (batchIndex < totalBatches - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
       }
 
       const finalResult = {
