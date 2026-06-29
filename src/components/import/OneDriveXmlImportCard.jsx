@@ -26,6 +26,7 @@ export default function OneDriveXmlImportCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [runningAuto, setRunningAuto] = useState(false);
   const [removingId, setRemovingId] = useState(null);
   const [result, setResult] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -182,6 +183,30 @@ export default function OneDriveXmlImportCard() {
     }
   };
 
+  // Roda a mesma rotina do automático sob demanda: varre pendentes em lote.
+  const handleRunAuto = async () => {
+    if (connectedFolders.length === 0) {
+      toast.error("Conecte pelo menos uma pasta do OneDrive primeiro.");
+      return;
+    }
+    setRunningAuto(true);
+    try {
+      const response = await base44.functions.invoke("oneDriveXmlAutoSync", {});
+      const r = response.data?.result || {};
+      await loadStatus();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      if (r.success > 0) {
+        toast.success(`${r.success} nota(s) pendente(s) importada(s)!`);
+      } else {
+        toast.message("Nenhum XML pendente para importar.");
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.error || error.message);
+    } finally {
+      setRunningAuto(false);
+    }
+  };
+
   const handleOpenFolder = (folder) => {
     loadFolder(folder.id, [...folderStack, currentFolder]);
   };
@@ -254,6 +279,10 @@ export default function OneDriveXmlImportCard() {
           <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing ? "Importando..." : "Importar agora"}
+          </Button>
+          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="flex-1 min-w-[140px] border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            {runningAuto ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Cloud className="w-4 h-4 mr-2" />}
+            {runningAuto ? "Varrendo pendentes..." : "Varrer pendentes agora"}
           </Button>
           <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
