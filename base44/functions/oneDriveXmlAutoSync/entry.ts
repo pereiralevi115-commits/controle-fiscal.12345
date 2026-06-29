@@ -446,34 +446,75 @@ async function saveResult(base44, settings, result, message) {
   });
 }
 
-// O webhook dispara quando algo muda. Em vez de reprocessar a pasta inteira
-// (centenas de arquivos -> timeout), pegamos apenas os XMLs modificados
-// recentemente (últimas 6h), no máx. 15 por pasta. A deduplicação ignora repetidos.
-async function importRecentXmls(base44, accessToken, folderId) {
-  const children = await graphRequest(
-    accessToken,
-    `/me/drive/items/${folderId}/children?$select=id,name,file,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=30`
-  );
-
-  const cutoff = Date.now() - 6 * 60 * 60 * 1000;
-  const xmlFiles = (children?.value || []).filter((item) => {
-    if (!item.file || !item.name?.toLowerCase().endsWith('.xml')) return false;
-    const modified = item.lastModifiedDateTime ? new Date(item.lastModifiedDateTime).getTime() : 0;
-    return modified >= cutoff;
-  }).slice(0, 15);
-
-  if (xmlFiles.length === 0) {
-    return { success: 0, errors: 0, total: 0 };
+// Lista TODOS os XMLs de uma pasta, paginando pela Graph API.
+async function listAllXmlFiles(accessToken, folderId) {
+  const files = [];
+  let url = `/me/drive/items/${folderId}/children?$select=id,name,file,lastModifiedDateTime&$top=200`;
+  while (url) {
+    const page = await graphRequest(accessToken, url);
+    for (const item of page?.value || []) {
+      if (item.file && item.name?.toLowerCase().endsWith('.xml')) {
+        files.push(item);
+      }
+    }
+    const next = page?.['@odata.nextLink'];
+    // nextLink vem como URL absoluta; graphRequest espera o path relativo a /v1.0.
+    url = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null;
   }
+  return files;
+}
+
+// Em vez de olhar só os arquivos recentes (que deixava de fora lotes grandes ou
+// webhooks perdidos), varremos a pasta inteira e importamos apenas os PENDENTES
+// — os XMLs cujo documento ainda não existe no banco. Para não estourar o tempo
+// de execução, processamos no máximo MAX_PER_RUN por execução; os faltantes
+// entram na passada seguinte (webhook ou agendamento de backup).
+const MAX_PER_RUN = 40;
+
+async function importPendingXmls(base44, accessToken, folderId, budget) {
+  if (budget <= 0) return { success: 0, errors: 0, total: 0, remaining: 1 };
+
+  const allFiles = await listAllXmlFiles(accessToken, folderId);
 
   const xmlContents = [];
-  for (const file of xmlFiles) {
+  let downloaded = 0;
+  for (const file of allFiles) {
+    if (downloaded >= budget) break;
+    let content;
     try {
-      xmlContents.push(await downloadFileText(accessToken, file.id));
-    } catch (_) { /* ignora falha de download individual */ }
+      content = await downloadFileText(accessToken, file.id);
+    } catch (_) { continue; }
+
+    // Só processa o que ainda não existe — evita rebaixar arquivos já importados.
+    try {
+      const parsed = parseXmlText(content);
+      if (!parsed.is_event) {
+        let existing = [];
+        if (parsed.access_key) {
+          existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+        }
+        if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
+          existing = await base44.asServiceRole.entities.Invoice.filter({
+            number: parsed.number,
+            supplier_cnpj: parsed.supplier_cnpj,
+          });
+        }
+        if (existing.length > 0) continue; // já importado, pula
+      }
+    } catch (_) { /* deixa importXmlContents tratar/contar o erro */ }
+
+    xmlContents.push(content);
+    downloaded++;
   }
 
-  return await importXmlContents(base44, xmlContents);
+  if (xmlContents.length === 0) {
+    return { success: 0, errors: 0, total: 0, remaining: 0 };
+  }
+
+  const result = await importXmlContents(base44, xmlContents);
+  // Se enchemos o orçamento, provavelmente ainda há pendentes para a próxima execução.
+  result.remaining = downloaded >= budget ? 1 : 0;
+  return result;
 }
 
 Deno.serve(async (req) => {
@@ -489,16 +530,21 @@ Deno.serve(async (req) => {
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('one_drive');
 
     const totals = { success: 0, errors: 0, total: 0 };
+    let pending = false;
+    let budget = MAX_PER_RUN;
     for (const folder of connectedFolders) {
-      const result = await importRecentXmls(base44, accessToken, folder.folder_id);
+      const result = await importPendingXmls(base44, accessToken, folder.folder_id, budget);
       totals.success += result.success || 0;
       totals.errors += result.errors || 0;
       totals.total += result.total || 0;
+      budget -= (result.total || 0);
+      if (result.remaining) pending = true;
+      if (budget <= 0) { pending = true; break; }
     }
 
     const message = totals.total === 0
-      ? 'Automático: nenhum XML novo nas últimas 24h.'
-      : `Automático: ${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))`;
+      ? 'Automático: nenhum XML pendente para importar.'
+      : `Automático: ${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há pendentes, continuará na próxima execução.' : ''}`;
 
     await saveResult(base44, settings, totals, message);
     return Response.json({ ok: true, result: totals });
