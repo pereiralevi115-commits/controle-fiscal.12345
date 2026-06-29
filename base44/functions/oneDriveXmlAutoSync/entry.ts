@@ -461,6 +461,14 @@ async function listAllXmlFiles(accessToken, folderId) {
     // nextLink vem como URL absoluta; graphRequest espera o path relativo a /v1.0.
     url = next ? next.replace('https://graph.microsoft.com/v1.0', '') : null;
   }
+  // Ordena do mais RECENTE para o mais antigo: os XMLs pendentes (recém-salvos
+  // pelo emissor) ficam no topo da fila e são processados primeiro, mesmo quando
+  // o nome do arquivo não contém a chave de acesso.
+  files.sort((a, b) => {
+    const ta = a.lastModifiedDateTime ? new Date(a.lastModifiedDateTime).getTime() : 0;
+    const tb = b.lastModifiedDateTime ? new Date(b.lastModifiedDateTime).getTime() : 0;
+    return tb - ta;
+  });
   return files;
 }
 
@@ -511,14 +519,16 @@ async function importPendingXmls(base44, accessToken, folderId, budget) {
   }
   const existingKeys = await fetchExistingKeys(base44, keysFromNames);
 
+  // allFiles já vem ordenado do mais recente para o mais antigo, então os
+  // pendentes (recém-salvos pelo emissor) estão no topo. Montamos a fila de
+  // candidatos descartando os já importados pelo nome (quando possível) e
+  // limitando ao orçamento da execução — os pendentes mais novos vêm primeiro.
   const candidates = [];
   for (const file of allFiles) {
     const key = accessKeyFromName(file.name);
     if (key && existingKeys.has(key)) continue; // já importado, pula sem baixar
     candidates.push(file);
-    // Limita o nº de candidatos avaliados para não percorrer milhares de arquivos
-    // por execução — o restante entra na próxima passada.
-    if (candidates.length >= budget * 4) break;
+    if (candidates.length >= budget) break;
   }
 
   // 2ª passada (com download, limitada ao orçamento): baixa e confirma pendência.
