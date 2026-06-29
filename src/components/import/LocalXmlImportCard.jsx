@@ -76,18 +76,31 @@ export default function LocalXmlImportCard() {
 
       setProgress({ current: 0, total: xmlContents.length });
 
-      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
-        const batch = xmlContents.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
-        const response = await base44.functions.invoke("parseXml", { xml_contents: batch });
-        totalSuccess += response.data.success || 0;
-        totalErrors += response.data.errors || 0;
-        allErrorDetails = allErrorDetails.concat(
-          (response.data.error_details || []).map((item) => ({
-            ...item,
-            index: item.index + batchIndex * batchSize,
-          }))
-        );
-        setProgress({ current: Math.min((batchIndex + 1) * batchSize, xmlContents.length), total: xmlContents.length });
+      // Adquire a trava UMA vez para todo o upload. Assim os lotes não competem
+      // com a importação automática (que rodava a cada 30 min e roubava a trava
+      // entre lotes, fazendo o processo parar no meio e voltar à tela).
+      let lockHeld = false;
+      try {
+        await base44.functions.invoke("parseXml", { action: "lock" });
+        lockHeld = true;
+
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
+          const batch = xmlContents.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+          const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
+          totalSuccess += response.data.success || 0;
+          totalErrors += response.data.errors || 0;
+          allErrorDetails = allErrorDetails.concat(
+            (response.data.error_details || []).map((item) => ({
+              ...item,
+              index: item.index + batchIndex * batchSize,
+            }))
+          );
+          setProgress({ current: Math.min((batchIndex + 1) * batchSize, xmlContents.length), total: xmlContents.length });
+        }
+      } finally {
+        if (lockHeld) {
+          await base44.functions.invoke("parseXml", { action: "unlock" }).catch(() => {});
+        }
       }
 
       const finalResult = {

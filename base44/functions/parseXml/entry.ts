@@ -532,18 +532,42 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const { xml_contents } = await req.json();
+    const body = await req.json();
+    const { xml_contents, action, keep_lock } = body;
+
+    // Ações dedicadas de trava: o upload em vários lotes adquire a trava UMA vez
+    // no início e libera só no fim, em vez de travar/destravar a cada lote.
+    if (action === "lock") {
+      const lock = await acquireImportLock(base44, "upload");
+      if (!lock.ok) {
+        return Response.json({
+          error: `Já existe uma importação em andamento (${lock.source}). Aguarde concluir antes de iniciar outra.`,
+          import_busy: true,
+        }, { status: 409 });
+      }
+      return Response.json({ locked: true });
+    }
+    if (action === "unlock") {
+      await releaseImportLock(base44);
+      return Response.json({ unlocked: true });
+    }
 
     if (!xml_contents || !Array.isArray(xml_contents)) {
       return Response.json({ error: "xml_contents deve ser um array de strings XML" }, { status: 400 });
     }
 
-    const lock = await acquireImportLock(base44, "upload");
-    if (!lock.ok) {
-      return Response.json({
-        error: `Já existe uma importação em andamento (${lock.source}). Aguarde concluir antes de iniciar outra.`,
-        import_busy: true,
-      }, { status: 409 });
+    // Se keep_lock=true, a trava é gerida pelo cliente (ações lock/unlock) e este
+    // lote não toca na trava. Caso contrário, mantém o comportamento de lote único.
+    let acquiredHere = false;
+    if (!keep_lock) {
+      const lock = await acquireImportLock(base44, "upload");
+      if (!lock.ok) {
+        return Response.json({
+          error: `Já existe uma importação em andamento (${lock.source}). Aguarde concluir antes de iniciar outra.`,
+          import_busy: true,
+        }, { status: 409 });
+      }
+      acquiredHere = true;
     }
 
     try {
@@ -561,33 +585,27 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 2) Carrega de uma só vez as chaves já existentes e as excluídas, em vez
-      //    de 2-3 queries por XML. Paginamos para cobrir bases grandes.
-      const loadKeySets = async (entityName) => {
-        const accessKeys = new Set();
-        const numberCnpj = new Set();
-        let skip = 0;
-        const pageSize = 500;
-        while (true) {
-          const page = await base44.asServiceRole.entities[entityName].list("-created_date", pageSize, skip);
-          for (const rec of page) {
-            if (rec.access_key) accessKeys.add(rec.access_key);
-            if (rec.number && rec.supplier_cnpj) numberCnpj.add(`${rec.number}|${rec.supplier_cnpj}`);
-          }
-          if (page.length < pageSize) break;
-          skip += pageSize;
-        }
-        return { accessKeys, numberCnpj };
-      };
+      // 2) Verifica duplicados de forma DIRECIONADA: em vez de recarregar toda a
+      //    base a cada lote (que ficava cada vez mais lento e estourava o tempo da
+      //    função), consultamos apenas as chaves de acesso presentes neste lote.
+      const batchAccessKeys = [...new Set(parsedDocs.map(d => d.parsed.access_key).filter(Boolean))];
 
-      const existingKeys = await loadKeySets("Invoice");
-      const deletedKeys = await loadKeySets("DeletedInvoiceKey");
+      const existingAK = new Set();
+      const deletedAK = new Set();
+      const lookupChunk = 50;
+      for (let i = 0; i < batchAccessKeys.length; i += lookupChunk) {
+        const slice = batchAccessKeys.slice(i, i + lookupChunk);
+        const [inv, del] = await Promise.all([
+          base44.asServiceRole.entities.Invoice.filter({ access_key: { $in: slice } }),
+          base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: { $in: slice } }),
+        ]);
+        inv.forEach(r => r.access_key && existingAK.add(r.access_key));
+        del.forEach(r => r.access_key && deletedAK.add(r.access_key));
+      }
 
-      const isInSet = (keySets, parsed) => {
-        if (parsed.access_key && keySets.accessKeys.has(parsed.access_key)) return true;
-        if (parsed.number && parsed.supplier_cnpj && keySets.numberCnpj.has(`${parsed.number}|${parsed.supplier_cnpj}`)) return true;
-        return false;
-      };
+      const isInSet = (akSet, parsed) => parsed.access_key && akSet.has(parsed.access_key);
+      const existingKeys = existingAK;
+      const deletedKeys = deletedAK;
 
       // 3) Filtra em memória: descarta duplicados e excluídos. Dedupe também
       //    dentro do próprio lote (XMLs repetidos no mesmo upload).
@@ -635,7 +653,9 @@ Deno.serve(async (req) => {
         total: xml_contents.length,
       });
     } finally {
-      await releaseImportLock(base44);
+      if (acquiredHere) {
+        await releaseImportLock(base44);
+      }
     }
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
