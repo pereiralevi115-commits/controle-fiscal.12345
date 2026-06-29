@@ -491,8 +491,9 @@ function parseXmlDocument(xmlText) {
 }
 
 // ---------- Trava global de importação (evita gravações simultâneas) ----------
-// Stale após 15 min: se um processo travar/morrer sem liberar, a trava expira.
-const LOCK_STALE_MS = 15 * 60 * 1000;
+// Stale após 3 min: se um processo travar/morrer sem liberar (ex.: usuário fecha
+// a aba no meio do upload), a trava expira rápido e não bloqueia novas importações.
+const LOCK_STALE_MS = 3 * 60 * 1000;
 
 async function getImportSettings(base44) {
   const settings = await base44.asServiceRole.entities.OneDriveImportSettings.filter({ key: "default" });

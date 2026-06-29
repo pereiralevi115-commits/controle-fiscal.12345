@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,6 +13,19 @@ export default function LocalXmlImportCard() {
   const [result, setResult] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const lockHeldRef = useRef(false);
+
+  // Se o usuário fechar/recarregar a aba no meio do upload, libera a trava global
+  // para não deixá-la presa bloqueando as próximas importações.
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (lockHeldRef.current) {
+        base44.functions.invoke("parseXml", { action: "unlock" }).catch(() => {});
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
 
   const handleFiles = useCallback((newFiles) => {
     const xmlFiles = Array.from(newFiles).filter(
@@ -67,7 +80,7 @@ export default function LocalXmlImportCard() {
       // Com milhares de XMLs, abrir um FileReader por arquivo simultaneamente
       // (Promise.all sobre 4600+ arquivos) estourava a memória e travava a aba.
       // Agora só os arquivos do lote atual ficam carregados na memória.
-      const batchSize = 150;
+      const batchSize = 40;
       const totalBatches = Math.ceil(files.length / batchSize);
       let totalSuccess = 0;
       let totalErrors = 0;
@@ -82,6 +95,7 @@ export default function LocalXmlImportCard() {
       try {
         await base44.functions.invoke("parseXml", { action: "lock" });
         lockHeld = true;
+        lockHeldRef.current = true;
 
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
           const fileBatch = files.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
@@ -119,6 +133,7 @@ export default function LocalXmlImportCard() {
       } finally {
         if (lockHeld) {
           await base44.functions.invoke("parseXml", { action: "unlock" }).catch(() => {});
+          lockHeldRef.current = false;
         }
       }
 
