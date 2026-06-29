@@ -36,45 +36,44 @@ export default function LocalXmlImportCard() {
     setFiles((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   };
 
+  // Lê UM arquivo do disco e devolve o texto decodificado.
+  const readFileText = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const buffer = reader.result;
+      // Tenta decodificar como UTF-8 em modo estrito. Se o arquivo estiver em
+      // ISO-8859-1/Windows-1252 (comum em NF-e/CT-e antigos), o UTF-8 estrito
+      // falha e caímos para windows-1252. Isso evita tanto a corrupção de
+      // acentos quanto o caractere inválido (U+FFFD) que tornava o XML ilegível.
+      let text;
+      try {
+        text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+      } catch {
+        text = new TextDecoder("windows-1252").decode(buffer);
+      }
+      resolve(text);
+    };
+    reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+    reader.readAsArrayBuffer(file);
+  });
+
   const handleImport = async () => {
     if (files.length === 0) return;
     setImporting(true);
     setResult(null);
 
     try {
-      const xmlContents = await Promise.all(
-        files.map((file) => new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const buffer = reader.result;
-            // Tenta decodificar como UTF-8 em modo estrito. Se o arquivo
-            // estiver em ISO-8859-1/Windows-1252 (comum em NF-e/CT-e antigos),
-            // o UTF-8 estrito falha e caímos para windows-1252. Isso evita
-            // tanto a corrupção de acentos quanto o caractere inválido (U+FFFD)
-            // que tornava o XML ilegível para o parser do servidor.
-            let text;
-            try {
-              text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-            } catch {
-              text = new TextDecoder("windows-1252").decode(buffer);
-            }
-            resolve(text);
-          };
-          reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
-          reader.readAsArrayBuffer(file);
-        }))
-      );
-
-      // O servidor agora processa cada lote inteiro de forma eficiente
-      // (dedupe em memória + bulkCreate), então enviamos blocos grandes.
-      // Mantemos blocos de 250 para não estourar o limite de payload da função.
+      // IMPORTANTE: lemos os arquivos LOTE A LOTE, não todos de uma vez.
+      // Com milhares de XMLs, abrir um FileReader por arquivo simultaneamente
+      // (Promise.all sobre 4600+ arquivos) estourava a memória e travava a aba.
+      // Agora só os arquivos do lote atual ficam carregados na memória.
       const batchSize = 250;
-      const totalBatches = Math.ceil(xmlContents.length / batchSize);
+      const totalBatches = Math.ceil(files.length / batchSize);
       let totalSuccess = 0;
       let totalErrors = 0;
       let allErrorDetails = [];
 
-      setProgress({ current: 0, total: xmlContents.length });
+      setProgress({ current: 0, total: files.length });
 
       // Adquire a trava UMA vez para todo o upload. Assim os lotes não competem
       // com a importação automática (que rodava a cada 30 min e roubava a trava
@@ -85,7 +84,9 @@ export default function LocalXmlImportCard() {
         lockHeld = true;
 
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
-          const batch = xmlContents.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+          const fileBatch = files.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
+          // Lê apenas os arquivos deste lote (limitado a batchSize).
+          const batch = await Promise.all(fileBatch.map(readFileText));
           const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
           totalSuccess += response.data.success || 0;
           totalErrors += response.data.errors || 0;
@@ -95,7 +96,7 @@ export default function LocalXmlImportCard() {
               index: item.index + batchIndex * batchSize,
             }))
           );
-          setProgress({ current: Math.min((batchIndex + 1) * batchSize, xmlContents.length), total: xmlContents.length });
+          setProgress({ current: Math.min((batchIndex + 1) * batchSize, files.length), total: files.length });
         }
       } finally {
         if (lockHeld) {
@@ -107,7 +108,7 @@ export default function LocalXmlImportCard() {
         success: totalSuccess,
         errors: totalErrors,
         error_details: allErrorDetails,
-        total: xmlContents.length,
+        total: files.length,
       };
 
       setResult(finalResult);
