@@ -67,7 +67,7 @@ export default function LocalXmlImportCard() {
       // Com milhares de XMLs, abrir um FileReader por arquivo simultaneamente
       // (Promise.all sobre 4600+ arquivos) estourava a memória e travava a aba.
       // Agora só os arquivos do lote atual ficam carregados na memória.
-      const batchSize = 250;
+      const batchSize = 150;
       const totalBatches = Math.ceil(files.length / batchSize);
       let totalSuccess = 0;
       let totalErrors = 0;
@@ -87,16 +87,34 @@ export default function LocalXmlImportCard() {
           const fileBatch = files.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
           // Lê apenas os arquivos deste lote (limitado a batchSize).
           const batch = await Promise.all(fileBatch.map(readFileText));
-          const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
-          totalSuccess += response.data.success || 0;
-          totalErrors += response.data.errors || 0;
-          allErrorDetails = allErrorDetails.concat(
-            (response.data.error_details || []).map((item) => ({
-              ...item,
-              index: item.index + batchIndex * batchSize,
-            }))
-          );
+
+          // Resiliência por lote: se UM lote falhar (timeout/500), registramos o
+          // erro e seguimos para o próximo — em vez de abortar todo o upload e
+          // perder o progresso já feito.
+          try {
+            const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
+            totalSuccess += response.data.success || 0;
+            totalErrors += response.data.errors || 0;
+            allErrorDetails = allErrorDetails.concat(
+              (response.data.error_details || []).map((item) => ({
+                ...item,
+                index: item.index + batchIndex * batchSize,
+              }))
+            );
+          } catch (batchErr) {
+            totalErrors += batch.length;
+            allErrorDetails.push({
+              index: batchIndex * batchSize,
+              error: `Lote ${batchIndex + 1} falhou: ${batchErr?.response?.data?.error || batchErr.message}`,
+            });
+          }
+
           setProgress({ current: Math.min((batchIndex + 1) * batchSize, files.length), total: files.length });
+
+          // Cede a thread principal entre lotes: dá ao navegador a chance de
+          // coletar o lixo (os textos do lote anterior) e repintar a barra de
+          // progresso, evitando que a aba congele/recarregue em volumes grandes.
+          await new Promise((r) => setTimeout(r, 50));
         }
       } finally {
         if (lockHeld) {
