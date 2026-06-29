@@ -490,6 +490,44 @@ function parseXmlDocument(xmlText) {
   return parsed;
 }
 
+// ---------- Trava global de importação (evita gravações simultâneas) ----------
+// Stale após 15 min: se um processo travar/morrer sem liberar, a trava expira.
+const LOCK_STALE_MS = 15 * 60 * 1000;
+
+async function getImportSettings(base44) {
+  const settings = await base44.asServiceRole.entities.OneDriveImportSettings.filter({ key: "default" });
+  return settings[0] || null;
+}
+
+async function acquireImportLock(base44, source) {
+  const settings = await getImportSettings(base44);
+  if (settings?.import_locked) {
+    const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+    if (Date.now() - lockedAt < LOCK_STALE_MS) {
+      return { ok: false, source: settings.import_lock_source || "outra" };
+    }
+  }
+  if (!settings) {
+    await base44.asServiceRole.entities.OneDriveImportSettings.create({
+      key: "default", import_locked: true, import_lock_source: source, import_lock_at: new Date().toISOString(),
+    });
+    return { ok: true };
+  }
+  await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+    import_locked: true, import_lock_source: source, import_lock_at: new Date().toISOString(),
+  });
+  return { ok: true };
+}
+
+async function releaseImportLock(base44) {
+  const settings = await getImportSettings(base44);
+  if (settings) {
+    await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+      import_locked: false, import_lock_source: null,
+    });
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -500,93 +538,105 @@ Deno.serve(async (req) => {
       return Response.json({ error: "xml_contents deve ser um array de strings XML" }, { status: 400 });
     }
 
-    const errors = [];
-
-    // 1) Parse de todos os XMLs em memória (sem tocar no banco).
-    const parsedDocs = [];
-    for (let i = 0; i < xml_contents.length; i++) {
-      try {
-        const parsed = parseXmlDocument(xml_contents[i]);
-        parsed.branch_cnpj = parsed.recipient_cnpj;
-        parsedDocs.push({ index: i, parsed });
-      } catch (err) {
-        errors.push({ index: i, error: err.message });
-      }
+    const lock = await acquireImportLock(base44, "upload");
+    if (!lock.ok) {
+      return Response.json({
+        error: `Já existe uma importação em andamento (${lock.source}). Aguarde concluir antes de iniciar outra.`,
+        import_busy: true,
+      }, { status: 409 });
     }
 
-    // 2) Carrega de uma só vez as chaves já existentes e as excluídas, em vez
-    //    de 2-3 queries por XML. Paginamos para cobrir bases grandes.
-    const loadKeySets = async (entityName) => {
-      const accessKeys = new Set();
-      const numberCnpj = new Set();
-      let skip = 0;
-      const pageSize = 500;
-      while (true) {
-        const page = await base44.asServiceRole.entities[entityName].list("-created_date", pageSize, skip);
-        for (const rec of page) {
-          if (rec.access_key) accessKeys.add(rec.access_key);
-          if (rec.number && rec.supplier_cnpj) numberCnpj.add(`${rec.number}|${rec.supplier_cnpj}`);
+    try {
+      const errors = [];
+
+      // 1) Parse de todos os XMLs em memória (sem tocar no banco).
+      const parsedDocs = [];
+      for (let i = 0; i < xml_contents.length; i++) {
+        try {
+          const parsed = parseXmlDocument(xml_contents[i]);
+          parsed.branch_cnpj = parsed.recipient_cnpj;
+          parsedDocs.push({ index: i, parsed });
+        } catch (err) {
+          errors.push({ index: i, error: err.message });
         }
-        if (page.length < pageSize) break;
-        skip += pageSize;
       }
-      return { accessKeys, numberCnpj };
-    };
 
-    const existingKeys = await loadKeySets("Invoice");
-    const deletedKeys = await loadKeySets("DeletedInvoiceKey");
+      // 2) Carrega de uma só vez as chaves já existentes e as excluídas, em vez
+      //    de 2-3 queries por XML. Paginamos para cobrir bases grandes.
+      const loadKeySets = async (entityName) => {
+        const accessKeys = new Set();
+        const numberCnpj = new Set();
+        let skip = 0;
+        const pageSize = 500;
+        while (true) {
+          const page = await base44.asServiceRole.entities[entityName].list("-created_date", pageSize, skip);
+          for (const rec of page) {
+            if (rec.access_key) accessKeys.add(rec.access_key);
+            if (rec.number && rec.supplier_cnpj) numberCnpj.add(`${rec.number}|${rec.supplier_cnpj}`);
+          }
+          if (page.length < pageSize) break;
+          skip += pageSize;
+        }
+        return { accessKeys, numberCnpj };
+      };
 
-    const isInSet = (keySets, parsed) => {
-      if (parsed.access_key && keySets.accessKeys.has(parsed.access_key)) return true;
-      if (parsed.number && parsed.supplier_cnpj && keySets.numberCnpj.has(`${parsed.number}|${parsed.supplier_cnpj}`)) return true;
-      return false;
-    };
+      const existingKeys = await loadKeySets("Invoice");
+      const deletedKeys = await loadKeySets("DeletedInvoiceKey");
 
-    // 3) Filtra em memória: descarta duplicados e excluídos. Dedupe também
-    //    dentro do próprio lote (XMLs repetidos no mesmo upload).
-    const toCreate = [];
-    const seenInBatch = new Set();
-    for (const { index, parsed } of parsedDocs) {
-      if (isInSet(deletedKeys, parsed)) {
-        errors.push({ index, error: `Documento #${parsed.number} foi excluído e não será reimportado` });
-        continue;
+      const isInSet = (keySets, parsed) => {
+        if (parsed.access_key && keySets.accessKeys.has(parsed.access_key)) return true;
+        if (parsed.number && parsed.supplier_cnpj && keySets.numberCnpj.has(`${parsed.number}|${parsed.supplier_cnpj}`)) return true;
+        return false;
+      };
+
+      // 3) Filtra em memória: descarta duplicados e excluídos. Dedupe também
+      //    dentro do próprio lote (XMLs repetidos no mesmo upload).
+      const toCreate = [];
+      const seenInBatch = new Set();
+      for (const { index, parsed } of parsedDocs) {
+        if (isInSet(deletedKeys, parsed)) {
+          errors.push({ index, error: `Documento #${parsed.number} foi excluído e não será reimportado` });
+          continue;
+        }
+        if (isInSet(existingKeys, parsed)) {
+          errors.push({ index, error: `Documento #${parsed.number} já importado` });
+          continue;
+        }
+        const dedupeKey = parsed.access_key || `${parsed.number}|${parsed.supplier_cnpj}`;
+        if (dedupeKey && seenInBatch.has(dedupeKey)) {
+          errors.push({ index, error: `Documento #${parsed.number} duplicado no lote` });
+          continue;
+        }
+        if (dedupeKey) seenInBatch.add(dedupeKey);
+        toCreate.push(parsed);
       }
-      if (isInSet(existingKeys, parsed)) {
-        errors.push({ index, error: `Documento #${parsed.number} já importado` });
-        continue;
+
+      // 4) Cria em lotes via bulkCreate — 1 chamada por ~100 notas em vez de
+      //    1 chamada por nota, eliminando o gargalo de rate limit.
+      let success = 0;
+      const chunkSize = 100;
+      for (let i = 0; i < toCreate.length; i += chunkSize) {
+        const chunk = toCreate.slice(i, i + chunkSize);
+        try {
+          await base44.asServiceRole.entities.Invoice.bulkCreate(chunk);
+          success += chunk.length;
+        } catch (err) {
+          errors.push({ index: -1, error: `Falha ao gravar lote: ${err.message}` });
+        }
+        if (i + chunkSize < toCreate.length) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
-      const dedupeKey = parsed.access_key || `${parsed.number}|${parsed.supplier_cnpj}`;
-      if (dedupeKey && seenInBatch.has(dedupeKey)) {
-        errors.push({ index, error: `Documento #${parsed.number} duplicado no lote` });
-        continue;
-      }
-      if (dedupeKey) seenInBatch.add(dedupeKey);
-      toCreate.push(parsed);
+
+      return Response.json({
+        success,
+        errors: errors.length,
+        error_details: errors,
+        total: xml_contents.length,
+      });
+    } finally {
+      await releaseImportLock(base44);
     }
-
-    // 4) Cria em lotes via bulkCreate — 1 chamada por ~100 notas em vez de
-    //    1 chamada por nota, eliminando o gargalo de rate limit.
-    let success = 0;
-    const chunkSize = 100;
-    for (let i = 0; i < toCreate.length; i += chunkSize) {
-      const chunk = toCreate.slice(i, i + chunkSize);
-      try {
-        await base44.asServiceRole.entities.Invoice.bulkCreate(chunk);
-        success += chunk.length;
-      } catch (err) {
-        errors.push({ index: -1, error: `Falha ao gravar lote: ${err.message}` });
-      }
-      if (i + chunkSize < toCreate.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-
-    return Response.json({
-      success,
-      errors: errors.length,
-      error_details: errors,
-      total: xml_contents.length,
-    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

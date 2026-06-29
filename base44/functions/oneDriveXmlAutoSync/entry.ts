@@ -527,6 +527,20 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: 'Sincronização automática desativada.' });
     }
 
+    // Trava global: se já houver uma importação manual (upload) ou outra rodando,
+    // pula esta execução para não gerar notas duplicadas.
+    const LOCK_STALE_MS = 15 * 60 * 1000;
+    if (settings.import_locked) {
+      const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+      if (Date.now() - lockedAt < LOCK_STALE_MS) {
+        return Response.json({ skipped: true, reason: `Outra importação em andamento (${settings.import_lock_source || 'outra'}).` });
+      }
+    }
+    await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+      import_locked: true, import_lock_source: 'auto', import_lock_at: new Date().toISOString(),
+    });
+
+    try {
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('one_drive');
 
     const totals = { success: 0, errors: 0, total: 0 };
@@ -548,6 +562,14 @@ Deno.serve(async (req) => {
 
     await saveResult(base44, settings, totals, message);
     return Response.json({ ok: true, result: totals });
+    } finally {
+      const fresh = await getSettings(base44);
+      if (fresh) {
+        await base44.asServiceRole.entities.OneDriveImportSettings.update(fresh.id, {
+          import_locked: false, import_lock_source: null,
+        });
+      }
+    }
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

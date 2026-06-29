@@ -103,7 +103,11 @@ export default function LocalXmlImportCard() {
       if (totalErrors > 0) toast.warning(`${totalErrors} arquivo(s) com erro`);
       setFiles([]);
     } catch (error) {
-      toast.error("Erro ao importar: " + (error?.response?.data?.error || error.message));
+      if (error?.response?.status === 409 || error?.response?.data?.import_busy) {
+        toast.error(error?.response?.data?.error || "Já existe uma importação em andamento. Aguarde concluir.");
+      } else {
+        toast.error("Erro ao importar: " + (error?.response?.data?.error || error.message));
+      }
     } finally {
       setImporting(false);
       setProgress({ current: 0, total: 0 });

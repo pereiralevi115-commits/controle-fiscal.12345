@@ -710,6 +710,25 @@ Deno.serve(async (req) => {
       // Processa uma pasta por vez, lote por lote. O frontend controla folderIndex/skip.
       const folderIndex = payload.folderIndex || 0;
       const skip = payload.skip || 0;
+
+      // Trava global: adquirida no primeiro lote, liberada quando concluir (allDone).
+      const LOCK_STALE_MS = 15 * 60 * 1000;
+      const isFirstBatchOfRun = folderIndex === 0 && skip === 0;
+      if (isFirstBatchOfRun) {
+        if (settings?.import_locked) {
+          const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+          if (Date.now() - lockedAt < LOCK_STALE_MS) {
+            return Response.json({
+              error: `Já existe uma importação em andamento (${settings.import_lock_source || 'outra'}). Aguarde concluir antes de iniciar outra.`,
+              import_busy: true,
+            }, { status: 409 });
+          }
+        }
+        await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+          import_locked: true, import_lock_source: 'onedrive', import_lock_at: new Date().toISOString(),
+        });
+      }
+
       const currentFolderEntry = connectedFolders[folderIndex];
 
       if (!currentFolderEntry) {
@@ -746,6 +765,16 @@ Deno.serve(async (req) => {
         last_import_success: totalSuccess,
         last_import_errors: totalErrors,
       });
+
+      // Libera a trava global quando toda a importação terminar.
+      if (allDone) {
+        const fresh = await getSettings(base44);
+        if (fresh) {
+          await base44.asServiceRole.entities.OneDriveImportSettings.update(fresh.id, {
+            import_locked: false, import_lock_source: null,
+          });
+        }
+      }
 
       // Indica ao frontend qual a próxima posição (próximo lote ou próxima pasta).
       const nextFolderIndex = folderDone ? folderIndex + 1 : folderIndex;
