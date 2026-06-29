@@ -6,6 +6,7 @@ import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
 import { useAuth } from "@/lib/AuthContext";
+import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 /**
  * Conteúdo da aba "NFS-e" reutilizado nas telas de gestão (Compras, Frota,
@@ -27,7 +28,7 @@ export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
   const toggleSelectAll = (checked, docs) =>
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
-  const filtered = useMemo(() => {
+  const filteredWithoutMonth = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
     return documents.filter((doc) => {
       const supplier = suppliers.find((s) => s.cnpj === doc.supplier_cnpj);
@@ -36,11 +37,6 @@ export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
       if (doc.archived) return false;
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
-      if (filters.monthYear !== "all" && doc.issue_date) {
-        const date = new Date(doc.issue_date + "T12:00:00");
-        const my = `${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
-        if (my !== filters.monthYear) return false;
-      }
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;
       if (filters.sigv === "nao" && doc.sigv_recorded) return false;
       if (filters.topcon === "sim" && !doc.topcon_recorded) return false;
@@ -49,7 +45,20 @@ export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
       if (filters.boleto === "nao" && doc.boleto_recorded) return false;
       return true;
     });
-  }, [documents, filters, suppliers, supplierFlag, allowedCnpjs]);
+  }, [documents, filters.search, filters.branch, filters.sigv, filters.topcon, filters.boleto, suppliers, supplierFlag, allowedCnpjs]);
+
+  const availableMonths = useMemo(() => getMonthsFromInvoices(filteredWithoutMonth), [filteredWithoutMonth]);
+
+  const filtered = useMemo(() => {
+    return filteredWithoutMonth.filter((doc) => {
+      if (filters.monthYear !== "all" && doc.issue_date) {
+        const date = new Date(doc.issue_date + "T12:00:00");
+        const my = `${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+        if (my !== filters.monthYear) return false;
+      }
+      return true;
+    });
+  }, [filteredWithoutMonth, filters.monthYear]);
 
   return (
     <div className="space-y-6">
@@ -62,6 +71,7 @@ export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
         onFilterChange={setFilters}
         branches={branches}
         invoices={documents}
+        availableMonths={availableMonths}
       />
 
       <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
+import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 export default function CTe() {
   const { data: documents = [], isLoading } = useInvoices("cte");
@@ -30,16 +31,11 @@ export default function CTe() {
   const toggleSelectAll = (checked, docs) =>
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
-  const filtered = useMemo(() => {
+  const filteredWithoutMonth = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
     return documents.filter((doc) => {
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
-      if (filters.monthYear !== "all" && doc.issue_date) {
-        const date = new Date(doc.issue_date + "T12:00:00");
-        const my = `${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
-        if (my !== filters.monthYear) return false;
-      }
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;
       if (filters.sigv === "nao" && doc.sigv_recorded) return false;
       if (filters.topcon === "sim" && !doc.topcon_recorded) return false;
@@ -48,7 +44,20 @@ export default function CTe() {
       if (filters.boleto === "nao" && doc.boleto_recorded) return false;
       return true;
     });
-  }, [documents, filters]);
+  }, [documents, filters.search, filters.branch, filters.sigv, filters.topcon, filters.boleto]);
+
+  const availableMonths = useMemo(() => getMonthsFromInvoices(filteredWithoutMonth), [filteredWithoutMonth]);
+
+  const filtered = useMemo(() => {
+    return filteredWithoutMonth.filter((doc) => {
+      if (filters.monthYear !== "all" && doc.issue_date) {
+        const date = new Date(doc.issue_date + "T12:00:00");
+        const my = `${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+        if (my !== filters.monthYear) return false;
+      }
+      return true;
+    });
+  }, [filteredWithoutMonth, filters.monthYear]);
 
   if (isLoading) {
     return (
@@ -79,6 +88,7 @@ export default function CTe() {
           onFilterChange={setFilters}
           branches={branches}
           invoices={documents}
+          availableMonths={availableMonths}
         />
 
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
