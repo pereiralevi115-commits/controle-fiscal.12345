@@ -596,8 +596,10 @@ Deno.serve(async (req) => {
     }
 
     // Trava global: se já houver uma importação manual (upload) ou outra rodando,
-    // pula esta execução para não gerar notas duplicadas.
-    const LOCK_STALE_MS = 3 * 60 * 1000;
+    // pula esta execução para não gerar notas duplicadas. Travas próprias da
+    // varredura automática ("auto") são consideradas velhas mais cedo (90s),
+    // para auto-recuperar rápido quando uma execução é cortada no meio.
+    const LOCK_STALE_MS = settings.import_lock_source === 'auto' ? 90 * 1000 : 3 * 60 * 1000;
     if (settings.import_locked) {
       const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
       if (Date.now() - lockedAt < LOCK_STALE_MS) {
