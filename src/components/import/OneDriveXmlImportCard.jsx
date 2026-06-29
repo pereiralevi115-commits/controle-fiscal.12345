@@ -275,18 +275,18 @@ export default function OneDriveXmlImportCard() {
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="flex-1 min-w-[140px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="h-10 w-full font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm shadow-indigo-500/20">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing ? "Importando..." : "Importar agora"}
           </Button>
-          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="flex-1 min-w-[140px] border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="h-10 w-full font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
             {runningAuto ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Cloud className="w-4 h-4 mr-2" />}
-            {runningAuto ? "Varrendo pendentes..." : "Varrer pendentes agora"}
+            {runningAuto ? "Varrendo..." : "Varrer pendentes"}
           </Button>
-          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className="flex-1 min-w-[140px] border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className={`h-10 w-full font-medium ${autoOn ? "border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"}`}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            {autoOn ? "Desativar automático" : "Ativar automático"}
+            {autoOn ? "Desativar auto" : "Ativar automático"}
           </Button>
         </div>
 
