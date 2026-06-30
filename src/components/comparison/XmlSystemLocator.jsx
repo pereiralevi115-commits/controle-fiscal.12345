@@ -87,6 +87,12 @@ function getAllocation(invoice, supplier, branchMap) {
   return `Dashboard > NF-e${branch}`;
 }
 
+function getScreenName(allocation) {
+  return String(allocation || "Encontrada no sistema")
+    .split(" · ")[0]
+    .replace("Dashboard > ", "");
+}
+
 export default function XmlSystemLocator() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -103,8 +109,8 @@ export default function XmlSystemLocator() {
   const allocationSummary = useMemo(() => {
     const grouped = new Map();
     rows.filter((r) => r.status === "found").forEach((row) => {
-      const key = row.allocation || "Encontrada no sistema";
-      const current = grouped.get(key) || { allocation: key, count: 0, value: 0 };
+      const key = getScreenName(row.allocation);
+      const current = grouped.get(key) || { screen: key, count: 0, value: 0 };
       current.count += 1;
       current.value += row.invoice?.total_value || row.total_value || 0;
       grouped.set(key, current);
@@ -214,14 +220,18 @@ export default function XmlSystemLocator() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {allocationSummary.map((item) => (
-                  <div key={item.allocation} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-semibold text-slate-800">{item.allocation}</p>
-                    <div className="mt-3 flex items-end justify-between gap-3">
-                      <div>
+                  <div key={item.screen} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Tela</p>
+                    <p className="text-base font-bold text-slate-800 mt-1">{item.screen}</p>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500 font-semibold">Quantidade</p>
                         <p className="text-2xl font-bold text-slate-800">{item.count}</p>
-                        <p className="text-xs text-slate-500">nota(s)</p>
                       </div>
-                      <p className="text-sm font-bold text-emerald-700">{formatCurrency(item.value)}</p>
+                      <div className="rounded-lg bg-emerald-50 p-3 text-right">
+                        <p className="text-xs text-emerald-700 font-semibold">Valor</p>
+                        <p className="text-lg font-bold text-emerald-700">{formatCurrency(item.value)}</p>
+                      </div>
                     </div>
                   </div>
                 ))}
