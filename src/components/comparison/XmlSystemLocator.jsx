@@ -82,6 +82,7 @@ function getAllocation(invoice, supplier, branchMap) {
   if (supplier?.gestao_compras) return `Dashboard > Gestão de Compras (${type})${branch}`;
   if (supplier?.gestao_frota) return `Dashboard > Gestão de Frota (${type})${branch}`;
   if (supplier?.controladoria) return `Dashboard > Controladoria (${type})${branch}`;
+  if (supplier?.hidden) return `Fornecedor oculto — fora dos cards principais${branch}`;
   if (invoice.document_type === "nfse") return `Dashboard > NFS-e${branch}`;
   return `Dashboard > NF-e${branch}`;
 }
