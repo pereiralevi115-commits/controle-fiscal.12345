@@ -94,7 +94,6 @@ export default function Dashboard() {
     const cancelledInvoices = invoices.filter(inv => {
       if (!filterByMonth(inv)) return false;
       if (!inv.cancelled) return false;
-      if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
       if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
       return true;
     });
