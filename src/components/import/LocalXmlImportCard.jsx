@@ -84,6 +84,9 @@ export default function LocalXmlImportCard() {
       const totalBatches = Math.ceil(files.length / batchSize);
       let totalSuccess = 0;
       let totalErrors = 0;
+      let totalEventsApplied = 0;
+      let totalEventsPending = 0;
+      let totalEventsIgnored = 0;
       let allErrorDetails = [];
 
       setProgress({ current: 0, total: files.length });
@@ -112,6 +115,9 @@ export default function LocalXmlImportCard() {
             const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
             totalSuccess += response.data.success || 0;
             totalErrors += response.data.errors || 0;
+            totalEventsApplied += response.data.events_applied || 0;
+            totalEventsPending += response.data.events_pending || 0;
+            totalEventsIgnored += response.data.events_ignored || 0;
             allErrorDetails = allErrorDetails.concat(
               (response.data.error_details || []).map((item) => ({
                 ...item,
@@ -143,6 +149,9 @@ export default function LocalXmlImportCard() {
       const finalResult = {
         success: totalSuccess,
         errors: totalErrors,
+        events_applied: totalEventsApplied,
+        events_pending: totalEventsPending,
+        events_ignored: totalEventsIgnored,
         error_details: allErrorDetails,
         total: files.length,
       };
