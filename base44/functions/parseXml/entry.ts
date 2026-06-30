@@ -626,9 +626,10 @@ async function processEvent(base44, ev) {
 }
 
 // ---------- Trava global de importação (evita gravações simultâneas) ----------
-// Stale após 3 min: se um processo travar/morrer sem liberar (ex.: usuário fecha
+// Stale após 90s: se um processo travar/morrer sem liberar (ex.: usuário fecha
 // a aba no meio do upload), a trava expira rápido e não bloqueia novas importações.
-const LOCK_STALE_MS = 3 * 60 * 1000;
+// Uploads longos renovam a trava via heartbeat a cada lote, então 90s é seguro.
+const LOCK_STALE_MS = 90 * 1000;
 
 async function getImportSettings(base44) {
   const settings = await base44.asServiceRole.entities.OneDriveImportSettings.filter({ key: "default" });
@@ -686,6 +687,18 @@ Deno.serve(async (req) => {
     if (action === "unlock") {
       await releaseImportLock(base44);
       return Response.json({ unlocked: true });
+    }
+    // Renova o timestamp da trava durante um upload longo: enquanto os lotes
+    // chegam, a trava continua "fresca". Se a aba morrer, os heartbeats param e
+    // a trava expira sozinha rapidamente, sem bloquear novas importações.
+    if (action === "heartbeat") {
+      const settings = await getImportSettings(base44);
+      if (settings?.import_locked) {
+        await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+          import_lock_at: new Date().toISOString(),
+        });
+      }
+      return Response.json({ ok: true });
     }
 
     if (!xml_contents || !Array.isArray(xml_contents)) {

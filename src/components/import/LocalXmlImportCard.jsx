@@ -106,6 +106,9 @@ export default function LocalXmlImportCard() {
           // erro e seguimos para o próximo — em vez de abortar todo o upload e
           // perder o progresso já feito.
           try {
+            // Renova a trava antes de cada lote para que ela nunca expire no
+            // meio de um upload longo, mas expire rápido se a aba travar/fechar.
+            await base44.functions.invoke("parseXml", { action: "heartbeat" }).catch(() => {});
             const response = await base44.functions.invoke("parseXml", { xml_contents: batch, keep_lock: true });
             totalSuccess += response.data.success || 0;
             totalErrors += response.data.errors || 0;
