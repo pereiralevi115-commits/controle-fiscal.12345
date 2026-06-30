@@ -23,6 +23,7 @@ import CriciumaInvoices from './pages/CriciumaInvoices';
 import NotasParaVerificar from './pages/NotasParaVerificar';
 import CTe from './pages/CTe';
 import NFSe from './pages/NFSe';
+import Conferencia from './pages/Conferencia';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -57,6 +58,8 @@ const AuthenticatedApp = () => {
         return <CTe />;
       case '/nfse':
         return <NFSe />;
+      case '/conferencia':
+        return <Conferencia />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':
