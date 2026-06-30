@@ -82,6 +82,10 @@ export default function Canceladas({ embedded } = {}) {
     () => cancelledAll.filter(inv => (inv.document_type || "nfe") === "nfe"),
     [cancelledAll]
   );
+  const totalValue = useMemo(
+    () => filtered.reduce((sum, inv) => sum + (inv.total_value || 0), 0),
+    [filtered]
+  );
   const nfseCanceladas = useMemo(
     () => invoices.filter(inv => inv.cancelled && inv.document_type === "nfse" && (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))),
     [invoices, allowedCnpjs]
@@ -191,6 +195,16 @@ export default function Canceladas({ embedded } = {}) {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
+              <span className="text-sm font-medium text-slate-600">
+                {filtered.length} nota(s) cancelada(s)
+              </span>
+              <span className="text-sm font-semibold text-slate-800">
+                Total: <span className="text-red-600">{formatCurrency(totalValue)}</span>
+              </span>
             </div>
           )}
         </div>
