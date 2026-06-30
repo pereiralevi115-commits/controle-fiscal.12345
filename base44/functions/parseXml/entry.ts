@@ -790,7 +790,7 @@ Deno.serve(async (req) => {
           continue;
         }
         if (dedupeKey) seenInBatch.add(dedupeKey);
-        toCreate.push(parsed);
+        toCreate.push({ ...parsed, import_source: "manual" });
       }
 
       // 4) Cria em lotes via bulkCreate — 1 chamada por ~100 notas em vez de

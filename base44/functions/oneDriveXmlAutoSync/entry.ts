@@ -375,7 +375,7 @@ async function importXmlContents(base44, xmlContents) {
       }
       if (existing.length > 0) continue;
 
-      await base44.asServiceRole.entities.Invoice.create(parsed);
+      await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "auto" });
       success++;
     } catch (_) {
       errors++;

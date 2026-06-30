@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -11,7 +11,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Inbox, FileText, Truck, ReceiptText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Inbox, FileText, Truck, ReceiptText, Cloud, Upload } from "lucide-react";
 
 const DOC_META = {
   nfe: { label: "NF-e", Icon: FileText, color: "text-blue-600" },
@@ -29,12 +30,25 @@ const formatDateTime = (iso) => {
 const formatCurrency = (value) =>
   (value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const FILTERS = [
+  { key: "all", label: "Todas" },
+  { key: "auto", label: "Automático" },
+  { key: "manual", label: "Manual" },
+];
+
 export default function AutoImportHistoryDialog({ open, onOpenChange }) {
+  const [filter, setFilter] = useState("all");
+
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ["auto-import-history"],
     queryFn: () => base44.entities.Invoice.list("-created_date", 100),
     enabled: open,
   });
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return invoices;
+    return invoices.filter((inv) => inv.import_source === filter);
+  }, [invoices, filter]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,21 +61,36 @@ export default function AutoImportHistoryDialog({ open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex gap-2">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.key}
+              size="sm"
+              variant={filter === f.key ? "default" : "outline"}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+            </Button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="py-12 flex justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
           </div>
-        ) : invoices.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="py-12 flex flex-col items-center text-center text-slate-500">
             <Inbox className="w-10 h-10 mb-3 text-slate-300" />
-            <p className="font-medium">Nenhuma nota importada ainda</p>
-            <p className="text-sm">Assim que o sincronizador importar notas, elas aparecerão aqui.</p>
+            <p className="font-medium">Nenhuma nota encontrada</p>
+            <p className="text-sm">Não há notas para o filtro selecionado.</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {invoices.map((inv) => {
+            {filtered.map((inv) => {
               const meta = DOC_META[inv.document_type] || DOC_META.nfe;
               const Icon = meta.Icon;
+              const isAuto = inv.import_source === "auto";
+              const isManual = inv.import_source === "manual";
               return (
                 <div key={inv.id} className="border rounded-xl p-3 flex items-start gap-3">
                   <div className={`mt-0.5 ${meta.color}`}>
@@ -71,6 +100,16 @@ export default function AutoImportHistoryDialog({ open, onOpenChange }) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">{meta.label}</Badge>
                       <p className="font-semibold text-sm text-slate-800">#{inv.number || "?"}</p>
+                      {isAuto && (
+                        <Badge variant="outline" className="text-xs text-indigo-700 border-indigo-300 bg-indigo-50 gap-1">
+                          <Cloud className="w-3 h-3" /> Automático
+                        </Badge>
+                      )}
+                      {isManual && (
+                        <Badge variant="outline" className="text-xs text-blue-700 border-blue-300 bg-blue-50 gap-1">
+                          <Upload className="w-3 h-3" /> Manual
+                        </Badge>
+                      )}
                       {inv.cancelled && (
                         <Badge variant="outline" className="text-xs text-red-700 border-red-300 bg-red-50">
                           Cancelada
