@@ -1,7 +1,7 @@
 import React from "react";
 import LocalXmlImportCard from "@/components/import/LocalXmlImportCard";
 import OneDriveXmlImportCard from "@/components/import/OneDriveXmlImportCard";
-import PendingEventsButton from "@/components/events/PendingEventsButton";
+import PendingEventsButton, { PendingEventsBanner } from "@/components/events/PendingEventsButton";
 import { Upload, Cloud, FileStack } from "lucide-react";
 
 export default function ImportXml() {
@@ -28,6 +28,9 @@ export default function ImportXml() {
             </div>
           </div>
         </div>
+
+        {/* Banner de eventos aguardando aprovação */}
+        <PendingEventsBanner />
 
         {/* Dois caminhos lado a lado */}
         <div className="grid gap-6 lg:grid-cols-2 items-start">
