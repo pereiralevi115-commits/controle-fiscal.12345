@@ -99,6 +99,23 @@ export default function XmlSystemLocator() {
     errors: rows.filter((r) => r.status === "error").length,
   }), [rows]);
 
+  const allocationSummary = useMemo(() => {
+    const grouped = new Map();
+    rows.filter((r) => r.status === "found").forEach((row) => {
+      const key = row.allocation || "Encontrada no sistema";
+      const current = grouped.get(key) || { allocation: key, count: 0, value: 0 };
+      current.count += 1;
+      current.value += row.invoice?.total_value || row.total_value || 0;
+      grouped.set(key, current);
+    });
+    return Array.from(grouped.values()).sort((a, b) => b.value - a.value);
+  }, [rows]);
+
+  const foundTotalValue = useMemo(
+    () => allocationSummary.reduce((sum, item) => sum + item.value, 0),
+    [allocationSummary]
+  );
+
   const handleFiles = async (fileList) => {
     const files = Array.from(fileList || []).filter((file) => file.name.toLowerCase().endsWith(".xml"));
     if (!files.length) return;
@@ -180,6 +197,37 @@ export default function XmlSystemLocator() {
             <Stat label="Eventos" value={summary.events} color="text-blue-700" />
             <Stat label="Erros" value={summary.errors} color="text-amber-700" />
           </div>
+
+          {allocationSummary.length > 0 && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-slate-900 text-white p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs text-slate-300 uppercase tracking-wide font-semibold">Somatório das notas encontradas</p>
+                  <p className="text-2xl font-bold">{formatCurrency(foundTotalValue)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-300 uppercase tracking-wide font-semibold">Total de notas</p>
+                  <p className="text-2xl font-bold">{summary.found}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {allocationSummary.map((item) => (
+                  <div key={item.allocation} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-800">{item.allocation}</p>
+                    <div className="mt-3 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-2xl font-bold text-slate-800">{item.count}</p>
+                        <p className="text-xs text-slate-500">nota(s)</p>
+                      </div>
+                      <p className="text-sm font-bold text-emerald-700">{formatCurrency(item.value)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="overflow-auto border border-slate-200 rounded-xl max-h-[520px]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-50 text-slate-500">
