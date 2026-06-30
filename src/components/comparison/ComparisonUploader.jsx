@@ -69,7 +69,17 @@ export default function ComparisonUploader({ onResult }) {
       if (name.endsWith(".csv") || name.endsWith(".txt")) {
         const text = await file.text();
         externalList = parseCSV(text);
-      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".json")) {
+      } else if (name.endsWith(".xls")) {
+        // .xls antigo costuma vir como CSV/HTML/texto delimitado — tenta ler como texto primeiro
+        const text = await file.text();
+        const looksBinary = /\x00/.test(text.slice(0, 2000));
+        if (looksBinary) {
+          throw new Error(
+            "Este arquivo .xls é do formato antigo do Excel e não pode ser lido. Abra no Excel ou Google Sheets e salve como .xlsx ou .csv, depois importe novamente."
+          );
+        }
+        externalList = parseCSV(text);
+      } else if (name.endsWith(".xlsx") || name.endsWith(".json")) {
         // Excel/JSON: extrai via integração ExtractDataFromUploadedFile
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         const res = await base44.integrations.Core.ExtractDataFromUploadedFile({
