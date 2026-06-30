@@ -78,7 +78,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const toggleTile = (key) =>
     setSelectedTiles((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const screenTotal = screens
-    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + screens.arquivadas + (nfseStats?.count || 0) + (cteStats?.count || 0))
+    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + (screens.arquivadas_nfe || 0) + (screens.arquivadas_nfse || 0) + (nfseStats?.count || 0) + (cteStats?.count || 0))
     : 0;
 
   const totalValue = screenStats
