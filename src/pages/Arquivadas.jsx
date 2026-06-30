@@ -40,9 +40,10 @@ export default function Arquivadas({ embedded } = {}) {
 
   const filteredInvoices = useMemo(() => {
     let filtered = invoices.filter((inv) => {
-      // Notas arquivadas manualmente OU com os 3 botões marcados
+      // Notas arquivadas manualmente OU com os 3 botões marcados, excluindo canceladas
       const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
       if (!inv.archived && !allRecorded) return false;
+      if (inv.cancelled) return false;
 
       const searchMatch =
         filters.search === "" ||
