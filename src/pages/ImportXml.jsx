@@ -2,6 +2,7 @@ import React from "react";
 import LocalXmlImportCard from "@/components/import/LocalXmlImportCard";
 import OneDriveXmlImportCard from "@/components/import/OneDriveXmlImportCard";
 import PendingEventsButton, { PendingEventsBanner } from "@/components/events/PendingEventsButton";
+import AutoImportHistoryButton from "@/components/import/AutoImportHistoryButton";
 import { Upload, Cloud, FileStack } from "lucide-react";
 
 export default function ImportXml() {
@@ -23,7 +24,8 @@ export default function ImportXml() {
                 ou conectando uma pasta do OneDrive para importação manual ou automática.
               </p>
             </div>
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex flex-col sm:flex-row gap-2">
+              <AutoImportHistoryButton />
               <PendingEventsButton />
             </div>
           </div>
