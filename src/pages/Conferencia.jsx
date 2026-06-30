@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { GitCompareArrows } from "lucide-react";
 import ComparisonUploader from "@/components/comparison/ComparisonUploader";
 import ComparisonResults from "@/components/comparison/ComparisonResults";
+import XmlSystemLocator from "@/components/comparison/XmlSystemLocator";
 
 export default function Conferencia() {
   const [result, setResult] = useState(null);
@@ -16,10 +17,12 @@ export default function Conferencia() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">Conferência de Notas</h1>
             <p className="text-slate-500 mt-0.5">
-              Importe a lista do outro sistema e veja exatamente quais notas estão faltando ou sobrando.
+              Confira XMLs sem reimportar e veja exatamente onde cada nota está no sistema.
             </p>
           </div>
         </div>
+
+        <XmlSystemLocator />
 
         <ComparisonUploader onResult={(data) => setResult(data)} />
 
