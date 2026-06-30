@@ -78,11 +78,11 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   const toggleTile = (key) =>
     setSelectedTiles((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const screenTotal = screens
-    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + (screens.arquivadas_nfe || 0) + (screens.arquivadas_nfse || 0) + (cancelledNfeCount || 0) + (cancelledNfseCount || 0) + (nfseStats?.count || 0) + (cteStats?.count || 0))
+    ? (screens.notas + screens.nfse + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + (screens.arquivadas_nfe || 0) + (screens.arquivadas_nfse || 0) + (cancelledNfeCount || 0) + (cancelledNfseCount || 0) + (cteStats?.count || 0))
     : 0;
 
   const totalValue = screenStats
-    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (cancelledNfeValue || 0) + (cancelledNfseValue || 0) + (nfseStats?.value || 0) + (cteStats?.value || 0)
+    ? (screenStats.notas?.value || 0) + (screenStats.nfse?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (cancelledNfeValue || 0) + (cancelledNfseValue || 0) + (cteStats?.value || 0)
     : 0;
   // screenTotal/totalValue continuam consolidados (compras/frota/controladoria somam NF-e + NFS-e), só a exibição é dividida.
 
@@ -98,7 +98,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ] : [];
 
   const nfseTiles = screens ? [
-    ...(nfseStats ? [{ key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: nfseStats.count, value: nfseStats.value, accent: { bg: "bg-rose-50", text: "text-rose-600" } }] : []),
+    { key: "nfse", icon: FileSpreadsheet, label: "NFS-e", count: screens.nfse, value: screenStats?.nfse?.value, percent: pctOf(screens.nfse), accent: { bg: "bg-rose-50", text: "text-rose-600" } },
     { key: "compras_nfse",       icon: ShoppingCart, label: "Compras NFS-e", count: screens.compras_nfse,       value: screenStats?.compras_split?.nfse?.value,       percent: pctOf(screens.compras_nfse),       accent: { bg: "bg-blue-50/60", text: "text-blue-500" } },
     { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
     { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
@@ -134,7 +134,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
 
   const screenRowConfig = [
     { key: "notas",         label: "NF-e",                   dotColor: "bg-slate-400", data: screenStats?.notas },
-    { key: "nfse",          label: "NFS-e",                  dotColor: "bg-rose-500",  data: nfseStats },
+    { key: "nfse",          label: "NFS-e",                  dotColor: "bg-rose-500",  data: screenStats?.nfse },
     { key: "compras_nfe",       label: "Compras · NF-e",     dotColor: "bg-blue-500",   data: screenStats?.compras_split?.nfe },
     { key: "compras_nfse",      label: "Compras · NFS-e",    dotColor: "bg-blue-400",   data: screenStats?.compras_split?.nfse },
     { key: "frota_nfe",         label: "Frota · NF-e",       dotColor: "bg-cyan-500",   data: screenStats?.frota_split?.nfe },

@@ -311,7 +311,7 @@ export default function Dashboard() {
       name: row.name,
       tiles: {
         notas:          { count: row.screens.notas,          value: row.screenStats?.notas?.value || 0 },
-        nfse:           { count: nfseStatsOf(nfseByBranch[row.cnpj] || []).count, value: nfseStatsOf(nfseByBranch[row.cnpj] || []).value },
+        nfse:           { count: row.screens.nfse, value: row.screenStats?.nfse?.value || 0 },
         cte:            { count: cteStatsOf(cteByBranch[row.cnpj] || []).count,   value: cteStatsOf(cteByBranch[row.cnpj] || []).value },
         materia_prima:  { count: row.screens.materia_prima,  value: row.screenStats?.materia_prima?.value || 0 },
         compras_nfe:        { count: row.screens.compras_nfe,        value: row.screenStats?.compras_split?.nfe?.value || 0 },
