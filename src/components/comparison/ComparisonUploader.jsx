@@ -21,9 +21,9 @@ function detectColumns(headerCells) {
   const lower = headerCells.map((c) => String(c || "").toLowerCase().trim());
   const find = (terms) => lower.findIndex((c) => terms.some((t) => c.includes(t)));
   return {
-    numberIdx: find(["nf", "número", "numero", "nota"]),
-    valueIdx: find(["valor", "total"]),
-    dateIdx: find(["data", "emiss"]),
+    numberIdx: find(["nf", "nº", "n°", "nfe", "nf-e", "número", "numero", "num", "nota", "documento", "doc", "nfse", "nfs-e"]),
+    valueIdx: find(["valor", "total", "vlr", "vl "]),
+    dateIdx: find(["data", "emiss", "dt "]),
   };
 }
 
@@ -89,12 +89,13 @@ export default function ComparisonUploader({ onResult }) {
             properties: {
               rows: {
                 type: "array",
+                description: "Cada linha da planilha. Identifique a coluna que contém o número da nota fiscal (pode se chamar NF, Nota, Documento, Doc, NFe, Número, Nº etc.), o valor e a data.",
                 items: {
                   type: "object",
                   properties: {
-                    number: { type: "string", description: "Número da nota fiscal (coluna NF)" },
-                    value: { type: "number", description: "Valor total da nota" },
-                    date: { type: "string", description: "Data de emissão" },
+                    number: { type: "string", description: "Número/identificador da nota fiscal daquela linha" },
+                    value: { type: "number", description: "Valor total da nota (se houver)" },
+                    date: { type: "string", description: "Data de emissão (se houver)" },
                   },
                 },
               },
@@ -103,11 +104,13 @@ export default function ComparisonUploader({ onResult }) {
         });
         if (res.status === "success" && res.output) {
           const arr = Array.isArray(res.output) ? res.output : res.output.rows || [];
-          externalList = arr.map((r) => ({
-            number: r.number,
-            value: typeof r.value === "number" ? r.value : parseBRNumber(r.value),
-            date: r.date || null,
-          }));
+          externalList = arr
+            .map((r) => ({
+              number: r.number != null ? String(r.number).trim() : "",
+              value: typeof r.value === "number" ? r.value : parseBRNumber(r.value),
+              date: r.date || null,
+            }))
+            .filter((r) => r.number && /\d/.test(r.number));
         } else {
           throw new Error(res.details || "Não consegui ler o arquivo.");
         }
@@ -116,7 +119,11 @@ export default function ComparisonUploader({ onResult }) {
       }
 
       externalList = externalList.filter((r) => r.number);
-      if (!externalList.length) throw new Error("Nenhuma nota encontrada no arquivo. Verifique se há uma coluna NF.");
+      if (!externalList.length) {
+        throw new Error(
+          "Não encontrei números de nota no arquivo. Confira se existe uma coluna com o número da NF (ex.: NF, Nota, Documento, Número) e se ela não está vazia. Se a planilha tiver linhas de título acima do cabeçalho, remova-as e tente de novo."
+        );
+      }
 
       const response = await base44.functions.invoke("compareInvoices", { externalList });
       onResult(response.data, externalList.length);
