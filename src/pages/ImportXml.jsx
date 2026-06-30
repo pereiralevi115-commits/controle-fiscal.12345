@@ -1,6 +1,7 @@
 import React from "react";
 import LocalXmlImportCard from "@/components/import/LocalXmlImportCard";
 import OneDriveXmlImportCard from "@/components/import/OneDriveXmlImportCard";
+import PendingEventsButton from "@/components/events/PendingEventsButton";
 import { Upload, Cloud, FileStack } from "lucide-react";
 
 export default function ImportXml() {
@@ -15,12 +16,15 @@ export default function ImportXml() {
             <div className="hidden sm:flex w-14 h-14 rounded-2xl bg-white/10 backdrop-blur items-center justify-center ring-1 ring-white/20">
               <FileStack className="w-7 h-7 text-white" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Integração</h1>
               <p className="text-slate-300 mt-2 max-w-2xl text-sm md:text-base">
                 Importe notas fiscais em XML de duas formas: enviando arquivos do seu computador
                 ou conectando uma pasta do OneDrive para importação manual ou automática.
               </p>
+            </div>
+            <div className="relative shrink-0">
+              <PendingEventsButton />
             </div>
           </div>
         </div>

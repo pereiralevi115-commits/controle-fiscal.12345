@@ -8,7 +8,32 @@ function getTagText(parent, tagName) {
   return elements[0]?.textContent?.trim() || "";
 }
 
+// Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
+const EVENT_LABELS = {
+  "110110": "Carta de Correção",
+  "110111": "Cancelamento",
+  "110112": "Cancelamento por Substituição",
+  "110113": "EPEC",
+  "110140": "EPEC",
+  "110150": "Pedido de Prorrogação",
+  "110160": "Pedido de Prorrogação",
+  "110170": "Manifestação do Fisco",
+  "210200": "Confirmação da Operação",
+  "210210": "Ciência da Operação",
+  "210220": "Desconhecimento da Operação",
+  "210240": "Operação não Realizada",
+  "240130": "Comprovante de Entrega",
+  "240140": "Cancelamento do Comprovante de Entrega",
+  "610110": "Carta de Correção (CT-e)",
+  "610111": "Cancelamento (CT-e)",
+  "110180": "Cancelamento (CT-e)",
+  "310610": "Comprovante de Entrega (CT-e)",
+  "310620": "Cancelamento do Comprovante de Entrega (CT-e)",
+};
+
 function detectDocumentType(doc) {
+  // Eventos (Cancelamento, CC-e, etc.) — não são documentos novos, são anexados.
+  if (doc.getElementsByTagName("infEvento").length > 0) return "evento";
   // IMPORTANTE: checar CT-e ANTES de NF-e. Um CT-e referencia as NF-e transportadas
   // dentro de <infNFe>, então a checagem de NF-e pegaria o CT-e por engano.
   if (doc.getElementsByTagName("infCte").length > 0) return "cte";
@@ -21,6 +46,32 @@ function detectDocumentType(doc) {
     if (doc.getElementsByTagName(tag).length > 0) return "nfse";
   }
   return null;
+}
+
+function parseEvento(doc) {
+  const infEvento = doc.getElementsByTagName("infEvento")[0];
+  const tpEvento = getTagText(infEvento, "tpEvento");
+  // A chave do documento referenciado pode estar em chNFe ou chCTe.
+  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const detEvento = infEvento.getElementsByTagName("detEvento")[0];
+  const description = getTagText(detEvento, "xCorrecao")
+    || getTagText(detEvento, "xJust")
+    || getTagText(detEvento, "xMotivo")
+    || "";
+  const eventDate = getTagText(infEvento, "dhEvento");
+  const protocol = getTagText(infEvento, "nProt")
+    || (doc.getElementsByTagName("retEvento")[0] ? getTagText(doc.getElementsByTagName("retEvento")[0], "nProt") : "");
+
+  return {
+    is_event: true,
+    access_key: accessKey,
+    event_type: tpEvento,
+    event_label: EVENT_LABELS[tpEvento] || `Evento ${tpEvento}`,
+    description,
+    event_date: eventDate ? eventDate.substring(0, 10) : "",
+    protocol,
+    is_cancellation: tpEvento === "110111" || tpEvento === "110112" || tpEvento === "110180" || tpEvento === "610111",
+  };
 }
 
 function parseNFe(doc) {
@@ -477,6 +528,13 @@ function parseXmlDocument(xmlText) {
   const type = detectDocumentType(doc);
 
   let parsed;
+  if (type === "evento") {
+    parsed = parseEvento(doc);
+    if (!parsed.access_key) {
+      throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
+    }
+    return parsed;
+  }
   if (type === "nfe") parsed = parseNFe(doc);
   else if (type === "cte") parsed = parseCTe(doc);
   else if (type === "nfse") parsed = parseNFSe(doc);
@@ -488,6 +546,83 @@ function parseXmlDocument(xmlText) {
   }
 
   return parsed;
+}
+
+// Aplica um evento já aprovado a um documento existente. Grava o evento no
+// histórico (sem duplicar) e, se for cancelamento, marca a nota como cancelada.
+async function applyEventToInvoice(base44, invoice, ev) {
+  const events = Array.isArray(invoice.fiscal_events) ? invoice.fiscal_events : [];
+  const already = events.some((e) =>
+    e.type === ev.event_type &&
+    e.date === ev.event_date &&
+    (e.protocol || "") === (ev.protocol || "")
+  );
+  if (already) return false;
+
+  events.push({
+    type: ev.event_type,
+    label: ev.event_label,
+    description: ev.description,
+    date: ev.event_date,
+    protocol: ev.protocol,
+  });
+
+  const updateData = { fiscal_events: events };
+  if (ev.is_cancellation) {
+    updateData.cancelled = true;
+    updateData.cancellation_date = ev.event_date || new Date().toISOString().split("T")[0];
+    updateData.cancellation_reason = ev.description || ev.event_label;
+  }
+
+  await base44.asServiceRole.entities.Invoice.update(invoice.id, updateData);
+  return true;
+}
+
+// Registra um evento pendente para aprovação manual (não duplica se já existir
+// um pendente igual).
+async function registerPendingEvent(base44, ev, invoice) {
+  const existing = await base44.asServiceRole.entities.PendingFiscalEvent.filter({
+    access_key: ev.access_key,
+    event_type: ev.event_type,
+    status: "pendente",
+  });
+  const dup = existing.some((p) =>
+    (p.event_date || "") === (ev.event_date || "") &&
+    (p.protocol || "") === (ev.protocol || "")
+  );
+  if (dup) return false;
+
+  await base44.asServiceRole.entities.PendingFiscalEvent.create({
+    access_key: ev.access_key,
+    event_type: ev.event_type,
+    event_label: ev.event_label,
+    description: ev.description,
+    event_date: ev.event_date,
+    protocol: ev.protocol,
+    is_cancellation: ev.is_cancellation,
+    document_exists: !!invoice,
+    document_number: invoice?.number || "",
+    supplier_name: invoice?.supplier_name || "",
+    status: "pendente",
+  });
+  return true;
+}
+
+// Processa um evento durante a importação:
+// - Cancelamento com nota existente → aplica direto.
+// - Demais eventos → ficam pendentes de aprovação.
+// - Evento sem nota (órfão) → fica pendente; será aplicado quando a nota entrar.
+async function processEvent(base44, ev) {
+  const docs = await base44.asServiceRole.entities.Invoice.filter({ access_key: ev.access_key });
+  const invoice = docs[0] || null;
+
+  if (ev.is_cancellation && invoice) {
+    const applied = await applyEventToInvoice(base44, invoice, ev);
+    return { applied, pending: false };
+  }
+
+  const registered = await registerPendingEvent(base44, ev, invoice);
+  return { applied: false, pending: registered };
 }
 
 // ---------- Trava global de importação (evita gravações simultâneas) ----------
@@ -575,10 +710,16 @@ Deno.serve(async (req) => {
       const errors = [];
 
       // 1) Parse de todos os XMLs em memória (sem tocar no banco).
+      //    Eventos (cancelamento, CC-e, etc.) são separados dos documentos.
       const parsedDocs = [];
+      const parsedEvents = [];
       for (let i = 0; i < xml_contents.length; i++) {
         try {
           const parsed = parseXmlDocument(xml_contents[i]);
+          if (parsed.is_event) {
+            parsedEvents.push({ index: i, parsed });
+            continue;
+          }
           parsed.branch_cnpj = parsed.recipient_cnpj;
           parsedDocs.push({ index: i, parsed });
         } catch (err) {
@@ -634,11 +775,13 @@ Deno.serve(async (req) => {
       //    1 chamada por nota, eliminando o gargalo de rate limit.
       let success = 0;
       const chunkSize = 100;
+      const createdKeys = [];
       for (let i = 0; i < toCreate.length; i += chunkSize) {
         const chunk = toCreate.slice(i, i + chunkSize);
         try {
           await base44.asServiceRole.entities.Invoice.bulkCreate(chunk);
           success += chunk.length;
+          chunk.forEach((c) => c.access_key && createdKeys.push(c.access_key));
         } catch (err) {
           errors.push({ index: -1, error: `Falha ao gravar lote: ${err.message}` });
         }
@@ -647,11 +790,49 @@ Deno.serve(async (req) => {
         }
       }
 
+      // 4b) Aplica CANCELAMENTOS pendentes (órfãos) cujas notas acabaram de entrar.
+      //     Cancelamento aplica direto; os demais eventos pendentes continuam
+      //     aguardando aprovação manual mesmo após a nota existir.
+      if (createdKeys.length > 0) {
+        for (let i = 0; i < createdKeys.length; i += 50) {
+          const slice = createdKeys.slice(i, i + 50);
+          const pendings = await base44.asServiceRole.entities.PendingFiscalEvent.filter({
+            access_key: { $in: slice }, status: "pendente", is_cancellation: true,
+          });
+          for (const p of pendings) {
+            const docs = await base44.asServiceRole.entities.Invoice.filter({ access_key: p.access_key });
+            if (docs[0]) {
+              await applyEventToInvoice(base44, docs[0], {
+                event_type: p.event_type, event_label: p.event_label, description: p.description,
+                event_date: p.event_date, protocol: p.protocol, is_cancellation: true,
+              });
+              await base44.asServiceRole.entities.PendingFiscalEvent.update(p.id, { status: "aprovado" });
+            }
+          }
+        }
+      }
+
+      // 5) Processa os eventos (após criar os documentos do lote, para que
+      //    cancelamentos de notas recém-criadas também sejam aplicados).
+      let eventsApplied = 0;
+      let eventsPending = 0;
+      for (const { index, parsed } of parsedEvents) {
+        try {
+          const res = await processEvent(base44, parsed);
+          if (res.applied) eventsApplied++;
+          else if (res.pending) eventsPending++;
+        } catch (err) {
+          errors.push({ index, error: `Evento: ${err.message}` });
+        }
+      }
+
       return Response.json({
         success,
         errors: errors.length,
         error_details: errors,
         total: xml_contents.length,
+        events_applied: eventsApplied,
+        events_pending: eventsPending,
       });
     } finally {
       if (acquiredHere) {
