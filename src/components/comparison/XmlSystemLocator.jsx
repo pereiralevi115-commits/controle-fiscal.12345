@@ -95,6 +95,7 @@ function getScreenName(allocation) {
 
 export default function XmlSystemLocator() {
   const [rows, setRows] = useState([]);
+  const [selectedScreen, setSelectedScreen] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -110,9 +111,10 @@ export default function XmlSystemLocator() {
     const grouped = new Map();
     rows.filter((r) => r.status === "found").forEach((row) => {
       const key = getScreenName(row.allocation);
-      const current = grouped.get(key) || { screen: key, count: 0, value: 0 };
+      const current = grouped.get(key) || { screen: key, count: 0, value: 0, notes: [] };
       current.count += 1;
       current.value += row.invoice?.total_value || row.total_value || 0;
+      current.notes.push(row);
       grouped.set(key, current);
     });
     return Array.from(grouped.values()).sort((a, b) => b.value - a.value);
@@ -123,11 +125,15 @@ export default function XmlSystemLocator() {
     [allocationSummary]
   );
 
+  const activeScreen = selectedScreen || allocationSummary.find((item) => item.screen.startsWith("Fornecedor oculto"))?.screen || allocationSummary[0]?.screen || "";
+  const activeNotes = allocationSummary.find((item) => item.screen === activeScreen)?.notes || [];
+
   const handleFiles = async (fileList) => {
     const files = Array.from(fileList || []).filter((file) => file.name.toLowerCase().endsWith(".xml"));
     if (!files.length) return;
     setLoading(true);
     setError("");
+    setSelectedScreen("");
     try {
       const [invoices, suppliers, branches] = await Promise.all([
         fetchAllInvoices(),
@@ -220,7 +226,12 @@ export default function XmlSystemLocator() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {allocationSummary.map((item) => (
-                  <div key={item.screen} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <button
+                    key={item.screen}
+                    type="button"
+                    onClick={() => setSelectedScreen(item.screen)}
+                    className={`text-left rounded-xl border p-4 shadow-sm transition-colors ${activeScreen === item.screen ? "bg-blue-50 border-blue-300" : "bg-white border-slate-200 hover:bg-slate-50"}`}
+                  >
                     <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Tela</p>
                     <p className="text-base font-bold text-slate-800 mt-1">{item.screen}</p>
                     <div className="mt-4 grid grid-cols-2 gap-3">
@@ -233,9 +244,42 @@ export default function XmlSystemLocator() {
                         <p className="text-lg font-bold text-emerald-700">{formatCurrency(item.value)}</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
+
+              {activeNotes.length > 0 && (
+                <div className="rounded-xl border border-blue-200 bg-white overflow-hidden">
+                  <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+                    <p className="font-bold text-slate-800">Lista de notas — {activeScreen}</p>
+                    <p className="text-xs text-slate-500">{activeNotes.length} nota(s) · {formatCurrency(activeNotes.reduce((sum, row) => sum + (row.invoice?.total_value || row.total_value || 0), 0))}</p>
+                  </div>
+                  <div className="overflow-auto max-h-[360px]">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-slate-50 text-slate-500">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-semibold">NF</th>
+                          <th className="text-left px-4 py-3 font-semibold">Fornecedor</th>
+                          <th className="text-left px-4 py-3 font-semibold">Filial</th>
+                          <th className="text-left px-4 py-3 font-semibold">Data</th>
+                          <th className="text-right px-4 py-3 font-semibold">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeNotes.map((row, index) => (
+                          <tr key={`${row.fileName}-active-${index}`} className="border-t border-slate-100">
+                            <td className="px-4 py-3 font-semibold text-slate-700">{row.invoice?.number || row.number || "—"}</td>
+                            <td className="px-4 py-3 text-slate-600">{row.invoice?.supplier_name || row.supplier_name || "—"}</td>
+                            <td className="px-4 py-3 text-slate-600">{String(row.allocation || "").split(" · ")[1] || "—"}</td>
+                            <td className="px-4 py-3 text-slate-600">{row.invoice?.issue_date || row.issue_date || "—"}</td>
+                            <td className="px-4 py-3 text-right font-bold text-emerald-700">{formatCurrency(row.invoice?.total_value || row.total_value || 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
