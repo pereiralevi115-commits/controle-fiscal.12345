@@ -40,26 +40,34 @@ export default function Canceladas({ embedded } = {}) {
     queryFn: () => base44.entities.Branch.list(),
   });
 
+  const { data: suppliers = [], isLoading: loadingSuppliers } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: () => base44.entities.Supplier.list(),
+  });
+
   const branchMap = useMemo(() => {
     const m = {};
     branches.forEach(b => { m[b.cnpj] = b.name; });
     return m;
   }, [branches]);
 
+  const hiddenCnpjs = useMemo(() => new Set(suppliers.filter(s => s.hidden).map(s => s.cnpj)), [suppliers]);
+
   const availableMonths = useMemo(() => {
     const set = new Set();
     invoices.forEach(inv => {
-      if (inv.cancelled && inv.issue_date) {
+      if (inv.cancelled && inv.issue_date && !hiddenCnpjs.has(inv.supplier_cnpj)) {
         const d = new Date(inv.issue_date + "T12:00:00");
         set.add(`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`);
       }
     });
     return Array.from(set).sort().reverse();
-  }, [invoices]);
+  }, [invoices, hiddenCnpjs]);
 
   const cancelledAll = useMemo(() => {
     return invoices.filter(inv => {
       if (!inv.cancelled) return false;
+      if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
       if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
       if (monthYear !== "all") {
         if (!inv.issue_date) return false;
@@ -76,7 +84,7 @@ export default function Canceladas({ embedded } = {}) {
       }
       return true;
     });
-  }, [invoices, allowedCnpjs, search, branchMap, monthYear]);
+  }, [invoices, allowedCnpjs, search, branchMap, monthYear, hiddenCnpjs]);
 
   const filtered = useMemo(
     () => cancelledAll.filter(inv => (inv.document_type || "nfe") === "nfe"),
@@ -87,11 +95,11 @@ export default function Canceladas({ embedded } = {}) {
     [filtered]
   );
   const nfseCanceladas = useMemo(
-    () => invoices.filter(inv => inv.cancelled && inv.document_type === "nfse" && (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))),
-    [invoices, allowedCnpjs]
+    () => invoices.filter(inv => inv.cancelled && inv.document_type === "nfse" && !hiddenCnpjs.has(inv.supplier_cnpj) && (!allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj))),
+    [invoices, allowedCnpjs, hiddenCnpjs]
   );
 
-  const isLoading = loadingInvoices || loadingBranches || branchFilterLoading;
+  const isLoading = loadingInvoices || loadingBranches || loadingSuppliers || branchFilterLoading;
 
   if (isLoading) {
     return (
