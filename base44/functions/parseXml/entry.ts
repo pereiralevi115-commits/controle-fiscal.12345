@@ -48,6 +48,11 @@ function detectDocumentType(doc) {
   return null;
 }
 
+// Eventos automáticos de manifestação do destinatário (Ciência, Confirmação,
+// Desconhecimento, Operação não Realizada). Não têm valor de aprovação manual:
+// são ignorados na importação — não viram nota, nem erro, nem pendência.
+const IGNORED_EVENT_TYPES = new Set(["210200", "210210", "210220", "210240"]);
+
 function parseEvento(doc) {
   const infEvento = doc.getElementsByTagName("infEvento")[0];
   const tpEvento = getTagText(infEvento, "tpEvento");
@@ -64,6 +69,7 @@ function parseEvento(doc) {
 
   return {
     is_event: true,
+    is_ignored: IGNORED_EVENT_TYPES.has(tpEvento),
     access_key: accessKey,
     event_type: tpEvento,
     event_label: EVENT_LABELS[tpEvento] || `Evento ${tpEvento}`,
@@ -530,6 +536,9 @@ function parseXmlDocument(xmlText) {
   let parsed;
   if (type === "evento") {
     parsed = parseEvento(doc);
+    // Eventos automáticos da Receita (Ciência/Confirmação/etc.) são ignorados —
+    // não precisam de chave nem geram erro.
+    if (parsed.is_ignored) return parsed;
     if (!parsed.access_key) {
       throw new Error("Evento sem chave de acesso — não foi possível vincular ao documento.");
     }
@@ -829,8 +838,11 @@ Deno.serve(async (req) => {
       //    cancelamentos de notas recém-criadas também sejam aplicados).
       let eventsApplied = 0;
       let eventsPending = 0;
+      let eventsIgnored = 0;
       for (const { index, parsed } of parsedEvents) {
         try {
+          // Eventos automáticos de manifestação são descartados silenciosamente.
+          if (parsed.is_ignored) { eventsIgnored++; continue; }
           const res = await processEvent(base44, parsed);
           if (res.applied) eventsApplied++;
           else if (res.pending) eventsPending++;
@@ -846,6 +858,7 @@ Deno.serve(async (req) => {
         total: xml_contents.length,
         events_applied: eventsApplied,
         events_pending: eventsPending,
+        events_ignored: eventsIgnored,
       });
     } finally {
       if (acquiredHere) {
