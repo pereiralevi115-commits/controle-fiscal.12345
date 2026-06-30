@@ -90,6 +90,15 @@ export default function Dashboard() {
       return true;
     });
 
+    // Notas canceladas (para contar/somar na seção de telas)
+    const cancelledInvoices = invoices.filter(inv => {
+      if (!filterByMonth(inv)) return false;
+      if (!inv.cancelled) return false;
+      if (hiddenCnpjs.has(inv.supplier_cnpj)) return false;
+      if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
+      return true;
+    });
+
     const archivedSet = new Set(archivedInvoices.map(inv => inv.id));
 
     const visibleInvoices = invoices.filter(inv => {
@@ -235,8 +244,13 @@ export default function Dashboard() {
     });
     archivedInvoices.forEach(inv => {
       const key = inv.branch_cnpj || "__sem_filial__";
-      if (!grouped[key]) grouped[key] = { visible: [], archived: [] };
+      if (!grouped[key]) grouped[key] = { visible: [], archived: [], cancelled: [] };
       grouped[key].archived.push(inv);
+    });
+    cancelledInvoices.forEach(inv => {
+      const key = inv.branch_cnpj || "__sem_filial__";
+      if (!grouped[key]) grouped[key] = { visible: [], archived: [], cancelled: [] };
+      (grouped[key].cancelled = grouped[key].cancelled || []).push(inv);
     });
     // Garante que filiais que só tenham CT-e/NFS-e também apareçam
     [...filteredCte, ...filteredNfse].forEach(inv => {
@@ -245,7 +259,7 @@ export default function Dashboard() {
     });
 
     // Build rows: one per branch that has invoices
-    const rows = Object.entries(grouped).map(([cnpj, { visible: invs, archived: archInvs }]) => {
+    const rows = Object.entries(grouped).map(([cnpj, { visible: invs, archived: archInvs, cancelled: cancInvs = [] }]) => {
       const name = cnpj === "__sem_filial__" ? "Sem Filial" : (branchMap[cnpj] || cnpj);
       const total = invs.length;
       const sigv = invs.filter(i => i.sigv_recorded).length;
@@ -259,7 +273,13 @@ export default function Dashboard() {
       const archivedValue = archInvs.reduce((s, i) => s + (i.total_value || 0), 0);
       const archivedNfeValue = nonMpArch.filter(i => (i.document_type || "nfe") !== "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
       const archivedNfseValue = nonMpArch.filter(i => (i.document_type || "nfe") === "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
-      return { cnpj, name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue };
+      const cancelledNfe = cancInvs.filter(i => (i.document_type || "nfe") !== "nfse");
+      const cancelledNfse = cancInvs.filter(i => (i.document_type || "nfe") === "nfse");
+      const cancelledNfeCount = cancelledNfe.length;
+      const cancelledNfseCount = cancelledNfse.length;
+      const cancelledNfeValue = cancelledNfe.reduce((s, i) => s + (i.total_value || 0), 0);
+      const cancelledNfseValue = cancelledNfse.reduce((s, i) => s + (i.total_value || 0), 0);
+      return { cnpj, name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cancelledNfeCount, cancelledNfseCount, cancelledNfeValue, cancelledNfseValue };
     });
 
     // Sort by branch name
@@ -277,6 +297,12 @@ export default function Dashboard() {
     const allNonMpArch = archivedInvoices.filter(i => !supplierMap[i.supplier_cnpj]?.materia_prima);
     const allArchivedNfeValue = allNonMpArch.filter(i => (i.document_type || "nfe") !== "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
     const allArchivedNfseValue = allNonMpArch.filter(i => (i.document_type || "nfe") === "nfse").reduce((s, i) => s + (i.total_value || 0), 0);
+    const allCancelledNfe = cancelledInvoices.filter(i => (i.document_type || "nfe") !== "nfse");
+    const allCancelledNfse = cancelledInvoices.filter(i => (i.document_type || "nfe") === "nfse");
+    const allCancelledNfeCount = allCancelledNfe.length;
+    const allCancelledNfseCount = allCancelledNfse.length;
+    const allCancelledNfeValue = allCancelledNfe.reduce((s, i) => s + (i.total_value || 0), 0);
+    const allCancelledNfseValue = allCancelledNfse.reduce((s, i) => s + (i.total_value || 0), 0);
 
     const cteStats = cteStatsOf(filteredCte);
     const nfseStats = nfseStatsOf(filteredNfse);
@@ -297,6 +323,8 @@ export default function Dashboard() {
         controladoria_nfse: { count: row.screens.controladoria_nfse, value: row.screenStats?.controladoria_split?.nfse?.value || 0 },
         arquivadas_nfe: { count: row.screens.arquivadas_nfe, value: row.archivedNfeValue || 0 },
         arquivadas_nfse:{ count: row.screens.arquivadas_nfse,value: row.archivedNfseValue || 0 },
+        canceladas_nfe: { count: row.cancelledNfeCount || 0, value: row.cancelledNfeValue || 0 },
+        canceladas_nfse:{ count: row.cancelledNfseCount || 0, value: row.cancelledNfseValue || 0 },
       },
     }));
 
@@ -305,6 +333,7 @@ export default function Dashboard() {
       isLider,
       allTotal, allSigv, allTopcon, allBoleto, allValue,
       allScreens, allScreenStats, allArchivedValue, allArchivedNfeValue, allArchivedNfseValue,
+      allCancelledNfeCount, allCancelledNfseCount, allCancelledNfeValue, allCancelledNfseValue,
       cteStats, nfseStats, branchBreakdown,
       cteStatsOf, nfseStatsOf, cteByBranch, nfseByBranch,
     };
@@ -323,6 +352,7 @@ export default function Dashboard() {
     isLider,
     allTotal, allSigv, allTopcon, allBoleto, allValue,
     allScreens, allScreenStats, allArchivedValue, allArchivedNfeValue, allArchivedNfseValue,
+    allCancelledNfeCount, allCancelledNfseCount, allCancelledNfeValue, allCancelledNfseValue,
     cteStats, nfseStats, branchBreakdown,
     cteStatsOf, nfseStatsOf, cteByBranch, nfseByBranch,
   } = computed;
@@ -375,11 +405,11 @@ export default function Dashboard() {
         <div className="space-y-5">
           {/* Card consolidado — todas as filiais (oculto para perfis Líder) */}
           {!isLider && (
-            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} archivedNfeValue={allArchivedNfeValue} archivedNfseValue={allArchivedNfseValue} cteStats={cteStats} nfseStats={nfseStats} branchBreakdown={branchBreakdown} highlight />
+            <BranchCard name="Todas as Filiais" total={allTotal} sigv={allSigv} topcon={allTopcon} boleto={allBoleto} value={allValue} screens={allScreens} screenStats={allScreenStats} archivedValue={allArchivedValue} archivedNfeValue={allArchivedNfeValue} archivedNfseValue={allArchivedNfseValue} cancelledNfeCount={allCancelledNfeCount} cancelledNfseCount={allCancelledNfseCount} cancelledNfeValue={allCancelledNfeValue} cancelledNfseValue={allCancelledNfseValue} cteStats={cteStats} nfseStats={nfseStats} branchBreakdown={branchBreakdown} highlight />
           )}
 
           {rows.map((row) => (
-            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} archivedNfeValue={row.archivedNfeValue} archivedNfseValue={row.archivedNfseValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
+            <BranchCard key={row.name} name={row.name} total={row.total} sigv={row.sigv} topcon={row.topcon} boleto={row.boleto} value={row.value} screens={row.screens} screenStats={row.screenStats} archivedValue={row.archivedValue} archivedNfeValue={row.archivedNfeValue} archivedNfseValue={row.archivedNfseValue} cancelledNfeCount={row.cancelledNfeCount} cancelledNfseCount={row.cancelledNfseCount} cancelledNfeValue={row.cancelledNfeValue} cancelledNfseValue={row.cancelledNfseValue} cteStats={cteStatsOf(cteByBranch[row.cnpj] || [])} nfseStats={nfseStatsOf(nfseByBranch[row.cnpj] || [])} />
           ))}
 
           {rows.length === 0 && (

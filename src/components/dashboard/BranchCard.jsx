@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox, Wallet, X } from "lucide-react";
+import { FileText, ShoppingCart, Truck, BarChart2, Receipt, Layers, FileSpreadsheet, FileBox, Wallet, X, Ban } from "lucide-react";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -72,17 +72,17 @@ const ScreenSummaryRow = ({ label, data, dotColor }) => {
   );
 };
 
-export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cteStats, nfseStats, branchBreakdown, highlight }) {
+export default function BranchCard({ name, total, sigv, topcon, boleto, value, screens, screenStats, archivedValue, archivedNfeValue, archivedNfseValue, cancelledNfeCount, cancelledNfseCount, cancelledNfeValue, cancelledNfseValue, cteStats, nfseStats, branchBreakdown, highlight }) {
   const [selectedTiles, setSelectedTiles] = useState([]);
 
   const toggleTile = (key) =>
     setSelectedTiles((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const screenTotal = screens
-    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + (screens.arquivadas_nfe || 0) + (screens.arquivadas_nfse || 0) + (nfseStats?.count || 0) + (cteStats?.count || 0))
+    ? (screens.notas + screens.materia_prima + screens.compras + screens.frota + screens.controladoria + (screens.arquivadas_nfe || 0) + (screens.arquivadas_nfse || 0) + (cancelledNfeCount || 0) + (cancelledNfseCount || 0) + (nfseStats?.count || 0) + (cteStats?.count || 0))
     : 0;
 
   const totalValue = screenStats
-    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (nfseStats?.value || 0) + (cteStats?.value || 0)
+    ? (screenStats.notas?.value || 0) + (screenStats.materia_prima?.value || 0) + (screenStats.compras?.value || 0) + (screenStats.frota?.value || 0) + (screenStats.controladoria?.value || 0) + (archivedValue || 0) + (cancelledNfeValue || 0) + (cancelledNfseValue || 0) + (nfseStats?.value || 0) + (cteStats?.value || 0)
     : 0;
   // screenTotal/totalValue continuam consolidados (compras/frota/controladoria somam NF-e + NFS-e), só a exibição é dividida.
 
@@ -94,6 +94,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     { key: "frota_nfe",          icon: Truck,        label: "Frota NF-e",    count: screens.frota_nfe,          value: screenStats?.frota_split?.nfe?.value,          percent: pctOf(screens.frota_nfe),          accent: { bg: "bg-cyan-50",    text: "text-cyan-600" } },
     { key: "controladoria_nfe",  icon: BarChart2,    label: "Controlad. NF-e",  count: screens.controladoria_nfe,  value: screenStats?.controladoria_split?.nfe?.value,  percent: pctOf(screens.controladoria_nfe),  accent: { bg: "bg-indigo-50",   text: "text-indigo-600" } },
     { key: "arquivadas_nfe",  icon: Receipt,    label: "Arq. NF-e",     count: screens.arquivadas_nfe,  value: archivedNfeValue,  percent: pctOf(screens.arquivadas_nfe),  accent: { bg: "bg-amber-50",   text: "text-amber-600" } },
+    ...((cancelledNfeCount || 0) > 0 ? [{ key: "canceladas_nfe", icon: Ban, label: "Cancel. NF-e", count: cancelledNfeCount, value: cancelledNfeValue, percent: pctOf(cancelledNfeCount), accent: { bg: "bg-red-50", text: "text-red-600" } }] : []),
   ] : [];
 
   const nfseTiles = screens ? [
@@ -102,6 +103,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
     { key: "frota_nfse",         icon: Truck,        label: "Frota NFS-e",   count: screens.frota_nfse,         value: screenStats?.frota_split?.nfse?.value,         percent: pctOf(screens.frota_nfse),         accent: { bg: "bg-cyan-50/60", text: "text-cyan-500" } },
     { key: "controladoria_nfse", icon: BarChart2,    label: "Controlad. NFS-e", count: screens.controladoria_nfse, value: screenStats?.controladoria_split?.nfse?.value, percent: pctOf(screens.controladoria_nfse), accent: { bg: "bg-indigo-50/60", text: "text-indigo-500" } },
     { key: "arquivadas_nfse", icon: Receipt,    label: "Arq. NFS-e",    count: screens.arquivadas_nfse, value: archivedNfseValue, percent: pctOf(screens.arquivadas_nfse), accent: { bg: "bg-orange-50",  text: "text-orange-600" } },
+    ...((cancelledNfseCount || 0) > 0 ? [{ key: "canceladas_nfse", icon: Ban, label: "Cancel. NFS-e", count: cancelledNfseCount, value: cancelledNfseValue, percent: pctOf(cancelledNfseCount), accent: { bg: "bg-red-50/60", text: "text-red-500" } }] : []),
   ] : [];
 
   const materiaPrimaTiles = screens ? [
