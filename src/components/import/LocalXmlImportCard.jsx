@@ -96,7 +96,21 @@ export default function LocalXmlImportCard() {
       // entre lotes, fazendo o processo parar no meio e voltar à tela).
       let lockHeld = false;
       try {
-        await base44.functions.invoke("parseXml", { action: "lock" });
+        const lockDeadline = Date.now() + 120000;
+        while (true) {
+          try {
+            await base44.functions.invoke("parseXml", { action: "lock" });
+            break;
+          } catch (lockErr) {
+            if ((lockErr?.response?.status === 409 || lockErr?.response?.data?.import_busy) && Date.now() < lockDeadline) {
+              setImportError("Aguardando a importação automática terminar para iniciar este upload...");
+              await new Promise((r) => setTimeout(r, 3000));
+              continue;
+            }
+            throw lockErr;
+          }
+        }
+        setImportError("");
         lockHeld = true;
         lockHeldRef.current = true;
 
