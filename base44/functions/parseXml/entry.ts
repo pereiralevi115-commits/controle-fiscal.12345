@@ -648,9 +648,12 @@ async function getImportSettings(base44) {
 async function acquireImportLock(base44, source) {
   const settings = await getImportSettings(base44);
   if (settings?.import_locked) {
-    const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
-    if (Date.now() - lockedAt < LOCK_STALE_MS) {
-      return { ok: false, source: settings.import_lock_source || "outra" };
+    const lockedByDisabledAuto = settings.import_lock_source === "auto" && settings.auto_sync_enabled === false;
+    if (!lockedByDisabledAuto) {
+      const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+      if (Date.now() - lockedAt < LOCK_STALE_MS) {
+        return { ok: false, source: settings.import_lock_source || "outra" };
+      }
     }
   }
   if (!settings) {
