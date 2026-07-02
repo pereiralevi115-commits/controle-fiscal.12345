@@ -624,7 +624,15 @@ Deno.serve(async (req) => {
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('one_drive');
 
     if (action === 'getStatus') {
-      const settings = await getSettings(base44);
+      let settings = await getSettings(base44);
+      const lockedAt = settings?.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+      const lockIsOld = settings?.import_locked && Date.now() - lockedAt > 90 * 1000;
+      const disabledAutoLock = settings?.import_locked && settings.import_lock_source === 'auto' && settings.auto_sync_enabled === false;
+      if (settings && (lockIsOld || disabledAutoLock)) {
+        settings = await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+          import_locked: false, import_lock_source: null,
+        });
+      }
       return Response.json({ settings });
     }
 
@@ -712,12 +720,13 @@ Deno.serve(async (req) => {
       const skip = payload.skip || 0;
 
       // Trava global: adquirida no primeiro lote, liberada quando concluir (allDone).
-      const LOCK_STALE_MS = 15 * 60 * 1000;
+      const LOCK_STALE_MS = 90 * 1000;
       const isFirstBatchOfRun = folderIndex === 0 && skip === 0;
       if (isFirstBatchOfRun) {
         if (settings?.import_locked) {
+          const lockedByDisabledAuto = settings.import_lock_source === 'auto' && settings.auto_sync_enabled === false;
           const lockedAt = settings.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
-          if (Date.now() - lockedAt < LOCK_STALE_MS) {
+          if (!lockedByDisabledAuto && Date.now() - lockedAt < LOCK_STALE_MS) {
             return Response.json({
               error: `Já existe uma importação em andamento (${settings.import_lock_source || 'outra'}). Aguarde concluir antes de iniciar outra.`,
               import_busy: true,
@@ -759,6 +768,9 @@ Deno.serve(async (req) => {
         folder_name: null,
         folder_path: null,
         auto_sync_enabled: settings?.auto_sync_enabled || false,
+        import_locked: true,
+        import_lock_source: 'onedrive',
+        import_lock_at: new Date().toISOString(),
         last_sync_at: new Date().toISOString(),
         last_sync_message: message,
         last_import_total: result.total,

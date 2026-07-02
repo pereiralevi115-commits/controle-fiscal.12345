@@ -592,6 +592,11 @@ Deno.serve(async (req) => {
     const connectedFolders = getConnectedFolders(settings);
 
     if (!settings?.auto_sync_enabled || connectedFolders.length === 0) {
+      if (settings?.import_locked && settings.import_lock_source === 'auto') {
+        await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+          import_locked: false, import_lock_source: null,
+        });
+      }
       return Response.json({ skipped: true, reason: 'Sincronização automática desativada.' });
     }
 
