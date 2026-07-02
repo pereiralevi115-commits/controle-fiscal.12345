@@ -93,6 +93,25 @@ function getScreenName(allocation) {
     .replace("Dashboard > ", "");
 }
 
+function valuesClose(a, b) {
+  const left = Number(a || 0);
+  const right = Number(b || 0);
+  if (!left || !right) return true;
+  return Math.abs(left - right) <= 0.01;
+}
+
+function findMatchingInvoice(parsed, byAccessKey, byNumberSupplier) {
+  if (parsed.access_key && byAccessKey.get(parsed.access_key)) {
+    return { invoice: byAccessKey.get(parsed.access_key), confident: true };
+  }
+  const key = `${normalizeNumber(parsed.number)}|${parsed.supplier_cnpj}`;
+  const candidates = byNumberSupplier.get(key) || [];
+  if (candidates.length === 0) return null;
+  const valueMatch = candidates.find((invoice) => valuesClose(parsed.total_value, invoice.total_value));
+  if (valueMatch) return { invoice: valueMatch, confident: true };
+  return { invoice: candidates[0], confident: false };
+}
+
 export default function XmlSystemLocator() {
   const [rows, setRows] = useState([]);
   const [selectedScreen, setSelectedScreen] = useState("");
@@ -103,6 +122,7 @@ export default function XmlSystemLocator() {
     total: rows.length,
     found: rows.filter((r) => r.status === "found").length,
     missing: rows.filter((r) => r.status === "missing").length,
+    divergences: rows.filter((r) => r.status === "divergence").length,
     events: rows.filter((r) => r.status === "event").length,
     errors: rows.filter((r) => r.status === "error").length,
   }), [rows]);
@@ -143,7 +163,11 @@ export default function XmlSystemLocator() {
       const suppliersByCnpj = Object.fromEntries(suppliers.map((s) => [onlyDigits(s.cnpj), s]));
       const branchMap = Object.fromEntries(branches.map((b) => [b.cnpj, b.name]));
       const byAccessKey = new Map(invoices.filter((i) => i.access_key).map((i) => [i.access_key, i]));
-      const byNumberSupplier = new Map(invoices.map((i) => [`${normalizeNumber(i.number)}|${onlyDigits(i.supplier_cnpj)}`, i]));
+      const byNumberSupplier = new Map();
+      invoices.forEach((invoice) => {
+        const key = `${normalizeNumber(invoice.number)}|${onlyDigits(invoice.supplier_cnpj)}`;
+        byNumberSupplier.set(key, [...(byNumberSupplier.get(key) || []), invoice]);
+      });
 
       const parsedRows = [];
       for (const file of files) {
@@ -153,13 +177,14 @@ export default function XmlSystemLocator() {
             parsedRows.push({ ...parsed, status: "event", allocation: "XML de evento fiscal — não é nota nova" });
             continue;
           }
-          const found = (parsed.access_key && byAccessKey.get(parsed.access_key)) || byNumberSupplier.get(`${normalizeNumber(parsed.number)}|${parsed.supplier_cnpj}`);
+          const match = findMatchingInvoice(parsed, byAccessKey, byNumberSupplier);
+          const found = match?.invoice || null;
           const supplier = suppliersByCnpj[onlyDigits(found?.supplier_cnpj)] || null;
           parsedRows.push({
             ...parsed,
-            status: found ? "found" : "missing",
-            invoice: found || null,
-            allocation: getAllocation(found, supplier, branchMap),
+            status: found ? (match.confident ? "found" : "divergence") : "missing",
+            invoice: found,
+            allocation: found ? (match.confident ? getAllocation(found, supplier, branchMap) : "Divergência de valor — revisar antes de confiar") : getAllocation(null, null, branchMap),
           });
         } catch (err) {
           parsedRows.push({ fileName: file.name, status: "error", allocation: err.message || "Erro ao ler XML" });
@@ -202,10 +227,11 @@ export default function XmlSystemLocator() {
 
       {rows.length > 0 && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <Stat label="XMLs lidos" value={summary.total} />
             <Stat label="Encontradas" value={summary.found} color="text-emerald-700" />
             <Stat label="Não encontradas" value={summary.missing} color="text-red-700" />
+            <Stat label="Divergências" value={summary.divergences} color="text-orange-700" />
             <Stat label="Eventos" value={summary.events} color="text-blue-700" />
             <Stat label="Erros" value={summary.errors} color="text-amber-700" />
           </div>
@@ -321,6 +347,7 @@ function Stat({ label, value, color = "text-slate-700" }) {
 function StatusBadge({ status }) {
   if (status === "found") return <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-1"><CheckCircle2 className="w-3 h-3" /> Encontrada</span>;
   if (status === "missing") return <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-full px-2 py-1"><XCircle className="w-3 h-3" /> Não encontrada</span>;
+  if (status === "divergence") return <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-2 py-1"><AlertTriangle className="w-3 h-3" /> Divergência</span>;
   if (status === "event") return <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-1"><FileSearch className="w-3 h-3" /> Evento</span>;
   return <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2 py-1"><AlertTriangle className="w-3 h-3" /> Erro</span>;
 }
