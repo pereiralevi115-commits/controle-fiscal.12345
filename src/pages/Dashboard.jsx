@@ -214,7 +214,14 @@ export default function Dashboard() {
 
     // CT-e e NFS-e consolidados (aplicando o mesmo filtro de mês e filiais permitidas)
     const filteredCte = cteList.filter(filterByMonth).filter(i => !allowedCnpjs || allowedCnpjs.includes(i.branch_cnpj));
-    const filteredNfse = nfseList.filter(filterByMonth).filter(i => !allowedCnpjs || allowedCnpjs.includes(i.branch_cnpj));
+    const filteredNfse = nfseList.filter((i) => {
+      if (!filterByMonth(i)) return false;
+      if (i.archived || isCompleted(i)) return false;
+      if (allowedCnpjs && !allowedCnpjs.includes(i.branch_cnpj)) return false;
+      const supplier = supplierMap[i.supplier_cnpj];
+      if (supplier?.gestao_frota || supplier?.gestao_compras || supplier?.controladoria) return false;
+      return true;
+    });
     const cteStatsOf = (arr) => ({ count: arr.length, value: arr.reduce((s, i) => s + (i.total_value || 0), 0) });
     const nfseStatsOf = (arr) => ({
       count: arr.length,
