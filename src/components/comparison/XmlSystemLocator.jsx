@@ -144,7 +144,6 @@ export default function XmlSystemLocator() {
       const branchMap = Object.fromEntries(branches.map((b) => [b.cnpj, b.name]));
       const byAccessKey = new Map(invoices.filter((i) => i.access_key).map((i) => [i.access_key, i]));
       const byNumberSupplier = new Map(invoices.map((i) => [`${normalizeNumber(i.number)}|${onlyDigits(i.supplier_cnpj)}`, i]));
-      const byNumber = new Map(invoices.map((i) => [normalizeNumber(i.number), i]));
 
       const parsedRows = [];
       for (const file of files) {
@@ -154,7 +153,7 @@ export default function XmlSystemLocator() {
             parsedRows.push({ ...parsed, status: "event", allocation: "XML de evento fiscal — não é nota nova" });
             continue;
           }
-          const found = (parsed.access_key && byAccessKey.get(parsed.access_key)) || byNumberSupplier.get(`${normalizeNumber(parsed.number)}|${parsed.supplier_cnpj}`) || byNumber.get(normalizeNumber(parsed.number));
+          const found = (parsed.access_key && byAccessKey.get(parsed.access_key)) || byNumberSupplier.get(`${normalizeNumber(parsed.number)}|${parsed.supplier_cnpj}`);
           const supplier = suppliersByCnpj[onlyDigits(found?.supplier_cnpj)] || null;
           parsedRows.push({
             ...parsed,
