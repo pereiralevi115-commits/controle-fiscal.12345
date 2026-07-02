@@ -11,6 +11,7 @@ export default function LocalXmlImportCard() {
   const [files, setFiles] = useState([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [importError, setImportError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const lockHeldRef = useRef(false);
@@ -37,6 +38,7 @@ export default function LocalXmlImportCard() {
     }
     setFiles((prev) => [...prev, ...xmlFiles]);
     setResult(null);
+    setImportError("");
   }, []);
 
   const handleDrop = useCallback((event) => {
@@ -74,6 +76,7 @@ export default function LocalXmlImportCard() {
     if (files.length === 0) return;
     setImporting(true);
     setResult(null);
+    setImportError("");
 
     try {
       // IMPORTANTE: lemos os arquivos LOTE A LOTE, não todos de uma vez.
@@ -153,11 +156,11 @@ export default function LocalXmlImportCard() {
       if (totalErrors > 0) toast.warning(`${totalErrors} arquivo(s) com erro`);
       setFiles([]);
     } catch (error) {
-      if (error?.response?.status === 409 || error?.response?.data?.import_busy) {
-        toast.error(error?.response?.data?.error || "Já existe uma importação em andamento. Aguarde concluir.");
-      } else {
-        toast.error("Erro ao importar: " + (error?.response?.data?.error || error.message));
-      }
+      const message = error?.response?.status === 409 || error?.response?.data?.import_busy
+        ? (error?.response?.data?.error || "Já existe uma importação em andamento. Aguarde concluir.")
+        : "Erro ao importar: " + (error?.response?.data?.error || error.message);
+      setImportError(message);
+      toast.error(message);
     } finally {
       setImporting(false);
       setProgress({ current: 0, total: 0 });
@@ -179,6 +182,11 @@ export default function LocalXmlImportCard() {
         removeFile={removeFile}
         handleImport={handleImport}
       />
+      {importError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {importError}
+        </div>
+      )}
       <ImportResultSummary result={result} />
     </section>
   );
