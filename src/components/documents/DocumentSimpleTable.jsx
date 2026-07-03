@@ -57,7 +57,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
   const [page, setPage] = useState(0);
   const pageCount = Math.ceil(sortedDocuments.length / PAGE_SIZE);
 
-  useEffect(() => { setPage(0); }, [sortedDocuments.length, sortKey, sortDir]);
+  useEffect(() => { setPage(0); }, [sortKey, sortDir]);
   useEffect(() => {
     if (page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
   }, [page, pageCount]);

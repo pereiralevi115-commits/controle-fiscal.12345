@@ -48,10 +48,10 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
 
   const pageCount = Math.ceil(invoices.length / PAGE_SIZE);
 
-  // Volta para a primeira página quando o conjunto de notas muda (filtros, ordenação, etc.)
+  // Volta para a primeira página apenas quando a ordenação muda.
   useEffect(() => {
     setPage(0);
-  }, [invoices.length, sortConfig]);
+  }, [sortConfig]);
 
   // Garante que a página atual continue válida se a lista diminuir
   useEffect(() => {
