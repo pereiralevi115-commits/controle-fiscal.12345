@@ -18,7 +18,22 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   const recordMutation = useMutation({
     mutationFn: (data) => base44.entities.Invoice.update(invoiceId, data),
-    onSuccess: () => {
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ["invoices"] });
+      const previousInvoices = queryClient.getQueryData(["invoices"]);
+      queryClient.setQueryData(["invoices"], (old = []) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((item) => item.id === invoiceId ? { ...item, ...data } : item);
+      });
+      return { previousInvoices };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousInvoices) {
+        queryClient.setQueryData(["invoices"], context.previousInvoices);
+      }
+      toast.error("Erro ao salvar a marcação.");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
   });
