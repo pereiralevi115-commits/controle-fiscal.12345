@@ -29,7 +29,7 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["pending-fiscal-events"],
-    queryFn: () => base44.entities.PendingFiscalEvent.filter({ status: "pendente" }, "-event_date"),
+    queryFn: () => base44.entities.PendingFiscalEvent.filter({ status: "pendente" }, "-event_date", 1000),
     enabled: open,
   });
 
@@ -52,16 +52,14 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
   });
 
   const bulkApproveMutation = useMutation({
-    mutationFn: async (eventIds) => {
-      for (const eventId of eventIds) {
-        await base44.functions.invoke("manageFiscalEvents", { action: "approve", eventId });
-      }
-    },
-    onSuccess: (_data, eventIds) => {
+    mutationFn: (eventIds) =>
+      base44.functions.invoke("manageFiscalEvents", { action: "approve_many", eventIds }),
+    onSuccess: (response, eventIds) => {
+      const approved = response?.data?.approved ?? eventIds.length;
       setSelectedIds((prev) => prev.filter((id) => !eventIds.includes(id)));
       queryClient.invalidateQueries({ queryKey: ["pending-fiscal-events"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      toast.success(`${eventIds.length} evento(s) aprovado(s) e aplicado(s) às notas.`);
+      toast.success(`${approved} evento(s) aprovado(s) e aplicado(s) às notas.`);
     },
     onError: (err) => {
       toast.error(err?.response?.data?.error || "Erro ao aprovar os eventos selecionados.");

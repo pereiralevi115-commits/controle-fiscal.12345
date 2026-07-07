@@ -32,7 +32,36 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { action, eventId } = await req.json();
+    const { action, eventId, eventIds = [] } = await req.json();
+
+    if (action === 'approve_many') {
+      const ids = Array.isArray(eventIds) ? eventIds.filter(Boolean) : [];
+      if (ids.length === 0) return Response.json({ error: 'Nenhum evento selecionado.' }, { status: 400 });
+
+      let approved = 0;
+      const errors = [];
+      for (const id of ids) {
+        const events = await base44.asServiceRole.entities.PendingFiscalEvent.filter({ id });
+        const p = events[0];
+        if (!p) {
+          errors.push({ id, error: 'Evento não encontrado.' });
+          continue;
+        }
+
+        const docs = await base44.asServiceRole.entities.Invoice.filter({ access_key: p.access_key });
+        const invoice = docs[0];
+        if (!invoice) {
+          errors.push({ id, error: 'Nota referenciada ainda não existe.' });
+          continue;
+        }
+
+        await applyEvent(base44, invoice, p);
+        await base44.asServiceRole.entities.PendingFiscalEvent.update(p.id, { status: 'aprovado' });
+        approved++;
+      }
+
+      return Response.json({ ok: true, approved, errors });
+    }
 
     if (action === 'approve') {
       const events = await base44.asServiceRole.entities.PendingFiscalEvent.filter({ id: eventId });
