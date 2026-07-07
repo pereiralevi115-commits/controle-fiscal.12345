@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import InvoiceStatusBadge from "./InvoiceStatusBadge";
 import FiscalEventsSection from "./FiscalEventsSection";
+import InternalControlsAudit from "./InternalControlsAudit";
 import { formatCNPJ } from "@/lib/formatters";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -167,6 +168,8 @@ export default function InvoiceDetailDialog({ invoice: invoiceProp, open, onClos
               <InfoField label="FILIAL" value={branches?.find((b) => b.cnpj === invoice.branch_cnpj)?.name} />
             </div>
           </div>
+
+          <InternalControlsAudit invoice={invoice} />
 
           {/* PRODUTOS */}
           {invoice.items && invoice.items.length > 0 && (

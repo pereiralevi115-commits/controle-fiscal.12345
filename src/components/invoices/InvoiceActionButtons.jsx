@@ -73,17 +73,49 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     });
   };
 
+  const getActorName = () => user?.full_name || user?.email || "Usuário não identificado";
+
+  const formatDateTime = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString("pt-BR");
+  };
+
+  const buildAuditTitle = (btn) => {
+    if (invoice[btn.field]) {
+      return `${btn.label} marcado por ${invoice[`${btn.auditPrefix}_recorded_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_recorded_at`])}`;
+    }
+    if (invoice[`${btn.auditPrefix}_updated_by_name`] || invoice[`${btn.auditPrefix}_updated_at`]) {
+      return `${btn.label} não marcado. Última alteração por ${invoice[`${btn.auditPrefix}_updated_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_updated_at`])}`;
+    }
+    return `${btn.label} ainda não registrado`;
+  };
+
   const handleButtonClick = (buttonType) => {
     const fieldMap = {
-      SIGV: "sigv_recorded",
-      TOPCON: "topcon_recorded",
-      BOLETO: "boleto_recorded"
+      SIGV: { field: "sigv_recorded", prefix: "sigv" },
+      TOPCON: { field: "topcon_recorded", prefix: "topcon" },
+      BOLETO: { field: "boleto_recorded", prefix: "boleto" }
     };
     
-    const field = fieldMap[buttonType];
-    const newValue = !invoice[field];
+    const config = fieldMap[buttonType];
+    const newValue = !invoice[config.field];
+    const now = new Date().toISOString();
+    const actorName = getActorName();
+    const actorId = user?.id || "";
+    const data = {
+      [config.field]: newValue,
+      [`${config.prefix}_updated_by_id`]: actorId,
+      [`${config.prefix}_updated_by_name`]: actorName,
+      [`${config.prefix}_updated_at`]: now,
+    };
+
+    if (newValue) {
+      data[`${config.prefix}_recorded_by_id`] = actorId;
+      data[`${config.prefix}_recorded_by_name`] = actorName;
+      data[`${config.prefix}_recorded_at`] = now;
+    }
     
-    recordMutation.mutate({ [field]: newValue }, {
+    recordMutation.mutate(data, {
       onSuccess: () => {
         toast.success(`${buttonType} ${newValue ? "registrado" : "desregistrado"}!`);
       }
@@ -91,9 +123,9 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   };
 
   const buttons = [
-    { id: "SIGV", label: "SIGV", permission: "toggle_sigv", borderColor: "border-emerald-500", textColor: "text-emerald-600", bgColor: "bg-emerald-50", activeBg: "bg-emerald-600", field: "sigv_recorded" },
-    { id: "TOPCON", label: "TOPCON", permission: "toggle_topcon", borderColor: "border-violet-500", textColor: "text-violet-600", bgColor: "bg-violet-50", activeBg: "bg-violet-600", field: "topcon_recorded" },
-    { id: "BOLETO", label: "BOLETO", permission: "toggle_boleto", borderColor: "border-amber-500", textColor: "text-amber-600", bgColor: "bg-amber-50", activeBg: "bg-amber-600", field: "boleto_recorded" }
+    { id: "SIGV", label: "SIGV", permission: "toggle_sigv", borderColor: "border-emerald-500", textColor: "text-emerald-600", bgColor: "bg-emerald-50", activeBg: "bg-emerald-600", field: "sigv_recorded", auditPrefix: "sigv" },
+    { id: "TOPCON", label: "TOPCON", permission: "toggle_topcon", borderColor: "border-violet-500", textColor: "text-violet-600", bgColor: "bg-violet-50", activeBg: "bg-violet-600", field: "topcon_recorded", auditPrefix: "topcon" },
+    { id: "BOLETO", label: "BOLETO", permission: "toggle_boleto", borderColor: "border-amber-500", textColor: "text-amber-600", bgColor: "bg-amber-50", activeBg: "bg-amber-600", field: "boleto_recorded", auditPrefix: "boleto" }
   ];
 
   return (
@@ -183,6 +215,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
             size="sm"
             onClick={() => canEdit && handleButtonClick(btn.id)}
             disabled={recordMutation.isPending || !canEdit}
+            title={buildAuditTitle(btn)}
             className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
               invoice[btn.field]
                 ? `${btn.activeBg} text-white border-2`
