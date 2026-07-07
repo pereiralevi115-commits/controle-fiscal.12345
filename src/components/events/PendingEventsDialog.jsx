@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Check, X, Ban, FileWarning, FileCheck, Loader2, Inbox } from "lucide-react";
 
 const formatEventDate = (date) => {
@@ -24,6 +25,7 @@ const formatEventDate = (date) => {
 
 export default function PendingEventsDialog({ open, onOpenChange }) {
   const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["pending-fiscal-events"],
@@ -31,10 +33,15 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
     enabled: open,
   });
 
+  const approvableEvents = useMemo(() => events.filter((ev) => ev.document_exists), [events]);
+  const selectedApprovableIds = selectedIds.filter((id) => approvableEvents.some((ev) => ev.id === id));
+  const allSelected = approvableEvents.length > 0 && selectedApprovableIds.length === approvableEvents.length;
+
   const actionMutation = useMutation({
     mutationFn: ({ action, eventId }) =>
       base44.functions.invoke("manageFiscalEvents", { action, eventId }),
     onSuccess: (_data, variables) => {
+      setSelectedIds((prev) => prev.filter((id) => id !== variables.eventId));
       queryClient.invalidateQueries({ queryKey: ["pending-fiscal-events"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success(variables.action === "approve" ? "Evento aprovado e aplicado à nota." : "Evento rejeitado.");
@@ -43,6 +50,33 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
       toast.error(err?.response?.data?.error || "Erro ao processar o evento.");
     },
   });
+
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (eventIds) => {
+      for (const eventId of eventIds) {
+        await base44.functions.invoke("manageFiscalEvents", { action: "approve", eventId });
+      }
+    },
+    onSuccess: (_data, eventIds) => {
+      setSelectedIds((prev) => prev.filter((id) => !eventIds.includes(id)));
+      queryClient.invalidateQueries({ queryKey: ["pending-fiscal-events"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success(`${eventIds.length} evento(s) aprovado(s) e aplicado(s) às notas.`);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.error || "Erro ao aprovar os eventos selecionados.");
+    },
+  });
+
+  const toggleSelection = (eventId) => {
+    setSelectedIds((prev) =>
+      prev.includes(eventId) ? prev.filter((id) => id !== eventId) : [...prev, eventId]
+    );
+  };
+
+  const toggleSelectAll = (checked) => {
+    setSelectedIds(checked ? approvableEvents.map((ev) => ev.id) : []);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,11 +101,41 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="sticky top-0 z-10 flex flex-col gap-3 rounded-xl border bg-white/95 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <Checkbox
+                  checked={allSelected}
+                  disabled={approvableEvents.length === 0 || bulkApproveMutation.isPending || actionMutation.isPending}
+                  onCheckedChange={(checked) => toggleSelectAll(checked === true)}
+                  aria-label="Selecionar todos os eventos aprováveis"
+                />
+                Selecionar todos para aprovação
+              </label>
+              <Button
+                size="sm"
+                disabled={selectedApprovableIds.length === 0 || bulkApproveMutation.isPending || actionMutation.isPending}
+                onClick={() => bulkApproveMutation.mutate(selectedApprovableIds)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              >
+                {bulkApproveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Aprovar selecionados ({selectedApprovableIds.length})
+              </Button>
+            </div>
+
             {events.map((ev) => {
               const isPending = actionMutation.isPending && actionMutation.variables?.eventId === ev.id;
+              const isSelected = selectedIds.includes(ev.id);
               const Icon = ev.is_cancellation ? Ban : ev.event_type === "110110" ? FileWarning : FileCheck;
               return (
-                <div key={ev.id} className="border rounded-xl p-4 flex items-start gap-3">
+                <div key={ev.id} className={`border rounded-xl p-4 flex items-start gap-3 ${isSelected ? "border-emerald-300 bg-emerald-50/40" : ""}`}>
+                  <Checkbox
+                    className="mt-1"
+                    checked={isSelected}
+                    disabled={!ev.document_exists || bulkApproveMutation.isPending || actionMutation.isPending}
+                    onCheckedChange={() => toggleSelection(ev.id)}
+                    aria-label="Selecionar evento para aprovação"
+                    title={!ev.document_exists ? "Importe a nota antes de selecionar" : "Selecionar para aprovação em massa"}
+                  />
                   <div className={`mt-0.5 ${ev.is_cancellation ? "text-red-600" : "text-slate-500"}`}>
                     <Icon className="w-5 h-5" />
                   </div>
@@ -99,7 +163,7 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
                   <div className="flex flex-col gap-2 shrink-0">
                     <Button
                       size="sm"
-                      disabled={isPending || !ev.document_exists}
+                      disabled={isPending || bulkApproveMutation.isPending || !ev.document_exists}
                       onClick={() => actionMutation.mutate({ action: "approve", eventId: ev.id })}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
                       title={!ev.document_exists ? "Importe a nota antes de aprovar" : "Aprovar e aplicar à nota"}
@@ -110,7 +174,7 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={isPending}
+                      disabled={isPending || bulkApproveMutation.isPending}
                       onClick={() => actionMutation.mutate({ action: "reject", eventId: ev.id })}
                       className="gap-1 text-slate-600 hover:text-red-600 hover:border-red-300"
                     >
