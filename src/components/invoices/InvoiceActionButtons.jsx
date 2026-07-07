@@ -92,7 +92,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     if (invoice[btn.field]) {
       const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
       const date = invoice[`${btn.auditPrefix}_recorded_at`];
-      return name || date ? `${getShortName(name)} • ${formatButtonDate(date)}` : null;
+      return name || date ? `${getShortName(name)} • ${formatButtonDate(date)}` : "registro antigo";
     }
     const date = invoice[`${btn.auditPrefix}_updated_at`];
     return date ? `Alt. ${formatButtonDate(date)}` : null;
@@ -100,7 +100,10 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
 
   const buildAuditTitle = (btn) => {
     if (invoice[btn.field]) {
-      return `${btn.label} marcado por ${invoice[`${btn.auditPrefix}_recorded_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_recorded_at`])}`;
+      const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
+      const date = invoice[`${btn.auditPrefix}_recorded_at`];
+      if (!name && !date) return `${btn.label} já estava marcado antes do registro de usuário/data ser implantado.`;
+      return `${btn.label} marcado por ${name || "—"} em ${formatDateTime(date)}`;
     }
     if (invoice[`${btn.auditPrefix}_updated_by_name`] || invoice[`${btn.auditPrefix}_updated_at`]) {
       return `${btn.label} não marcado. Última alteração por ${invoice[`${btn.auditPrefix}_updated_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_updated_at`])}`;
