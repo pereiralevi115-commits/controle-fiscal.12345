@@ -80,24 +80,6 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     return new Date(value).toLocaleString("pt-BR");
   };
 
-  const formatButtonDate = (value) => {
-    if (!value) return "—";
-    const date = new Date(value);
-    return `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
-  };
-
-  const getShortName = (name) => (name || "—").split(" ")[0];
-
-  const getButtonAuditText = (btn) => {
-    if (invoice[btn.field]) {
-      const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
-      const date = invoice[`${btn.auditPrefix}_recorded_at`];
-      return name || date ? `${getShortName(name)} • ${formatButtonDate(date)}` : "registro antigo";
-    }
-    const date = invoice[`${btn.auditPrefix}_updated_at`];
-    return date ? `Alt. ${formatButtonDate(date)}` : null;
-  };
-
   const buildAuditTitle = (btn) => {
     if (invoice[btn.field]) {
       const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
@@ -240,18 +222,13 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
             onClick={() => canEdit && handleButtonClick(btn.id)}
             disabled={recordMutation.isPending || !canEdit}
             title={buildAuditTitle(btn)}
-            className={`min-h-9 h-auto px-3 py-1 text-xs font-medium transition-all flex-col gap-0 leading-tight ${btn.borderColor} ${
+            className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
               invoice[btn.field]
                 ? `${btn.activeBg} text-white border-2`
                 : `${btn.textColor} hover:${btn.bgColor}`
             } ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
           >
-            <span>{btn.label}</span>
-            {getButtonAuditText(btn) && (
-              <span className="text-[10px] font-normal opacity-80 whitespace-nowrap">
-                {getButtonAuditText(btn)}
-              </span>
-            )}
+            {btn.label}
           </Button>
         );
       })}
