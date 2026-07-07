@@ -4,6 +4,7 @@ import OneDriveXmlImportCard from "@/components/import/OneDriveXmlImportCard";
 import PendingEventsButton, { PendingEventsBanner } from "@/components/events/PendingEventsButton";
 import AutoImportHistoryButton from "@/components/import/AutoImportHistoryButton";
 import OneDriveAuditPanel from "@/components/import/OneDriveAuditPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Cloud, FileStack } from "lucide-react";
 
 export default function ImportXml() {
@@ -35,42 +36,50 @@ export default function ImportXml() {
         {/* Banner de eventos aguardando aprovação */}
         <PendingEventsBanner />
 
-        {/* Dois caminhos lado a lado */}
-        <div className="grid gap-6 lg:grid-cols-2 items-start">
-          {/* Card: Upload manual */}
-          <div className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <Upload className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">Upload manual</h2>
-                <p className="text-sm text-slate-500">Arraste ou selecione arquivos XML do seu computador.</p>
-              </div>
-            </div>
-            <div className="p-6">
-              <LocalXmlImportCard />
-            </div>
-          </div>
+        <Tabs defaultValue="importacao" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-white border border-slate-200 rounded-2xl p-1">
+            <TabsTrigger value="importacao" className="rounded-xl">Importação</TabsTrigger>
+            <TabsTrigger value="auditoria" className="rounded-xl">Auditoria dos XMLs</TabsTrigger>
+          </TabsList>
 
-          {/* Card: OneDrive */}
-          <div className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <Cloud className="w-6 h-6 text-white" />
+          <TabsContent value="importacao" className="mt-0">
+            <div className="grid gap-6 lg:grid-cols-2 items-start">
+              <div className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <Upload className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-800">Upload manual</h2>
+                    <p className="text-sm text-slate-500">Arraste ou selecione arquivos XML do seu computador.</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <LocalXmlImportCard />
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">OneDrive compartilhado</h2>
-                <p className="text-sm text-slate-500">Conecte uma pasta para importar de forma manual ou automática.</p>
-              </div>
-            </div>
-            <div className="p-6">
-              <OneDriveXmlImportCard />
-            </div>
-          </div>
-        </div>
 
-        <OneDriveAuditPanel />
+              <div className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <Cloud className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-800">OneDrive compartilhado</h2>
+                    <p className="text-sm text-slate-500">Conecte uma pasta para importar de forma manual ou automática.</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <OneDriveXmlImportCard />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="auditoria" className="mt-0">
+            <OneDriveAuditPanel />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
