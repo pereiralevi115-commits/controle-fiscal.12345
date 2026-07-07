@@ -119,7 +119,10 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     };
     
     const config = fieldMap[buttonType];
-    const newValue = !invoice[config.field];
+    const alreadyMarkedWithoutAudit = invoice[config.field]
+      && !invoice[`${config.prefix}_recorded_by_name`]
+      && !invoice[`${config.prefix}_recorded_at`];
+    const newValue = alreadyMarkedWithoutAudit ? true : !invoice[config.field];
     const now = new Date().toISOString();
     const actorName = getActorName();
     const actorId = user?.id || "";
@@ -138,7 +141,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     
     recordMutation.mutate(data, {
       onSuccess: () => {
-        toast.success(`${buttonType} ${newValue ? "registrado" : "desregistrado"}!`);
+        toast.success(alreadyMarkedWithoutAudit ? `${buttonType} atualizado com usuário e data!` : `${buttonType} ${newValue ? "registrado" : "desregistrado"}!`);
       }
     });
   };
