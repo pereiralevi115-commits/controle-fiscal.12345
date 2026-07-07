@@ -195,6 +195,7 @@ export default function OneDriveXmlImportCard() {
       const r = response.data?.result || {};
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      window.dispatchEvent(new Event("onedrive-audit-refresh"));
       if (r.success > 0) {
         toast.success(`${r.success} nota(s) pendente(s) importada(s)!`);
       } else {

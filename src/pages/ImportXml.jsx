@@ -3,6 +3,7 @@ import LocalXmlImportCard from "@/components/import/LocalXmlImportCard";
 import OneDriveXmlImportCard from "@/components/import/OneDriveXmlImportCard";
 import PendingEventsButton, { PendingEventsBanner } from "@/components/events/PendingEventsButton";
 import AutoImportHistoryButton from "@/components/import/AutoImportHistoryButton";
+import OneDriveAuditPanel from "@/components/import/OneDriveAuditPanel";
 import { Upload, Cloud, FileStack } from "lucide-react";
 
 export default function ImportXml() {
@@ -68,6 +69,8 @@ export default function ImportXml() {
             </div>
           </div>
         </div>
+
+        <OneDriveAuditPanel />
       </div>
     </div>
   );

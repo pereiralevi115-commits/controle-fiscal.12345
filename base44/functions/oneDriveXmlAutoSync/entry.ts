@@ -504,14 +504,61 @@ async function fetchExistingKeys(base44, keys) {
   return existing;
 }
 
-async function importPendingXmls(base44, accessToken, folderId, budget) {
+async function upsertAudit(base44, data) {
+  const now = new Date().toISOString();
+  const payload = {
+    ...data,
+    last_seen_at: now,
+    last_processed_at: now,
+  };
+  const existing = data.file_id
+    ? await base44.asServiceRole.entities.OneDriveXmlAudit.filter({ file_id: data.file_id })
+    : [];
+  if (existing.length > 0) {
+    await base44.asServiceRole.entities.OneDriveXmlAudit.update(existing[0].id, payload);
+  } else {
+    await base44.asServiceRole.entities.OneDriveXmlAudit.create(payload);
+  }
+}
+
+async function savePendingEvent(base44, parsed) {
+  const existing = await base44.asServiceRole.entities.PendingFiscalEvent.filter({
+    access_key: parsed.access_key,
+    event_type: parsed.event_type,
+    protocol: parsed.protocol || "",
+    status: "pendente",
+  });
+  if (existing.length > 0) return;
+  await base44.asServiceRole.entities.PendingFiscalEvent.create({
+    access_key: parsed.access_key,
+    event_type: parsed.event_type,
+    event_label: parsed.event_label,
+    description: parsed.description,
+    event_date: parsed.event_date,
+    protocol: parsed.protocol || "",
+    is_cancellation: parsed.is_cancellation,
+    document_exists: false,
+    status: "pendente",
+  });
+}
+
+function auditBase(file, folder, extra = {}) {
+  return {
+    file_id: file.id,
+    file_name: file.name,
+    folder_id: folder.folder_id,
+    folder_name: folder.folder_name,
+    folder_path: folder.folder_path,
+    modified_at_onedrive: file.lastModifiedDateTime,
+    access_key: accessKeyFromName(file.name) || "",
+    ...extra,
+  };
+}
+
+async function importPendingXmls(base44, accessToken, folder, budget) {
   if (budget <= 0) return { success: 0, errors: 0, total: 0, remaining: 1 };
 
-  const allFiles = await listAllXmlFiles(accessToken, folderId);
-
-  // 1ª passada (barata, SEM download e SEM consulta por arquivo): consulta o
-  // banco UMA vez em lote para descobrir quais chaves já existem, e descarta
-  // os arquivos cujo nome já corresponde a um documento importado.
+  const allFiles = await listAllXmlFiles(accessToken, folder.folder_id);
   const keysFromNames = [];
   for (const file of allFiles) {
     const key = accessKeyFromName(file.name);
@@ -519,70 +566,102 @@ async function importPendingXmls(base44, accessToken, folderId, budget) {
   }
   const existingKeys = await fetchExistingKeys(base44, keysFromNames);
 
-  // allFiles já vem ordenado do mais recente para o mais antigo, então os
-  // pendentes (recém-salvos pelo emissor) estão no topo. Montamos a fila de
-  // candidatos descartando os já importados pelo nome (quando possível) e
-  // limitando ao orçamento da execução — os pendentes mais novos vêm primeiro.
   const candidates = [];
   for (const file of allFiles) {
     const key = accessKeyFromName(file.name);
-    if (key && existingKeys.has(key)) continue; // já importado, pula sem baixar
+    if (key && existingKeys.has(key)) continue;
     candidates.push(file);
     if (candidates.length >= budget) break;
   }
 
-  // 2ª passada (com download, limitada ao orçamento): baixa e confirma pendência.
-  const xmlContents = [];
-  let downloaded = 0;
+  let success = 0;
+  let errors = 0;
+  let processed = 0;
+
   for (const file of candidates) {
-    if (downloaded >= budget) break;
-    let content;
+    if (processed >= budget) break;
+    processed++;
+
+    let content = "";
     try {
       content = await downloadFileText(accessToken, file.id);
-    } catch (_) { continue; }
+    } catch (error) {
+      errors++;
+      await upsertAudit(base44, auditBase(file, folder, {
+        status: "erro",
+        document_type: "desconhecido",
+        reason: `Falha ao baixar arquivo: ${error.message}`,
+      }));
+      continue;
+    }
 
     try {
       const parsed = parseXmlText(content);
+      const base = auditBase(file, folder, {
+        access_key: parsed.access_key || accessKeyFromName(file.name) || "",
+        document_type: parsed.is_event ? "evento" : parsed.document_type,
+        document_number: parsed.number || "",
+        supplier_name: parsed.supplier_name || "",
+        supplier_cnpj: parsed.supplier_cnpj || "",
+      });
+
       if (parsed.is_event) {
-        // Evento só é "pendente" se o documento-pai existe e ainda não foi gravado.
         const docs = parsed.access_key
           ? await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key })
           : [];
-        if (docs.length === 0) continue;
-        const events = Array.isArray(docs[0].fiscal_events) ? docs[0].fiscal_events : [];
-        const already = events.some((e) =>
-          e.type === parsed.event_type &&
-          e.date === parsed.event_date &&
-          (e.protocol || "") === (parsed.protocol || "")
-        );
-        if (already) continue;
-      } else {
-        let existing = [];
-        if (parsed.access_key) {
-          existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+        if (docs.length === 0) {
+          await savePendingEvent(base44, parsed);
+          await upsertAudit(base44, { ...base, status: "evento_pendente", reason: "Evento fiscal aguardando a nota principal existir no sistema." });
+          continue;
         }
-        if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
-          existing = await base44.asServiceRole.entities.Invoice.filter({
-            number: parsed.number,
-            supplier_cnpj: parsed.supplier_cnpj,
-          });
-        }
-        if (existing.length > 0) continue;
+        const res = await applyEvent(base44, parsed);
+        await upsertAudit(base44, {
+          ...base,
+          status: res.applied ? "evento_aplicado" : "ignorado",
+          reason: res.applied ? "Evento fiscal aplicado à nota." : "Evento fiscal já estava registrado na nota.",
+          invoice_id: docs[0].id,
+        });
+        if (res.applied) success++;
+        continue;
       }
-    } catch (_) { /* deixa importXmlContents tratar/contar o erro */ }
 
-    xmlContents.push(content);
-    downloaded++;
+      parsed.branch_cnpj = parsed.recipient_cnpj;
+      let blocked = [];
+      if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
+      if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
+        blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ number: parsed.number, supplier_cnpj: parsed.supplier_cnpj });
+      }
+      if (blocked.length > 0) {
+        await upsertAudit(base44, { ...base, status: "ignorado", reason: "Nota já foi excluída manualmente e não deve voltar." });
+        continue;
+      }
+
+      let existing = [];
+      if (parsed.access_key) existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+      if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
+        existing = await base44.asServiceRole.entities.Invoice.filter({ number: parsed.number, supplier_cnpj: parsed.supplier_cnpj });
+      }
+      if (existing.length > 0) {
+        await upsertAudit(base44, { ...base, status: "duplicado", reason: "Documento já existe no sistema.", invoice_id: existing[0].id });
+        continue;
+      }
+
+      const created = await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "auto" });
+      await upsertAudit(base44, { ...base, status: "importado", reason: "Documento importado automaticamente.", invoice_id: created.id });
+      success++;
+    } catch (error) {
+      errors++;
+      await upsertAudit(base44, auditBase(file, folder, {
+        status: "erro",
+        document_type: "desconhecido",
+        reason: error.message,
+      }));
+    }
+
+    await new Promise((r) => setTimeout(r, 250));
   }
 
-  if (xmlContents.length === 0) {
-    // Se ainda há candidatos não baixados, sinaliza pendência para a próxima passada.
-    return { success: 0, errors: 0, total: 0, remaining: candidates.length > 0 ? 1 : 0 };
-  }
-
-  const result = await importXmlContents(base44, xmlContents);
-  result.remaining = downloaded >= budget ? 1 : 0;
-  return result;
+  return { success, errors, total: processed, remaining: candidates.length >= budget ? 1 : 0 };
 }
 
 Deno.serve(async (req) => {
@@ -622,7 +701,7 @@ Deno.serve(async (req) => {
     let pending = false;
     let budget = MAX_PER_RUN;
     for (const folder of connectedFolders) {
-      const result = await importPendingXmls(base44, accessToken, folder.folder_id, budget);
+      const result = await importPendingXmls(base44, accessToken, folder, budget);
       totals.success += result.success || 0;
       totals.errors += result.errors || 0;
       totals.total += result.total || 0;
