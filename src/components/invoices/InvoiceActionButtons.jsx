@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
@@ -215,21 +216,28 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
       {buttons.map((btn) => {
         const canEdit = hasPermission(btn.permission);
         return (
-          <Button
-            key={btn.id}
-            variant="outline"
-            size="sm"
-            onClick={() => canEdit && handleButtonClick(btn.id)}
-            disabled={recordMutation.isPending || !canEdit}
-            title={buildAuditTitle(btn)}
-            className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
-              invoice[btn.field]
-                ? `${btn.activeBg} text-white border-2`
-                : `${btn.textColor} hover:${btn.bgColor}`
-            } ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
-          >
-            {btn.label}
-          </Button>
+          <TooltipProvider key={btn.id} delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => canEdit && handleButtonClick(btn.id)}
+                  disabled={recordMutation.isPending || !canEdit}
+                  className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
+                    invoice[btn.field]
+                      ? `${btn.activeBg} text-white border-2`
+                      : `${btn.textColor} hover:${btn.bgColor}`
+                  } ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
+                >
+                  {btn.label}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {buildAuditTitle(btn)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       })}
     </div>
