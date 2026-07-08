@@ -22,7 +22,7 @@ export default function UsersPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [editForm, setEditForm] = useState({ role: "user", profile_id: "" });
+  const [editForm, setEditForm] = useState({ display_name: "", role: "user", profile_id: "" });
 
   const [sortConfig, setSortConfig] = useState([]);
 
@@ -58,13 +58,15 @@ export default function UsersPage() {
     });
   };
 
+  const getUserDisplayName = (user) => user.display_name || user.full_name || "—";
+
   const sortedUsers = React.useMemo(() => {
     let result = [...users];
     if (sortConfig.length > 0) {
       const { key, direction } = sortConfig[0];
       result.sort((a, b) => {
-        let aVal = a[key];
-        let bVal = b[key];
+        let aVal = key === "display_name" ? getUserDisplayName(a) : a[key];
+        let bVal = key === "display_name" ? getUserDisplayName(b) : b[key];
         if (typeof aVal === "string") {
           aVal = aVal?.toLowerCase() || "";
           bVal = bVal?.toLowerCase() || "";
@@ -122,7 +124,7 @@ export default function UsersPage() {
 
   const openEdit = (user) => {
     setEditUser(user);
-    setEditForm({ role: user.role || "user", profile_id: user.profile_id || "__none__", branch_ids: user.branch_ids || [] });
+    setEditForm({ display_name: user.display_name || user.full_name || "", role: user.role || "user", profile_id: user.profile_id || "__none__", branch_ids: user.branch_ids || [] });
     setEditOpen(true);
   };
 
@@ -136,6 +138,7 @@ export default function UsersPage() {
     updateUserMutation.mutate({
       userId: editUser.id,
       data: {
+        display_name: editForm.display_name.trim(),
         role: editForm.role,
         profile_id: editForm.profile_id === "__none__" ? null : editForm.profile_id,
         branch_ids: isLiderProfile(editForm.profile_id) ? editForm.branch_ids : [],
@@ -205,7 +208,7 @@ export default function UsersPage() {
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="font-semibold">
-                          <SortableHeader label="Nome" sortKey="full_name" />
+                          <SortableHeader label="Nome" sortKey="display_name" />
                         </TableHead>
                         <TableHead className="font-semibold">
                           <SortableHeader label="Email" sortKey="email" />
@@ -224,7 +227,7 @@ export default function UsersPage() {
                     <TableBody>
                       {sortedUsers.map((user) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
+                          <TableCell className="font-medium">{getUserDisplayName(user)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                           <TableCell>
                             <Badge variant={user.role === "admin" ? "default" : "secondary"}>
@@ -285,8 +288,16 @@ export default function UsersPage() {
             {editUser && (
               <div className="space-y-4 mt-2">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-700">{editUser.full_name || editUser.email}</p>
+                  <p className="text-sm font-medium text-slate-700">{getUserDisplayName(editUser)}</p>
                   <p className="text-xs text-muted-foreground">{editUser.email}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome</Label>
+                  <Input
+                    value={editForm.display_name}
+                    onChange={(e) => setEditForm({ ...editForm, display_name: e.target.value })}
+                    placeholder="Nome exibido no sistema"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Função</Label>

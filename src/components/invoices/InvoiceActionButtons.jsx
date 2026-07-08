@@ -74,7 +74,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     });
   };
 
-  const getActorName = () => user?.full_name || user?.email || "Usuário não identificado";
+  const getActorName = () => user?.display_name || user?.full_name || user?.email || "Usuário não identificado";
 
   const formatDateTime = (value) => {
     if (!value) return "—";
