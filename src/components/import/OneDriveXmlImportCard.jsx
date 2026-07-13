@@ -7,6 +7,7 @@ import ImportResultSummary from "@/components/import/ImportResultSummary";
 import OneDriveFolderBrowser from "@/components/import/OneDriveFolderBrowser";
 import OneDriveConnectedFolders from "@/components/import/OneDriveConnectedFolders";
 import OneDriveHelpBox from "@/components/import/OneDriveHelpBox";
+import OneDriveRunFeedback from "@/components/import/OneDriveRunFeedback";
 import { Cloud, Loader2, RefreshCw } from "lucide-react";
 
 // Normaliza a lista de pastas conectadas (considera o campo legado de pasta única).
@@ -35,6 +36,7 @@ export default function OneDriveXmlImportCard() {
   const [xmlFileCount, setXmlFileCount] = useState(0);
   const [folderStack, setFolderStack] = useState([]);
   const [importProgress, setImportProgress] = useState(null);
+  const [runFeedback, setRunFeedback] = useState(null);
 
   const connectedFolders = getConnectedFolders(settings);
 
@@ -154,6 +156,7 @@ export default function OneDriveXmlImportCard() {
 
         setImportProgress({
           folder: (data.folderIndex ?? folderIndex) + 1,
+          folderName: data.folderName || "pasta conectada",
           folderCount: data.folderCount || connectedFolders.length,
           processed: data.processed || 0,
           total: data.total || 0,
@@ -190,20 +193,50 @@ export default function OneDriveXmlImportCard() {
       return;
     }
     setRunningAuto(true);
+    const timers = [];
+    const moveToStep = (currentStep, detail, delay) => {
+      timers.push(setTimeout(() => {
+        setRunFeedback((prev) => prev && !prev.done && !prev.error ? { ...prev, currentStep, detail } : prev);
+      }, delay));
+    };
+
+    setRunFeedback({
+      title: "Varredura de pendentes em andamento",
+      detail: "Conectando ao OneDrive e preparando as pastas conectadas.",
+      currentStep: 0,
+    });
+    moveToStep(1, "Procurando XMLs que ainda não viraram nota no sistema.", 1200);
+    moveToStep(2, "Baixando e lendo os XMLs pendentes encontrados.", 2600);
+    moveToStep(3, "Criando notas novas e registrando a auditoria dos arquivos.", 4200);
+
     try {
       const response = await base44.functions.invoke("oneDriveXmlAutoSync", {});
       const r = response.data?.result || {};
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       window.dispatchEvent(new Event("onedrive-audit-refresh"));
+      setRunFeedback({
+        title: "Varredura concluída",
+        detail: `${r.total || 0} XML(s) analisado(s): ${r.success || 0} importado(s) e ${r.errors || 0} com problema. A aba de auditoria mostra arquivo por arquivo.`,
+        currentStep: 4,
+        done: true,
+      });
       if (r.success > 0) {
         toast.success(`${r.success} nota(s) pendente(s) importada(s)!`);
       } else {
         toast.message("Nenhum XML pendente para importar.");
       }
     } catch (error) {
-      toast.error(error?.response?.data?.error || error.message);
+      const message = error?.response?.data?.error || error.message;
+      setRunFeedback({
+        title: "Varredura interrompida",
+        detail: message,
+        currentStep: 0,
+        error: true,
+      });
+      toast.error(message);
     } finally {
+      timers.forEach(clearTimeout);
       setRunningAuto(false);
     }
   };
@@ -249,7 +282,7 @@ export default function OneDriveXmlImportCard() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-indigo-700">
-                Importando pasta {importProgress.folder}/{importProgress.folderCount}...
+                Importando {importProgress.folderName} ({importProgress.folder}/{importProgress.folderCount})...
               </span>
               <span className="font-semibold text-slate-700 tabular-nums">
                 {importProgress.processed} / {importProgress.total}
@@ -290,6 +323,8 @@ export default function OneDriveXmlImportCard() {
             {autoOn ? "Desativar auto" : "Ativar automático"}
           </Button>
         </div>
+
+        <OneDriveRunFeedback feedback={runFeedback} />
 
         {/* Legenda explicativa dos botões */}
         <div className="grid sm:grid-cols-2 gap-2 pt-1">
