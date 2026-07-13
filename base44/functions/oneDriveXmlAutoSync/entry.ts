@@ -504,6 +504,23 @@ async function fetchExistingKeys(base44, keys) {
   return existing;
 }
 
+async function fetchAlreadyHandledFileIds(base44, fileIds) {
+  const handled = new Set();
+  const finalStatuses = ["importado", "duplicado", "ignorado", "evento_pendente", "evento_aplicado"];
+  const CHUNK = 100;
+  for (let i = 0; i < fileIds.length; i += CHUNK) {
+    const slice = fileIds.slice(i, i + CHUNK);
+    const rows = await base44.asServiceRole.entities.OneDriveXmlAudit.filter({
+      file_id: { $in: slice },
+      status: { $in: finalStatuses },
+    });
+    for (const row of rows) {
+      if (row.file_id) handled.add(row.file_id);
+    }
+  }
+  return handled;
+}
+
 async function upsertAudit(base44, data) {
   const now = new Date().toISOString();
   const payload = {
@@ -565,9 +582,11 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
     if (key) keysFromNames.push(key);
   }
   const existingKeys = await fetchExistingKeys(base44, keysFromNames);
+  const handledFileIds = await fetchAlreadyHandledFileIds(base44, allFiles.map((file) => file.id).filter(Boolean));
 
   const candidates = [];
   for (const file of allFiles) {
+    if (handledFileIds.has(file.id)) continue;
     const key = accessKeyFromName(file.name);
     if (key && existingKeys.has(key)) continue;
     candidates.push(file);
@@ -711,8 +730,8 @@ Deno.serve(async (req) => {
     }
 
     const message = totals.total === 0
-      ? 'Automático: nenhum XML pendente para importar.'
-      : `Automático: ${totals.success} importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há pendentes, continuará na próxima execução.' : ''}`;
+      ? 'Automático: nenhum XML novo pendente para importar.'
+      : `Automático: ${totals.total} XML(s) analisado(s), ${totals.success} nota(s) importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há XMLs novos na fila, continuará na próxima execução.' : ''}`;
 
     await saveResult(base44, settings, totals, message);
     return Response.json({ ok: true, result: totals });
