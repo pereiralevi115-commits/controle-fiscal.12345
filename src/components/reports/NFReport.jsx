@@ -14,12 +14,6 @@ const formatCurrency = (value) =>
 const formatDate = (date) =>
   date ? format(new Date(date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—";
 
-const BRANCH_ORDER = [
-  "ARARANGUA", "ORLEANS", "CAPIVARI DE BAIXO", "CRICIUMA", "PASSO DE TORRES",
-  "BRAÇO DO NORTE", "MAQUINE", "CASEIROS", "LAGES",
-  "SANTO ANTONIO DA PATRULHA", "VILA FLORES"
-];
-
 export default function NFReport({ open, onClose, invoices, branches }) {
   const printRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -31,25 +25,13 @@ export default function NFReport({ open, onClose, invoices, branches }) {
 
   const branchName = (inv) => branchMap[inv.branch_cnpj] || inv.branch_cnpj || "Sem Filial";
 
-  // Filtrar por período (data de vencimento) e ordenar por filial
+  // Filtra por período (data de vencimento), preservando exatamente a ordem da tela Notas Fiscais.
   const periodInvoices = useMemo(() => {
-    const filtered = invoices.filter((inv) => {
+    return invoices.filter((inv) => {
       if (!inv.due_date) return !startDate;
       if (startDate && inv.due_date < startDate) return false;
       if (endDate && inv.due_date > endDate) return false;
       return true;
-    });
-
-    return filtered.sort((a, b) => {
-      const an = branchName(a).toUpperCase();
-      const bn = branchName(b).toUpperCase();
-      const ai = BRANCH_ORDER.findIndex(n => an.includes(n));
-      const bi = BRANCH_ORDER.findIndex(n => bn.includes(n));
-      const aIdx = ai === -1 ? 999 : ai;
-      const bIdx = bi === -1 ? 999 : bi;
-      if (aIdx !== bIdx) return aIdx - bIdx;
-      if (an !== bn) return an.localeCompare(bn);
-      return new Date(a.due_date || 0) - new Date(b.due_date || 0);
     });
   }, [invoices, startDate, endDate]);
 
