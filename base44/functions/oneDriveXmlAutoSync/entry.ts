@@ -504,9 +504,11 @@ async function fetchExistingKeys(base44, keys) {
   return existing;
 }
 
-async function fetchAlreadyHandledFileIds(base44, fileIds) {
+async function fetchAlreadyHandledFileIds(base44, files) {
   const handled = new Set();
-  const finalStatuses = ["importado", "duplicado", "ignorado", "evento_pendente", "evento_aplicado"];
+  const finalStatuses = ["importado", "duplicado", "ignorado", "evento_aplicado"];
+  const byId = new Map(files.filter((file) => file.id).map((file) => [file.id, file]));
+  const fileIds = Array.from(byId.keys());
   const CHUNK = 100;
   for (let i = 0; i < fileIds.length; i += CHUNK) {
     const slice = fileIds.slice(i, i + CHUNK);
@@ -515,7 +517,9 @@ async function fetchAlreadyHandledFileIds(base44, fileIds) {
       status: { $in: finalStatuses },
     });
     for (const row of rows) {
-      if (row.file_id) handled.add(row.file_id);
+      const file = byId.get(row.file_id);
+      const unchanged = !file?.lastModifiedDateTime || !row.modified_at_onedrive || row.modified_at_onedrive === file.lastModifiedDateTime;
+      if (row.file_id && unchanged) handled.add(row.file_id);
     }
   }
   return handled;
@@ -576,19 +580,11 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
   if (budget <= 0) return { success: 0, errors: 0, total: 0, remaining: 1 };
 
   const allFiles = await listAllXmlFiles(accessToken, folder.folder_id);
-  const keysFromNames = [];
-  for (const file of allFiles) {
-    const key = accessKeyFromName(file.name);
-    if (key) keysFromNames.push(key);
-  }
-  const existingKeys = await fetchExistingKeys(base44, keysFromNames);
-  const handledFileIds = await fetchAlreadyHandledFileIds(base44, allFiles.map((file) => file.id).filter(Boolean));
+  const handledFileIds = await fetchAlreadyHandledFileIds(base44, allFiles);
 
   const candidates = [];
   for (const file of allFiles) {
     if (handledFileIds.has(file.id)) continue;
-    const key = accessKeyFromName(file.name);
-    if (key && existingKeys.has(key)) continue;
     candidates.push(file);
     if (candidates.length >= budget) break;
   }
