@@ -211,7 +211,7 @@ export default function OneDriveXmlImportCard() {
     moveToStep(3, "Criando notas novas e registrando a auditoria dos arquivos.", 4200);
 
     try {
-      const response = await base44.functions.invoke("oneDriveXmlAutoSync", {});
+      const response = await base44.functions.invoke("oneDriveXmlAutoSync", { manualRun: true });
       const r = response.data?.result || {};
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["invoices"] });

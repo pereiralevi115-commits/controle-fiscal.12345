@@ -682,10 +682,19 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    let payload = {};
+    try {
+      payload = await req.json();
+    } catch (_) {}
+    const manualRun = payload?.manualRun === true;
     const settings = await getSettings(base44);
     const connectedFolders = getConnectedFolders(settings);
 
-    if (!settings?.auto_sync_enabled || connectedFolders.length === 0) {
+    if (connectedFolders.length === 0) {
+      return Response.json({ skipped: true, reason: 'Nenhuma pasta do OneDrive conectada.' });
+    }
+
+    if (!manualRun && !settings?.auto_sync_enabled) {
       if (settings?.import_locked && settings.import_lock_source === 'auto') {
         await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
           import_locked: false, import_lock_source: null,
@@ -706,7 +715,7 @@ Deno.serve(async (req) => {
       }
     }
     await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
-      import_locked: true, import_lock_source: 'auto', import_lock_at: new Date().toISOString(),
+      import_locked: true, import_lock_source: manualRun ? 'onedrive' : 'auto', import_lock_at: new Date().toISOString(),
     });
 
     try {
@@ -725,9 +734,10 @@ Deno.serve(async (req) => {
       if (budget <= 0) { pending = true; break; }
     }
 
+    const sourceLabel = manualRun ? 'Varredura manual' : 'Automático';
     const message = totals.total === 0
-      ? 'Automático: nenhum XML novo pendente para importar.'
-      : `Automático: ${totals.total} XML(s) analisado(s), ${totals.success} nota(s) importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há XMLs novos na fila, continuará na próxima execução.' : ''}`;
+      ? `${sourceLabel}: nenhum XML novo pendente para importar.`
+      : `${sourceLabel}: ${totals.total} XML(s) analisado(s), ${totals.success} nota(s) importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há XMLs novos na fila, continuará na próxima execução.' : ''}`;
 
     await saveResult(base44, settings, totals, message);
     return Response.json({ ok: true, result: totals });
