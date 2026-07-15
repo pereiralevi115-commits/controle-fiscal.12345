@@ -55,6 +55,9 @@ const STATUS_ACTION = {
 export default function OneDriveAuditPanel() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [typeFilter, setTypeFilter] = useState("todos");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const loadRows = async () => {
     setLoading(true);
@@ -76,6 +79,20 @@ export default function OneDriveAuditPanel() {
     acc[row.status] = (acc[row.status] || 0) + 1;
     return acc;
   }, {}), [rows]);
+
+  const filteredRows = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchesStatus = statusFilter === "todos" || row.status === statusFilter;
+      const matchesType = typeFilter === "todos" || row.document_type === typeFilter;
+      const searchable = [row.file_name, row.document_number, row.supplier_name, row.access_key, row.reason]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const matchesSearch = !term || searchable.includes(term);
+      return matchesStatus && matchesType && matchesSearch;
+    });
+  }, [rows, searchTerm, statusFilter, typeFilter]);
 
   return (
     <section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -111,6 +128,31 @@ export default function OneDriveAuditPanel() {
           ))}
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por arquivo, nota, fornecedor ou chave"
+            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400"
+          />
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400"
+          >
+            <option value="todos">Todas as situações</option>
+            {Object.entries(STATUS_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+          <select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value)}
+            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-emerald-400"
+          >
+            <option value="todos">Todos os tipos</option>
+            {Object.entries(TYPE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </div>
+
         <div className="overflow-x-auto rounded-2xl border border-slate-100">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500">
@@ -124,9 +166,9 @@ export default function OneDriveAuditPanel() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-500">Nenhum XML auditado ainda.</td></tr>
-              ) : rows.map((row) => (
+              {filteredRows.length === 0 ? (
+                <tr><td colSpan="6" className="px-4 py-8 text-center text-slate-500">Nenhum XML encontrado com os filtros atuais.</td></tr>
+              ) : filteredRows.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50 align-top">
                   <td className="px-4 py-3 max-w-xs truncate" title={row.file_name}>{row.file_name}</td>
                   <td className="px-4 py-3 text-slate-600">{TYPE_LABELS[row.document_type] || row.document_type || "—"}</td>
