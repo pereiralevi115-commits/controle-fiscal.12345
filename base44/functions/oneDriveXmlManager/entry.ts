@@ -614,7 +614,25 @@ async function savePendingEvent(base44, parsed) {
   });
 }
 
+const FINAL_AUDIT_STATUSES = ["importado", "duplicado", "ignorado", "evento_aplicado"];
+
+async function shouldSkipResolvedAudit(base44, file) {
+  const existing = await base44.asServiceRole.entities.OneDriveXmlAudit.filter({ file_id: file.id });
+  if (existing.length === 0) return false;
+
+  const audit = existing[0];
+  const unchanged = !file.lastModifiedDateTime || !audit.modified_at_onedrive || audit.modified_at_onedrive === file.lastModifiedDateTime;
+  if (!FINAL_AUDIT_STATUSES.includes(audit.status) || !unchanged) return false;
+
+  await base44.asServiceRole.entities.OneDriveXmlAudit.update(audit.id, { last_seen_at: new Date().toISOString() });
+  return true;
+}
+
 async function processOneDriveXmlFile(base44, accessToken, file, folder) {
+  if (await shouldSkipResolvedAudit(base44, file)) {
+    return { success: 0, errors: 0 };
+  }
+
   let content = "";
   try {
     content = await downloadFileText(accessToken, file.id);
