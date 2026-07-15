@@ -506,7 +506,7 @@ async function fetchExistingKeys(base44, keys) {
 
 async function fetchAlreadyHandledFileIds(base44, files) {
   const handled = new Set();
-  const finalStatuses = ["importado", "duplicado", "ignorado", "evento_aplicado"];
+  const finalStatuses = ["importado", "duplicado", "ignorado", "erro", "evento_pendente", "evento_aplicado"];
   const byId = new Map(files.filter((file) => file.id).map((file) => [file.id, file]));
   const fileIds = Array.from(byId.keys());
   const CHUNK = 100;
@@ -740,7 +740,7 @@ Deno.serve(async (req) => {
       : `${sourceLabel}: ${totals.total} XML(s) analisado(s), ${totals.success} nota(s) importada(s), ${totals.errors} erro(s) (${connectedFolders.length} pasta(s))${pending ? ' — ainda há XMLs novos na fila, continuará na próxima execução.' : ''}`;
 
     await saveResult(base44, settings, totals, message);
-    return Response.json({ ok: true, result: totals });
+    return Response.json({ ok: true, result: { ...totals, pending } });
     } finally {
       const fresh = await getSettings(base44);
       if (fresh) {

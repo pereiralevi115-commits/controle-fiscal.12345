@@ -614,7 +614,7 @@ async function savePendingEvent(base44, parsed) {
   });
 }
 
-const FINAL_AUDIT_STATUSES = ["importado", "duplicado", "ignorado", "evento_aplicado"];
+const FINAL_AUDIT_STATUSES = ["importado", "duplicado", "ignorado", "erro", "evento_pendente", "evento_aplicado"];
 
 async function shouldSkipResolvedAudit(base44, file) {
   const existing = await base44.asServiceRole.entities.OneDriveXmlAudit.filter({ file_id: file.id });
@@ -626,6 +626,26 @@ async function shouldSkipResolvedAudit(base44, file) {
 
   await base44.asServiceRole.entities.OneDriveXmlAudit.update(audit.id, { last_seen_at: new Date().toISOString() });
   return true;
+}
+
+async function fetchAlreadyHandledFileIds(base44, files) {
+  const handled = new Set();
+  const byId = new Map(files.filter((file) => file.id).map((file) => [file.id, file]));
+  const fileIds = Array.from(byId.keys());
+  const CHUNK = 100;
+  for (let i = 0; i < fileIds.length; i += CHUNK) {
+    const slice = fileIds.slice(i, i + CHUNK);
+    const rows = await base44.asServiceRole.entities.OneDriveXmlAudit.filter({
+      file_id: { $in: slice },
+      status: { $in: FINAL_AUDIT_STATUSES },
+    });
+    for (const row of rows) {
+      const file = byId.get(row.file_id);
+      const unchanged = !file?.lastModifiedDateTime || !row.modified_at_onedrive || row.modified_at_onedrive === file.lastModifiedDateTime;
+      if (row.file_id && unchanged) handled.add(row.file_id);
+    }
+  }
+  return handled;
 }
 
 async function processOneDriveXmlFile(base44, accessToken, file, folder) {
@@ -713,8 +733,10 @@ const BATCH_SIZE = 5;
 
 async function importFolderById(base44, accessToken, folder, skip = 0) {
   const allXmlFiles = await listAllXmlFiles(accessToken, folder.folder_id);
-  const totalFiles = allXmlFiles.length;
-  const batch = allXmlFiles.slice(skip, skip + BATCH_SIZE);
+  const handledFileIds = await fetchAlreadyHandledFileIds(base44, allXmlFiles);
+  const pendingFiles = allXmlFiles.filter((file) => !handledFileIds.has(file.id));
+  const totalFiles = pendingFiles.length;
+  const batch = pendingFiles.slice(skip, skip + BATCH_SIZE);
 
   if (batch.length === 0) {
     return { success: 0, errors: 0, error_details: [], total: totalFiles, processed: skip, remaining: 0, done: true };

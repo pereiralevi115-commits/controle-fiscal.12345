@@ -211,29 +211,53 @@ export default function OneDriveXmlImportCard() {
     moveToStep(3, "Criando notas novas e registrando a auditoria dos arquivos.", 4200);
 
     try {
-      const response = await base44.functions.invoke("oneDriveXmlAutoSync", { manualRun: true });
-      if (response.data?.skipped) {
-        setRunFeedback({
-          title: "Varredura não iniciada",
-          detail: response.data.reason || "A varredura não pôde ser iniciada agora.",
-          currentStep: 0,
-          error: true,
-        });
-        toast.message(response.data.reason || "Varredura não iniciada.");
-        return;
+      let pending = true;
+      let rounds = 0;
+      let totalAnalyzed = 0;
+      let totalSuccess = 0;
+      let totalErrors = 0;
+
+      while (pending) {
+        rounds += 1;
+        setRunFeedback((prev) => ({
+          ...(prev || {}),
+          title: "Varredura de pendentes em andamento",
+          detail: `Processando lote ${rounds}. Mantenha esta tela aberta até concluir.`,
+          currentStep: 2,
+        }));
+
+        const response = await base44.functions.invoke("oneDriveXmlAutoSync", { manualRun: true });
+        if (response.data?.skipped) {
+          setRunFeedback({
+            title: "Varredura não iniciada",
+            detail: response.data.reason || "A varredura não pôde ser iniciada agora.",
+            currentStep: 0,
+            error: true,
+          });
+          toast.message(response.data.reason || "Varredura não iniciada.");
+          return;
+        }
+
+        const r = response.data?.result || {};
+        totalAnalyzed += r.total || 0;
+        totalSuccess += r.success || 0;
+        totalErrors += r.errors || 0;
+        pending = !!r.pending;
+        window.dispatchEvent(new Event("onedrive-audit-refresh"));
+        if (pending) await new Promise((resolve) => setTimeout(resolve, 500));
       }
-      const r = response.data?.result || {};
+
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       window.dispatchEvent(new Event("onedrive-audit-refresh"));
       setRunFeedback({
         title: "Varredura concluída",
-        detail: `${r.total || 0} XML(s) analisado(s): ${r.success || 0} importado(s) e ${r.errors || 0} com problema. A aba de auditoria mostra arquivo por arquivo.`,
+        detail: `${totalAnalyzed} XML(s) analisado(s): ${totalSuccess} importado(s) e ${totalErrors} com problema. A aba de auditoria mostra arquivo por arquivo.`,
         currentStep: 4,
         done: true,
       });
-      if (r.success > 0) {
-        toast.success(`${r.success} nota(s) pendente(s) importada(s)!`);
+      if (totalSuccess > 0) {
+        toast.success(`${totalSuccess} nota(s) pendente(s) importada(s)!`);
       } else {
         toast.message("Nenhum XML pendente para importar.");
       }

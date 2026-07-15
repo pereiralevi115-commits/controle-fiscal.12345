@@ -45,8 +45,8 @@ const STATUS_HELP = {
 const STATUS_ACTION = {
   importado: "Nada a fazer.",
   evento_aplicado: "Nada a fazer.",
-  evento_pendente: "Confira se a nota principal existe; depois aprove o evento fiscal pendente.",
-  erro: "Abra o XML no OneDrive, confira o arquivo e tente importar novamente.",
+  evento_pendente: "Acompanhe na área de eventos fiscais pendentes para decidir a aprovação.",
+  erro: "Corrija ou substitua o arquivo no OneDrive; se ele mudar, será analisado novamente.",
   duplicado: "Nada a fazer; é apenas uma proteção contra duplicidade.",
   ignorado: "Revise somente se você esperava que esse XML virasse uma nota.",
   pendente: "Aguarde a próxima varredura ou clique em Varrer pendentes.",
@@ -175,7 +175,7 @@ export default function OneDriveAuditPanel() {
                   <td className="px-4 py-3">
                     <Badge className={STATUS_CLASSES[row.status] || "bg-slate-100 text-slate-700"}>{STATUS_LABELS[row.status] || row.status}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 max-w-sm">{STATUS_HELP[row.status] || row.reason || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 max-w-sm">{row.reason || STATUS_HELP[row.status] || "—"}</td>
                   <td className="px-4 py-3 text-slate-600 max-w-xs">{STATUS_ACTION[row.status] || "Revise o motivo informado."}</td>
                   <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{row.last_seen_at ? new Date(row.last_seen_at).toLocaleString("pt-BR") : "—"}</td>
                 </tr>
