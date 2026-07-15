@@ -166,6 +166,7 @@ export default function OneDriveXmlImportCard() {
           setResult({ success: totalSuccess, errors: totalErrors, error_details: data.error_details || [] });
           await loadStatus();
           queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          window.dispatchEvent(new Event("onedrive-audit-refresh"));
           if (totalSuccess > 0) {
             toast.success(`${totalSuccess} nota(s) importada(s) com sucesso!`);
           } else {

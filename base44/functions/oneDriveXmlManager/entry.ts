@@ -547,7 +547,7 @@ async function listFolderItems(accessToken, parentId) {
 // Busca TODOS os XMLs da pasta usando paginação da Graph API
 async function listAllXmlFiles(accessToken, folderId) {
   const allFiles = [];
-  let nextLink = `/me/drive/items/${folderId}/children?$select=id,name,file&$top=200`;
+  let nextLink = `/me/drive/items/${folderId}/children?$select=id,name,file,lastModifiedDateTime&$top=200`;
 
   while (nextLink) {
     const url = nextLink.startsWith('https://') ? nextLink : null;
@@ -563,52 +563,159 @@ async function listAllXmlFiles(accessToken, folderId) {
   return allFiles;
 }
 
-// Importa em lotes de BATCH_SIZE arquivos por chamada para evitar timeout
+function accessKeyFromName(name) {
+  const digits = (name || "").replace(/\D/g, "");
+  const match = digits.match(/\d{44}/);
+  return match ? match[0] : null;
+}
+
+function auditBase(file, folder, extra = {}) {
+  return {
+    file_id: file.id,
+    file_name: file.name,
+    folder_id: folder.folder_id,
+    folder_name: folder.folder_name,
+    folder_path: folder.folder_path,
+    modified_at_onedrive: file.lastModifiedDateTime,
+    access_key: accessKeyFromName(file.name) || "",
+    ...extra,
+  };
+}
+
+async function upsertAudit(base44, data) {
+  const now = new Date().toISOString();
+  const payload = { ...data, last_seen_at: now, last_processed_at: now };
+  const existing = data.file_id ? await base44.asServiceRole.entities.OneDriveXmlAudit.filter({ file_id: data.file_id }) : [];
+  if (existing.length > 0) {
+    await base44.asServiceRole.entities.OneDriveXmlAudit.update(existing[0].id, payload);
+  } else {
+    await base44.asServiceRole.entities.OneDriveXmlAudit.create(payload);
+  }
+}
+
+async function savePendingEvent(base44, parsed) {
+  const existing = await base44.asServiceRole.entities.PendingFiscalEvent.filter({
+    access_key: parsed.access_key,
+    event_type: parsed.event_type,
+    protocol: parsed.protocol || "",
+    status: "pendente",
+  });
+  if (existing.length > 0) return;
+  await base44.asServiceRole.entities.PendingFiscalEvent.create({
+    access_key: parsed.access_key,
+    event_type: parsed.event_type,
+    event_label: parsed.event_label,
+    description: parsed.description,
+    event_date: parsed.event_date,
+    protocol: parsed.protocol || "",
+    is_cancellation: parsed.is_cancellation,
+    document_exists: false,
+    status: "pendente",
+  });
+}
+
+async function processOneDriveXmlFile(base44, accessToken, file, folder) {
+  let content = "";
+  try {
+    content = await downloadFileText(accessToken, file.id);
+  } catch (error) {
+    await upsertAudit(base44, auditBase(file, folder, {
+      status: "erro",
+      document_type: "desconhecido",
+      reason: `Falha ao baixar arquivo do OneDrive: ${error.message}`,
+    }));
+    return { success: 0, errors: 1, detail: `${file.name}: falha ao baixar do OneDrive` };
+  }
+
+  try {
+    const parsed = parseXmlText(content);
+    const base = auditBase(file, folder, {
+      access_key: parsed.access_key || accessKeyFromName(file.name) || "",
+      document_type: parsed.is_event ? "evento" : parsed.document_type,
+      document_number: parsed.number || "",
+      supplier_name: parsed.supplier_name || "",
+      supplier_cnpj: parsed.supplier_cnpj || "",
+    });
+
+    if (parsed.is_event) {
+      const docs = parsed.access_key ? await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key }) : [];
+      if (docs.length === 0) {
+        await savePendingEvent(base44, parsed);
+        await upsertAudit(base44, { ...base, status: "evento_pendente", reason: "Evento fiscal guardado para aprovação quando a nota principal existir." });
+        return { success: 0, errors: 0 };
+      }
+
+      const res = await applyEvent(base44, parsed);
+      await upsertAudit(base44, {
+        ...base,
+        status: res.applied ? "evento_aplicado" : "ignorado",
+        reason: res.applied ? "Evento fiscal aplicado à nota." : "Evento fiscal já estava registrado na nota.",
+        invoice_id: docs[0].id,
+      });
+      return { success: res.applied ? 1 : 0, errors: 0 };
+    }
+
+    parsed.branch_cnpj = parsed.recipient_cnpj;
+
+    let blocked = [];
+    if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
+    if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
+      blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ number: parsed.number, supplier_cnpj: parsed.supplier_cnpj });
+    }
+    if (blocked.length > 0) {
+      await upsertAudit(base44, { ...base, status: "ignorado", reason: "Nota já foi excluída manualmente e não deve voltar para o sistema." });
+      return { success: 0, errors: 0 };
+    }
+
+    let existing = [];
+    if (parsed.access_key) existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+    if (existing.length === 0 && parsed.number && parsed.supplier_cnpj) {
+      existing = await base44.asServiceRole.entities.Invoice.filter({ number: parsed.number, supplier_cnpj: parsed.supplier_cnpj });
+    }
+    if (existing.length > 0) {
+      await upsertAudit(base44, { ...base, status: "duplicado", reason: "Documento já existe no sistema; não foi importado novamente.", invoice_id: existing[0].id });
+      return { success: 0, errors: 0 };
+    }
+
+    const created = await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "manual" });
+    await upsertAudit(base44, { ...base, status: "importado", reason: "Documento importado manualmente pelo OneDrive.", invoice_id: created.id });
+    return { success: 1, errors: 0 };
+  } catch (error) {
+    await upsertAudit(base44, auditBase(file, folder, {
+      status: "erro",
+      document_type: "desconhecido",
+      reason: error.message,
+    }));
+    return { success: 0, errors: 1, detail: `${file.name}: ${error.message}` };
+  }
+}
+
+// Importa em lotes de BATCH_SIZE arquivos por chamada para evitar timeout.
 const BATCH_SIZE = 5;
 
-async function importFolderById(base44, accessToken, folderId, skip = 0) {
-  const allXmlFiles = await listAllXmlFiles(accessToken, folderId);
+async function importFolderById(base44, accessToken, folder, skip = 0) {
+  const allXmlFiles = await listAllXmlFiles(accessToken, folder.folder_id);
   const totalFiles = allXmlFiles.length;
-
   const batch = allXmlFiles.slice(skip, skip + BATCH_SIZE);
 
   if (batch.length === 0) {
-    return {
-      success: 0, errors: 0, error_details: [], total: 0,
-      processed: 0, remaining: 0, done: true,
-    };
+    return { success: 0, errors: 0, error_details: [], total: totalFiles, processed: skip, remaining: 0, done: true };
   }
 
-  const xmlContents = [];
-  const fileErrors = [];
+  let success = 0;
+  let errors = 0;
+  const errorDetails = [];
 
-  for (const file of batch) {
-    try {
-      const content = await downloadFileText(accessToken, file.id);
-      xmlContents.push(content);
-    } catch (error) {
-      fileErrors.push({ error: `${file.name}: ${error.message}` });
-    }
+  for (let i = 0; i < batch.length; i++) {
+    const result = await processOneDriveXmlFile(base44, accessToken, batch[i], folder);
+    success += result.success || 0;
+    errors += result.errors || 0;
+    if (result.detail) errorDetails.push({ index: skip + i, error: result.detail });
   }
-
-  const importResult = xmlContents.length > 0
-    ? await importXmlBatchLocal(base44, xmlContents)
-    : { success: 0, errors: 0, error_details: [], total: 0 };
 
   const processed = skip + batch.length;
-  const remaining = totalFiles - processed;
-
-  return {
-    ...importResult,
-    errors: importResult.errors + fileErrors.length,
-    error_details: importResult.error_details.concat(
-      fileErrors.map((item, index) => ({ index: importResult.total + index, error: item.error }))
-    ),
-    total: totalFiles,
-    processed,
-    remaining,
-    done: remaining <= 0,
-  };
+  const remaining = Math.max(0, totalFiles - processed);
+  return { success, errors, error_details: errorDetails, total: totalFiles, processed, remaining, done: remaining <= 0 };
 }
 
 Deno.serve(async (req) => {
@@ -744,7 +851,7 @@ Deno.serve(async (req) => {
         return Response.json({ allDone: true, done: true });
       }
 
-      const result = await importFolderById(base44, accessToken, currentFolderEntry.folder_id, skip);
+      const result = await importFolderById(base44, accessToken, currentFolderEntry, skip);
 
       // Acumula os totais entre lotes e pastas (zera só no primeiríssimo lote da primeira pasta).
       const isFirstBatch = folderIndex === 0 && skip === 0;

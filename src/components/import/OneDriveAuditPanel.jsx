@@ -86,7 +86,7 @@ export default function OneDriveAuditPanel() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-slate-800">Auditoria dos XMLs do OneDrive</h2>
-            <p className="text-sm text-slate-500">Aqui você acompanha o que aconteceu com cada XML visto pela importação automática.</p>
+            <p className="text-sm text-slate-500">Aqui você acompanha o que aconteceu com cada XML visto pela importação manual ou automática.</p>
           </div>
         </div>
         <Button variant="outline" onClick={loadRows} disabled={loading} className="shrink-0">
