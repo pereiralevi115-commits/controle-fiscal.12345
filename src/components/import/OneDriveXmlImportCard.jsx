@@ -212,6 +212,16 @@ export default function OneDriveXmlImportCard() {
 
     try {
       const response = await base44.functions.invoke("oneDriveXmlAutoSync", { manualRun: true });
+      if (response.data?.skipped) {
+        setRunFeedback({
+          title: "Varredura não iniciada",
+          detail: response.data.reason || "A varredura não pôde ser iniciada agora.",
+          currentStep: 0,
+          error: true,
+        });
+        toast.message(response.data.reason || "Varredura não iniciada.");
+        return;
+      }
       const r = response.data?.result || {};
       await loadStatus();
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
