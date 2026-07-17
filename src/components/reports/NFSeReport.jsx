@@ -72,11 +72,10 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
       const cols = [
         { key: "branch", label: "Filial", w: 26 },
-        { key: "supplier", label: "Fornecedor", w: 55 },
+        { key: "supplier", label: "Fornecedor", w: 45 },
         { key: "nf", label: "NFS-e", w: 18 },
         { key: "issue", label: "Emissão", w: 18 },
-        { key: "due", label: "Vencimento", w: 20 },
-        { key: "service", label: "Serviço", w: 55 },
+        { key: "service", label: "Serviço", w: 92 },
         { key: "value", label: "Valor", w: 22, align: "right" },
         { key: "sigv", label: "SIGV", w: 11, align: "center" },
         { key: "topcon", label: "TOPCON", w: 15, align: "center" },
@@ -132,53 +131,67 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
           pdf.addPage();
           y = margin;
           drawTableHeader();
-          pdf.setFontSize(7.5);
+          pdf.setFontSize(7);
           pdf.setFont(undefined, "normal");
-        }
-
-        if (idx % 2 === 0) {
-          pdf.setFillColor(245, 247, 250);
-          pdf.rect(margin, y, contentWidth, 6, "F");
-        }
-
-        pdf.setTextColor(15, 23, 42);
-        const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
-        const values = {
-          branch: truncate(branchName(inv), 18),
-          supplier: truncate(inv.supplier_name, 40),
-          nf: truncate(nf, 12),
-          issue: formatDate(inv.issue_date),
-          due: formatDate(inv.due_date),
-          service: truncate(serviceText(inv), 42),
-          value: formatCurrency(inv.total_value),
-          sigv: inv.sigv_recorded ? "Sim" : "—",
-          topcon: inv.topcon_recorded ? "Sim" : "—",
-          boleto: inv.boleto_recorded ? "Sim" : "—",
-        };
-
-        let x = margin;
-        cols.forEach((c) => {
-          const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
-          const isStatusSim = ["sigv", "topcon", "boleto"].includes(c.key) && values[c.key] === "Sim";
-          if (isStatusSim) {
-            if (c.key === "topcon") {
-              pdf.setTextColor(147, 51, 234);
-            } else if (c.key === "boleto") {
-              pdf.setTextColor(234, 88, 12);
-            } else {
-              pdf.setTextColor(22, 163, 74);
-            }
-            pdf.setFont(undefined, "bold");
           }
-          pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
-          if (isStatusSim) {
-            pdf.setTextColor(15, 23, 42);
+
+          pdf.setTextColor(15, 23, 42);
+          const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
+          const serviceLines = pdf.splitTextToSize(serviceText(inv), 88).slice(0, 3);
+          const rowHeight = Math.max(7, serviceLines.length * 3.4 + 3);
+
+          if (y + rowHeight > pageHeight - margin - 12) {
+            pdf.addPage();
+            y = margin;
+            drawTableHeader();
+            pdf.setFontSize(7);
             pdf.setFont(undefined, "normal");
           }
-          x += c.w;
-        });
-        y += 6;
-      });
+
+          if (idx % 2 === 0) {
+            pdf.setFillColor(245, 247, 250);
+            pdf.rect(margin, y, contentWidth, rowHeight, "F");
+          }
+
+          const values = {
+            branch: truncate(branchName(inv), 18),
+            supplier: truncate(inv.supplier_name, 32),
+            nf: truncate(nf, 12),
+            issue: formatDate(inv.issue_date),
+            service: serviceLines,
+            value: formatCurrency(inv.total_value),
+            sigv: inv.sigv_recorded ? "Sim" : "—",
+            topcon: inv.topcon_recorded ? "Sim" : "—",
+            boleto: inv.boleto_recorded ? "Sim" : "—",
+          };
+
+          let x = margin;
+          cols.forEach((c) => {
+            const tx = c.align === "right" ? x + c.w - 2 : c.align === "center" ? x + c.w / 2 : x + 2;
+            const isStatusSim = ["sigv", "topcon", "boleto"].includes(c.key) && values[c.key] === "Sim";
+            if (isStatusSim) {
+              if (c.key === "topcon") {
+                pdf.setTextColor(147, 51, 234);
+              } else if (c.key === "boleto") {
+                pdf.setTextColor(234, 88, 12);
+              } else {
+                pdf.setTextColor(22, 163, 74);
+              }
+              pdf.setFont(undefined, "bold");
+            }
+            if (c.key === "service") {
+              pdf.text(values.service, tx, y + 4, { align: "left", maxWidth: c.w - 4 });
+            } else {
+              pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
+            }
+            if (isStatusSim) {
+              pdf.setTextColor(15, 23, 42);
+              pdf.setFont(undefined, "normal");
+            }
+            x += c.w;
+          });
+          y += rowHeight;
+          });
 
       if (y > pageHeight - margin - 10) { pdf.addPage(); y = margin; }
       pdf.setFillColor(30, 41, 59);
@@ -199,7 +212,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[96vw] w-[96vw] max-h-[92vh] overflow-hidden p-0">
         <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between gap-4 flex-wrap z-10">
           <DialogTitle className="text-xl">Relatório NFS-e</DialogTitle>
           <div className="flex items-end gap-3 flex-wrap">
@@ -218,7 +231,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
           </div>
         </div>
 
-        <div className="p-6 space-y-4 text-sm">
+        <div className="p-6 space-y-4 text-sm max-h-[calc(92vh-92px)] overflow-auto">
           <div className="flex items-start justify-between border-b-2 border-slate-800 pb-3 mb-2 gap-6">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-slate-800">Relatório NFS-e</h1>
@@ -237,7 +250,19 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
           </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded">
-            <table className="w-full text-xs">
+            <table className="w-full min-w-[1120px] text-[11px] table-fixed">
+              <colgroup>
+                <col className="w-[11%]" />
+                <col className="w-[20%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[24%]" />
+                <col className="w-[8%]" />
+                <col className="w-[4%]" />
+                <col className="w-[4%]" />
+                <col className="w-[4%]" />
+              </colgroup>
               <thead>
                 <tr className="bg-slate-800 text-white">
                   <th className="px-3 py-2 text-left font-semibold">Filial</th>
@@ -262,7 +287,9 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
                     </td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.issue_date)}</td>
                     <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{formatDate(inv.due_date)}</td>
-                    <td className="px-3 py-2 text-slate-600">{serviceText(inv)}</td>
+                    <td className="px-3 py-2 text-slate-600">
+                      <div className="max-h-10 overflow-hidden leading-snug" title={serviceText(inv)}>{serviceText(inv)}</div>
+                    </td>
                     <td className="px-3 py-2 text-right font-medium text-slate-700 whitespace-nowrap">{formatCurrency(inv.total_value)}</td>
                     <td className="px-3 py-2 text-center">
                       {inv.sigv_recorded ? <span className="text-green-600 font-semibold">Sim</span> : <span className="text-slate-300">—</span>}
