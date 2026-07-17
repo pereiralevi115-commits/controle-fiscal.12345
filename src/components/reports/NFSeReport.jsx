@@ -32,6 +32,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
   const periodInvoices = useMemo(() => {
     const filtered = invoices.filter((inv) => {
+      if (inv.document_type !== "nfse") return false;
       if (!inv.due_date) return !startDate;
       if (startDate && inv.due_date < startDate) return false;
       if (endDate && inv.due_date > endDate) return false;
@@ -72,7 +73,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
       const cols = [
         { key: "branch", label: "Filial", w: 26 },
         { key: "supplier", label: "Fornecedor", w: 55 },
-        { key: "nf", label: "NF", w: 18 },
+        { key: "nf", label: "NFS-e", w: 18 },
         { key: "issue", label: "Emissão", w: 18 },
         { key: "due", label: "Vencimento", w: 20 },
         { key: "service", label: "Serviço", w: 55 },
@@ -241,7 +242,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
                 <tr className="bg-slate-800 text-white">
                   <th className="px-3 py-2 text-left font-semibold">Filial</th>
                   <th className="px-3 py-2 text-left font-semibold">Fornecedor</th>
-                  <th className="px-3 py-2 text-left font-semibold">NF</th>
+                  <th className="px-3 py-2 text-left font-semibold">NFS-e</th>
                   <th className="px-3 py-2 text-left font-semibold">Emissão</th>
                   <th className="px-3 py-2 text-left font-semibold">Vencimento</th>
                   <th className="px-3 py-2 text-left font-semibold">Serviço</th>
