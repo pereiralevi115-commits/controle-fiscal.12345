@@ -34,7 +34,7 @@ export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
       const supplier = suppliers.find((s) => s.cnpj === doc.supplier_cnpj);
       if (!(supplier && supplier[supplierFlag] === true)) return false;
       if (allowedCnpjs && !allowedCnpjs.includes(doc.branch_cnpj)) return false;
-      if (doc.archived) return false;
+      if (doc.archived || doc.cancelled) return false;
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;
