@@ -166,13 +166,15 @@ async function findBestMatch(base44, boleto) {
 }
 
 async function markInvoiceBoleto(base44, invoiceId, user) {
+  const actorName = user.full_name || user.email || 'Usuário';
+  const ddaActorName = `${actorName} (via DDA)`;
   await base44.asServiceRole.entities.Invoice.update(invoiceId, {
     boleto_recorded: true,
     boleto_recorded_by_id: user.id,
-    boleto_recorded_by_name: user.full_name || user.email || 'Usuário',
+    boleto_recorded_by_name: ddaActorName,
     boleto_recorded_at: new Date().toISOString(),
     boleto_updated_by_id: user.id,
-    boleto_updated_by_name: user.full_name || user.email || 'Usuário',
+    boleto_updated_by_name: ddaActorName,
     boleto_updated_at: new Date().toISOString(),
   });
 }

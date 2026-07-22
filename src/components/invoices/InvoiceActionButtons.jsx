@@ -85,8 +85,10 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     if (invoice[btn.field]) {
       const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
       const date = invoice[`${btn.auditPrefix}_recorded_at`];
+      const isDdaLink = btn.id === "BOLETO" && /\(via DDA\)/i.test(name || "");
+      const cleanName = isDdaLink ? name.replace(/\s*\(via DDA\)/i, "") : name;
       if (!name && !date) return `${btn.label} já estava marcado antes do registro de usuário/data ser implantado.`;
-      return `${btn.label} marcado por ${name || "—"} em ${formatDateTime(date)}`;
+      return `${btn.label} marcado por ${cleanName || "—"} em ${formatDateTime(date)}${isDdaLink ? ". Vinculado através da tela Boletos DDA." : ""}`;
     }
     if (invoice[`${btn.auditPrefix}_updated_by_name`] || invoice[`${btn.auditPrefix}_updated_at`]) {
       return `${btn.label} não marcado. Última alteração por ${invoice[`${btn.auditPrefix}_updated_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_updated_at`])}`;
