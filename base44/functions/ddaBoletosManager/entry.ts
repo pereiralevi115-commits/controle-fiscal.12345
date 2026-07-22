@@ -180,12 +180,20 @@ async function markInvoiceBoleto(base44, invoiceId, user) {
 }
 
 async function saveBoleto(base44, boleto, match, user, dryRun) {
+  const linkedInvoices = match.invoice ? [{
+    invoice_id: match.invoice.id,
+    invoice_type: match.invoice.document_type || 'nfe',
+    invoice_number: match.invoice.number || '',
+    supplier_name: match.invoice.supplier_name || '',
+    total_value: match.invoice.total_value || 0,
+  }] : [];
   const payload = {
     ...boleto,
     status: match.status,
     invoice_id: match.invoice?.id || null,
     invoice_type: match.invoice?.document_type || null,
     invoice_number: match.invoice?.number || null,
+    linked_invoices: linkedInvoices,
     match_confidence: match.match_confidence || 0,
     match_reason: match.match_reason || '',
     linked_at: match.invoice ? new Date().toISOString() : null,
@@ -217,15 +225,32 @@ async function importFile(base44, payload, user) {
 
 async function linkManual(base44, payload, user) {
   const boleto = await base44.asServiceRole.entities.BoletoDDA.get(payload.boleto_id);
-  const invoice = await base44.asServiceRole.entities.Invoice.get(payload.invoice_id);
-  await markInvoiceBoleto(base44, invoice.id, user);
-  const updated = await base44.asServiceRole.entities.BoletoDDA.update(boleto.id, {
-    status: 'vinculado',
+  const invoiceIds = [...new Set(Array.isArray(payload.invoice_ids) ? payload.invoice_ids : [payload.invoice_id].filter(Boolean))];
+  if (invoiceIds.length === 0) throw new Error('Selecione ao menos uma nota fiscal para vincular.');
+
+  const invoices = [];
+  for (const invoiceId of invoiceIds) invoices.push(await base44.asServiceRole.entities.Invoice.get(invoiceId));
+  for (const invoice of invoices) await markInvoiceBoleto(base44, invoice.id, user);
+
+  const linkedInvoices = invoices.map((invoice) => ({
     invoice_id: invoice.id,
     invoice_type: invoice.document_type || 'nfe',
     invoice_number: invoice.number || '',
-    match_confidence: 100,
-    match_reason: 'Vinculado manualmente pelo usuário.',
+    supplier_name: invoice.supplier_name || '',
+    total_value: invoice.total_value || 0,
+  }));
+  const totalInvoices = invoices.reduce((sum, invoice) => sum + (invoice.total_value || 0), 0);
+  const difference = Math.abs(totalInvoices - (boleto.charged_value || 0));
+  const updated = await base44.asServiceRole.entities.BoletoDDA.update(boleto.id, {
+    status: 'vinculado',
+    invoice_id: invoices[0].id,
+    invoice_type: invoices[0].document_type || 'nfe',
+    invoice_number: linkedInvoices.map((item) => item.invoice_number).join(', '),
+    linked_invoices: linkedInvoices,
+    match_confidence: invoiceIds.length === 1 ? 100 : 95,
+    match_reason: invoiceIds.length === 1
+      ? 'Vinculado manualmente pelo usuário.'
+      : `Vinculado manualmente a ${invoiceIds.length} NFs. Diferença entre boleto e soma das NFs: R$ ${difference.toFixed(2).replace('.', ',')}.`,
     linked_at: new Date().toISOString(),
     linked_by_id: user.id,
     linked_by_name: user.full_name || user.email || 'Usuário',

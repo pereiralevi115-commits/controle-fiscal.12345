@@ -17,6 +17,9 @@ const statusClass = {
 
 const typeLabel = { nfe: "NF-e", nfse: "NFS-e", cte: "CT-e" };
 const yesNoClass = (value) => value ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600";
+const linkedRefs = (boleto) => Array.isArray(boleto.linked_invoices) && boleto.linked_invoices.length > 0
+  ? boleto.linked_invoices
+  : boleto.invoice_id ? [{ invoice_id: boleto.invoice_id, invoice_type: boleto.invoice_type, invoice_number: boleto.invoice_number }] : [];
 
 function AuditBadge({ label, value, name, date }) {
   return (
@@ -27,18 +30,25 @@ function AuditBadge({ label, value, name, date }) {
   );
 }
 
-function InvoiceDetails({ boleto, invoice }) {
-  if (!boleto.invoice_id) return <p className="text-xs text-slate-500 mt-2">{boleto.match_reason}</p>;
-  if (!invoice) return <p className="text-xs text-slate-500 mt-2">{typeLabel[boleto.invoice_type]} {boleto.invoice_number}</p>;
+function InvoiceDetails({ boleto, invoices, refs }) {
+  if (refs.length === 0) return <p className="text-xs text-slate-500 mt-2">{boleto.match_reason}</p>;
   return (
-    <div className="mt-2 space-y-2 text-xs text-slate-600 min-w-[260px]">
-      <p className="font-semibold text-slate-800">{typeLabel[invoice.document_type || "nfe"]} {invoice.series ? `${invoice.series}/` : ""}{invoice.number}</p>
-      <p>{invoice.supplier_name}</p>
-      <p>Emissão {formatDate(invoice.issue_date)} · Venc. NF {formatDate(invoice.due_date)} · {formatCurrency(invoice.total_value)}</p>
-      <div className="flex flex-wrap gap-1.5">
-        <AuditBadge label="SIGV" value={invoice.sigv_recorded} name={invoice.sigv_recorded_by_name || invoice.sigv_updated_by_name} date={invoice.sigv_recorded_at || invoice.sigv_updated_at} />
-        <AuditBadge label="TOPCON" value={invoice.topcon_recorded} name={invoice.topcon_recorded_by_name || invoice.topcon_updated_by_name} date={invoice.topcon_recorded_at || invoice.topcon_updated_at} />
-      </div>
+    <div className="mt-2 space-y-2 text-xs text-slate-600 min-w-[300px]">
+      {refs.length > 1 && <p className="font-semibold text-slate-800">{refs.length} NFs vinculadas</p>}
+      {refs.map((ref) => {
+        const invoice = invoices.find((item) => item?.id === ref.invoice_id);
+        return invoice ? (
+          <div key={ref.invoice_id} className="rounded-lg border border-slate-100 bg-white p-2">
+            <p className="font-semibold text-slate-800">{typeLabel[invoice.document_type || "nfe"]} {invoice.series ? `${invoice.series}/` : ""}{invoice.number}</p>
+            <p>{invoice.supplier_name}</p>
+            <p>Emissão {formatDate(invoice.issue_date)} · Venc. NF {formatDate(invoice.due_date)} · {formatCurrency(invoice.total_value)}</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <AuditBadge label="SIGV" value={invoice.sigv_recorded} name={invoice.sigv_recorded_by_name || invoice.sigv_updated_by_name} date={invoice.sigv_recorded_at || invoice.sigv_updated_at} />
+              <AuditBadge label="TOPCON" value={invoice.topcon_recorded} name={invoice.topcon_recorded_by_name || invoice.topcon_updated_by_name} date={invoice.topcon_recorded_at || invoice.topcon_updated_at} />
+            </div>
+          </div>
+        ) : <p key={ref.invoice_id} className="text-xs text-slate-500">{typeLabel[ref.invoice_type]} {ref.invoice_number}</p>;
+      })}
     </div>
   );
 }
@@ -47,7 +57,7 @@ export default function DdaTable({ boletos, onLink }) {
   const [status, setStatus] = useState("todos");
   const [search, setSearch] = useState("");
   const [printingInvoiceId, setPrintingInvoiceId] = useState(null);
-  const linkedIds = useMemo(() => [...new Set(boletos.map((b) => b.invoice_id).filter(Boolean))], [boletos]);
+  const linkedIds = useMemo(() => [...new Set(boletos.flatMap((b) => linkedRefs(b).map((ref) => ref.invoice_id)).filter(Boolean))], [boletos]);
   const { data: invoices = [] } = useQuery({
     queryKey: ["ddaLinkedInvoices", linkedIds.join(",")],
     enabled: linkedIds.length > 0,
@@ -57,29 +67,30 @@ export default function DdaTable({ boletos, onLink }) {
       return rows;
     },
   });
-  const { data: branches = [] } = useQuery({
-    queryKey: ["ddaBranches"],
-    queryFn: () => base44.entities.Branch.list(),
-  });
+  const { data: branches = [] } = useQuery({ queryKey: ["ddaBranches"], queryFn: () => base44.entities.Branch.list() });
   const invoiceMap = useMemo(() => new Map(invoices.map((inv) => [inv.id, inv])), [invoices]);
   const branchMap = useMemo(() => new Map(branches.map((branch) => [onlyDigits(branch.cnpj), branch.name])), [branches]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return boletos.filter((b) => {
-      const invoice = invoiceMap.get(b.invoice_id);
+      const refs = linkedRefs(b);
+      const linkedText = refs.map((ref) => {
+        const inv = invoiceMap.get(ref.invoice_id);
+        return `${ref.invoice_number || ""} ${inv?.number || ""} ${inv?.supplier_name || ""}`;
+      }).join(" ");
       if (status !== "todos" && b.status !== status) return false;
-      const text = `${b.beneficiary_name || ""} ${b.document_number || ""} ${b.payer_name || ""} ${b.line_digitavel || ""} ${invoice?.number || ""} ${invoice?.supplier_name || ""}`.toLowerCase();
+      const text = `${b.beneficiary_name || ""} ${b.document_number || ""} ${b.payer_name || ""} ${b.line_digitavel || ""} ${linkedText}`.toLowerCase();
       return !term || text.includes(term);
     });
   }, [boletos, status, search, invoiceMap]);
 
-  const handlePrintInvoice = async (invoice) => {
-    if (!invoice) return;
-    setPrintingInvoiceId(invoice.id);
+  const handlePrintInvoices = async (invoiceList) => {
+    if (invoiceList.length === 0) return;
+    setPrintingInvoiceId(invoiceList.map((invoice) => invoice.id).join(","));
     try {
-      await openInvoicePdfForPrint(invoice);
-      toast.success("Nota fiscal aberta para impressão.");
+      for (const invoice of invoiceList) await openInvoicePdfForPrint(invoice);
+      toast.success(invoiceList.length > 1 ? "Notas fiscais abertas para impressão." : "Nota fiscal aberta para impressão.");
     } catch (error) {
       toast.error("Não foi possível abrir a nota fiscal.");
     } finally {
@@ -106,13 +117,16 @@ export default function DdaTable({ boletos, onLink }) {
               <th className="text-left px-4 py-3 font-medium">Pagador</th>
               <th className="text-left px-4 py-3 font-medium">Vencimento</th>
               <th className="text-right px-4 py-3 font-medium">Valor</th>
-              <th className="text-left px-4 py-3 font-medium">NF vinculada</th>
+              <th className="text-left px-4 py-3 font-medium">NF(s) vinculada(s)</th>
               <th className="text-right px-4 py-3 font-medium">Ação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((b) => {
-              const invoice = invoiceMap.get(b.invoice_id);
+              const refs = linkedRefs(b);
+              const linkedInvoices = refs.map((ref) => invoiceMap.get(ref.invoice_id)).filter(Boolean);
+              const firstInvoice = linkedInvoices[0] || null;
+              const printingKey = linkedInvoices.map((invoice) => invoice.id).join(",");
               return (
                 <tr key={b.id} className="align-top hover:bg-slate-50">
                   <td className="px-4 py-3 min-w-[260px]">
@@ -129,12 +143,12 @@ export default function DdaTable({ boletos, onLink }) {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(b.due_date)}</td>
                   <td className="px-4 py-3 text-right font-bold whitespace-nowrap">{formatCurrency(b.charged_value)}</td>
-                  <td className="px-4 py-3 min-w-[300px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoice={invoice} /></td>
+                  <td className="px-4 py-3 min-w-[340px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoices={linkedInvoices} refs={refs} /></td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, invoice)}>Imprimir boleto</Button>
-                      <Button variant="outline" size="sm" disabled={!invoice || printingInvoiceId === invoice.id} onClick={() => handlePrintInvoice(invoice)} title={!invoice ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>
-                        {printingInvoiceId === invoice?.id ? "Abrindo..." : "Imprimir NF"}
+                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, firstInvoice)}>Imprimir boleto</Button>
+                      <Button variant="outline" size="sm" disabled={linkedInvoices.length === 0 || printingInvoiceId === printingKey} onClick={() => handlePrintInvoices(linkedInvoices)} title={linkedInvoices.length === 0 ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>
+                        {printingInvoiceId === printingKey ? "Abrindo..." : linkedInvoices.length > 1 ? "Imprimir NFs" : "Imprimir NF"}
                       </Button>
                       {b.status === "pendente" && <Button variant="outline" size="sm" onClick={() => onLink(b)}>Vincular</Button>}
                     </div>

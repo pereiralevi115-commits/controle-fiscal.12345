@@ -21,7 +21,7 @@ export default function BoletosDDA() {
   };
 
   const linkMutation = useMutation({
-    mutationFn: ({ boletoId, invoiceId }) => base44.functions.invoke("ddaBoletosManager", { action: "linkManual", boleto_id: boletoId, invoice_id: invoiceId }),
+    mutationFn: ({ boletoId, invoiceIds }) => base44.functions.invoke("ddaBoletosManager", { action: "linkManual", boleto_id: boletoId, invoice_ids: invoiceIds }),
     onSuccess: () => { setSelected(null); refresh(); },
   });
 
@@ -50,7 +50,7 @@ export default function BoletosDDA() {
           open={!!selected}
           onClose={() => setSelected(null)}
           loading={linkMutation.isPending}
-          onLink={(boletoId, invoiceId) => linkMutation.mutate({ boletoId, invoiceId })}
+          onLink={(boletoId, invoiceIds) => linkMutation.mutate({ boletoId, invoiceIds })}
         />
       </div>
     </div>

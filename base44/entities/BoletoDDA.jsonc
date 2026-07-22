@@ -79,7 +79,7 @@
     },
     "invoice_id": {
       "type": "string",
-      "description": "ID da NF-e, NFS-e ou CT-e vinculada"
+      "description": "ID principal da NF-e, NFS-e ou CT-e vinculada"
     },
     "invoice_type": {
       "type": "string",
@@ -88,11 +88,40 @@
         "nfse",
         "cte"
       ],
-      "description": "Tipo do documento fiscal vinculado"
+      "description": "Tipo do documento fiscal vinculado principal"
     },
     "invoice_number": {
       "type": "string",
-      "description": "N\u00famero do documento fiscal vinculado"
+      "description": "N\u00famero do documento fiscal vinculado principal ou lista resumida"
+    },
+    "linked_invoices": {
+      "type": "array",
+      "description": "Lista de documentos fiscais vinculados ao mesmo boleto DDA",
+      "items": {
+        "type": "object",
+        "properties": {
+          "invoice_id": {
+            "type": "string"
+          },
+          "invoice_type": {
+            "type": "string",
+            "enum": [
+              "nfe",
+              "nfse",
+              "cte"
+            ]
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "supplier_name": {
+            "type": "string"
+          },
+          "total_value": {
+            "type": "number"
+          }
+        }
+      }
     },
     "match_confidence": {
       "type": "number",
