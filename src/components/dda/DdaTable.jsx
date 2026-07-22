@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import BoletoBarcode from "@/components/dda/BoletoBarcode";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import { printDdaBoleto } from "@/lib/ddaPrint";
+import { openInvoicePdfForPrint } from "@/lib/invoicePrint";
 import { formatCurrency, formatDate, formatCnpjCpf } from "@/lib/boletoUtils";
 
 const statusClass = {
@@ -44,6 +46,7 @@ function InvoiceDetails({ boleto, invoice }) {
 export default function DdaTable({ boletos, onLink }) {
   const [status, setStatus] = useState("todos");
   const [search, setSearch] = useState("");
+  const [printingInvoiceId, setPrintingInvoiceId] = useState(null);
   const linkedIds = useMemo(() => [...new Set(boletos.map((b) => b.invoice_id).filter(Boolean))], [boletos]);
   const { data: invoices = [] } = useQuery({
     queryKey: ["ddaLinkedInvoices", linkedIds.join(",")],
@@ -65,6 +68,19 @@ export default function DdaTable({ boletos, onLink }) {
       return !term || text.includes(term);
     });
   }, [boletos, status, search, invoiceMap]);
+
+  const handlePrintInvoice = async (invoice) => {
+    if (!invoice) return;
+    setPrintingInvoiceId(invoice.id);
+    try {
+      await openInvoicePdfForPrint(invoice);
+      toast.success("Nota fiscal aberta para impressão.");
+    } catch (error) {
+      toast.error("Não foi possível abrir a nota fiscal.");
+    } finally {
+      setPrintingInvoiceId(null);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -107,7 +123,10 @@ export default function DdaTable({ boletos, onLink }) {
                   <td className="px-4 py-3 min-w-[300px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoice={invoice} /></td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, invoice)}>Imprimir</Button>
+                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, invoice)}>Imprimir boleto</Button>
+                      <Button variant="outline" size="sm" disabled={!invoice || printingInvoiceId === invoice.id} onClick={() => handlePrintInvoice(invoice)} title={!invoice ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>
+                        {printingInvoiceId === invoice?.id ? "Abrindo..." : "Imprimir NF"}
+                      </Button>
                       {b.status === "pendente" && <Button variant="outline" size="sm" onClick={() => onLink(b)}>Vincular</Button>}
                     </div>
                   </td>
