@@ -81,6 +81,8 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     return new Date(value).toLocaleString("pt-BR");
   };
 
+  const isDdaBoletoRecorded = () => /\(via DDA\)/i.test(invoice.boleto_recorded_by_name || invoice.boleto_updated_by_name || "");
+
   const buildAuditTitle = (btn) => {
     if (invoice[btn.field]) {
       const name = invoice[`${btn.auditPrefix}_recorded_by_name`];
@@ -88,7 +90,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
       const isDdaLink = btn.id === "BOLETO" && /\(via DDA\)/i.test(name || "");
       const cleanName = isDdaLink ? name.replace(/\s*\(via DDA\)/i, "") : name;
       if (!name && !date) return `${btn.label} já estava marcado antes do registro de usuário/data ser implantado.`;
-      return `${btn.label} marcado por ${cleanName || "—"} em ${formatDateTime(date)}${isDdaLink ? ". Vinculado através da tela Boletos DDA." : ""}`;
+      return `${btn.label} marcado por ${cleanName || "—"} em ${formatDateTime(date)}${isDdaLink ? ". Vinculado através da tela Boletos DDA e não pode ser desmarcado manualmente." : ""}`;
     }
     if (invoice[`${btn.auditPrefix}_updated_by_name`] || invoice[`${btn.auditPrefix}_updated_at`]) {
       return `${btn.label} não marcado. Última alteração por ${invoice[`${btn.auditPrefix}_updated_by_name`] || "—"} em ${formatDateTime(invoice[`${btn.auditPrefix}_updated_at`])}`;
@@ -217,6 +219,8 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
       )}
       {buttons.map((btn) => {
         const canEdit = hasPermission(btn.permission);
+        const lockedDdaBoleto = btn.id === "BOLETO" && invoice[btn.field] && isDdaBoletoRecorded();
+        const canClick = canEdit && !lockedDdaBoleto;
         return (
           <TooltipProvider key={btn.id} delayDuration={100}>
             <Tooltip>
@@ -224,13 +228,13 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => canEdit && handleButtonClick(btn.id)}
+                  onClick={() => canClick && handleButtonClick(btn.id)}
                   disabled={recordMutation.isPending || !canEdit}
                   className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
                     invoice[btn.field]
                       ? `${btn.activeBg} text-white border-2`
                       : `${btn.textColor} hover:${btn.bgColor}`
-                  } ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
+                  } ${lockedDdaBoleto ? "cursor-not-allowed" : ""} ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
                 >
                   {btn.label}
                 </Button>
