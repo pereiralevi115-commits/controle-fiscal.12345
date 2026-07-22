@@ -1,56 +1,93 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useInvoices } from "@/hooks/useInvoices";
-import { formatCurrency, formatDate, formatCnpjCpf, onlyDigits } from "@/lib/boletoUtils";
-
-const typeLabel = { nfe: "NF-e", nfse: "NFS-e", cte: "CT-e" };
+import { base44 } from "@/api/base44Client";
+import { onlyDigits } from "@/lib/boletoUtils";
+import DdaCandidateCard from "@/components/dda/DdaCandidateCard";
+import DdaLinkComparison from "@/components/dda/DdaLinkComparison";
+import DdaQuickFilters from "@/components/dda/DdaQuickFilters";
+import { getDdaMatch, matchSearchText, passesQuickFilter } from "@/components/dda/ddaMatchUtils";
 
 export default function DdaLinkDialog({ boleto, open, onClose, onLink, loading }) {
   const [search, setSearch] = useState("");
-  const { data: invoices = [] } = useInvoices(["nfe", "nfse", "cte"]);
+  const [quickFilter, setQuickFilter] = useState("todos");
+  const [selectedId, setSelectedId] = useState(null);
+  const { data: invoices = [], isFetching: loadingCandidates } = useQuery({
+    queryKey: ["ddaCandidateInvoices", boleto?.id],
+    enabled: open && !!boleto,
+    queryFn: async () => {
+      const supplierCnpj = onlyDigits(boleto.beneficiary_cnpj);
+      const payerCnpj = onlyDigits(boleto.payer_cnpj);
+      const pages = await Promise.all([
+        base44.entities.Invoice.filter({ supplier_cnpj: supplierCnpj }, "-issue_date", 100),
+        base44.entities.Invoice.filter({ branch_cnpj: payerCnpj }, "-issue_date", 100),
+        base44.entities.Invoice.filter({ recipient_cnpj: payerCnpj }, "-issue_date", 100),
+        base44.entities.Invoice.list("-issue_date", 300),
+      ]);
+      return [...new Map(pages.flat().map((invoice) => [invoice.id, invoice])).values()];
+    },
+  });
+  const { data: branches = [] } = useQuery({ queryKey: ["ddaLinkBranches"], queryFn: () => base44.entities.Branch.list() });
+
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setQuickFilter("todos");
+      setSelectedId(null);
+    }
+  }, [open, boleto?.id]);
+
+  const branchMap = useMemo(() => new Map(branches.map((branch) => [onlyDigits(branch.cnpj), branch.name])), [branches]);
+  const payerBranchName = boleto ? branchMap.get(onlyDigits(boleto.payer_cnpj)) : null;
 
   const candidates = useMemo(() => {
     if (!boleto) return [];
     const term = search.trim().toLowerCase();
     return invoices
       .filter((inv) => !inv.archived && !inv.cancelled)
-      .filter((inv) => {
-        const supplierMatch = onlyDigits(inv.supplier_cnpj) === boleto.beneficiary_cnpj;
-        const branchMatch = onlyDigits(inv.branch_cnpj || inv.recipient_cnpj) === boleto.payer_cnpj;
-        const valueMatch = Math.abs((inv.total_value || 0) - (boleto.charged_value || 0)) <= 0.01;
-        const text = `${inv.number || ""} ${inv.supplier_name || ""}`.toLowerCase();
-        return (supplierMatch || branchMatch || valueMatch || text.includes(term)) && (!term || text.includes(term));
-      })
-      .slice(0, 25);
-  }, [invoices, boleto, search]);
+      .map((invoice) => ({ invoice, match: getDdaMatch(boleto, invoice) }))
+      .filter((row) => !term || matchSearchText(row.invoice).includes(term))
+      .filter((row) => passesQuickFilter(row, quickFilter))
+      .sort((a, b) => b.match.score - a.match.score || (b.invoice.total_value || 0) - (a.invoice.total_value || 0))
+      .slice(0, 40);
+  }, [invoices, boleto, search, quickFilter]);
+
+  const selectedRow = candidates.find((row) => row.invoice.id === selectedId) || candidates[0];
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Vincular boleto pendente</DialogTitle></DialogHeader>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vincular boleto pendente</DialogTitle>
+        </DialogHeader>
         {boleto && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-900">
-              <strong>{boleto.beneficiary_name}</strong> · {formatCurrency(boleto.charged_value)} · vence em {formatDate(boleto.due_date)}
+            <DdaLinkComparison boleto={boleto} row={selectedRow} payerBranchName={payerBranchName} />
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <Input placeholder="Buscar por número da nota, fornecedor ou CNPJ" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <DdaQuickFilters value={quickFilter} onChange={setQuickFilter} />
             </div>
-            <Input placeholder="Buscar nota por número ou fornecedor" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-500">Notas ordenadas por compatibilidade com o boleto.</p>
+              <Button disabled={!selectedRow || loading} onClick={() => onLink(boleto.id, selectedRow.invoice.id)}>
+                Vincular selecionada
+              </Button>
+            </div>
             <div className="space-y-2">
-              {candidates.map((inv) => (
-                <div key={inv.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-800">{typeLabel[inv.document_type || "nfe"]} {inv.series ? `${inv.series}/` : ""}{inv.number}</p>
-                    <p className="text-xs text-slate-500 truncate">{inv.supplier_name} · {formatCnpjCpf(inv.supplier_cnpj)}</p>
-                    <p className="text-xs text-slate-500">Emissão {formatDate(inv.issue_date)} · Vencimento {formatDate(inv.due_date)}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-slate-800">{formatCurrency(inv.total_value)}</p>
-                    <Button size="sm" disabled={loading} onClick={() => onLink(boleto.id, inv.id)}>Vincular</Button>
-                  </div>
-                </div>
+              {loadingCandidates && <p className="py-8 text-center text-sm text-slate-500">Carregando notas candidatas...</p>}
+              {!loadingCandidates && candidates.map((row) => (
+                <DdaCandidateCard
+                  key={row.invoice.id}
+                  row={row}
+                  selected={selectedRow?.invoice.id === row.invoice.id}
+                  loading={loading}
+                  onSelect={() => setSelectedId(row.invoice.id)}
+                  onLink={() => onLink(boleto.id, row.invoice.id)}
+                />
               ))}
-              {candidates.length === 0 && <p className="text-center text-sm text-slate-500 py-8">Nenhuma nota encontrada com os filtros atuais.</p>}
+              {!loadingCandidates && candidates.length === 0 && <p className="py-8 text-center text-sm text-slate-500">Nenhuma nota encontrada com os filtros atuais.</p>}
             </div>
           </div>
         )}
