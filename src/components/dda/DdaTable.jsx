@@ -146,7 +146,7 @@ export default function DdaTable({ boletos, onLink }) {
                   <td className="px-4 py-3 min-w-[340px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoices={linkedInvoices} refs={refs} /></td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, firstInvoice)}>Imprimir boleto</Button>
+                      <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, linkedInvoices)}>Imprimir boleto</Button>
                       <Button variant="outline" size="sm" disabled={linkedInvoices.length === 0 || printingInvoiceId === printingKey} onClick={() => handlePrintInvoices(linkedInvoices)} title={linkedInvoices.length === 0 ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>
                         {printingInvoiceId === printingKey ? "Abrindo..." : linkedInvoices.length > 1 ? "Imprimir NFs" : "Imprimir NF"}
                       </Button>
