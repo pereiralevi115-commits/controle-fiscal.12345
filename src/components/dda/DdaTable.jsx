@@ -7,7 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { printDdaBoleto } from "@/lib/ddaPrint";
 import { openInvoicePdfForPrint } from "@/lib/invoicePrint";
-import { formatCurrency, formatDate, formatCnpjCpf } from "@/lib/boletoUtils";
+import { formatCurrency, formatDate, formatCnpjCpf, onlyDigits } from "@/lib/boletoUtils";
 
 const statusClass = {
   vinculado: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
@@ -57,7 +57,12 @@ export default function DdaTable({ boletos, onLink }) {
       return rows;
     },
   });
+  const { data: branches = [] } = useQuery({
+    queryKey: ["ddaBranches"],
+    queryFn: () => base44.entities.Branch.list(),
+  });
   const invoiceMap = useMemo(() => new Map(invoices.map((inv) => [inv.id, inv])), [invoices]);
+  const branchMap = useMemo(() => new Map(branches.map((branch) => [onlyDigits(branch.cnpj), branch.name])), [branches]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -117,7 +122,11 @@ export default function DdaTable({ boletos, onLink }) {
                     <div className="mt-2 max-w-xs"><BoletoBarcode code={b.barcode} /></div>
                   </td>
                   <td className="px-4 py-3 min-w-[220px]"><p className="font-medium text-slate-700">{b.beneficiary_name}</p><p className="text-xs text-slate-500">{formatCnpjCpf(b.beneficiary_cnpj)}</p></td>
-                  <td className="px-4 py-3 min-w-[180px]"><p className="text-slate-700">{b.payer_name}</p><p className="text-xs text-slate-500">{formatCnpjCpf(b.payer_cnpj)}</p></td>
+                  <td className="px-4 py-3 min-w-[180px]">
+                    <p className="font-medium text-slate-700">{branchMap.get(onlyDigits(b.payer_cnpj)) || b.payer_name}</p>
+                    {branchMap.get(onlyDigits(b.payer_cnpj)) && <p className="text-xs text-slate-500">{b.payer_name}</p>}
+                    <p className="text-xs text-slate-500">{formatCnpjCpf(b.payer_cnpj)}</p>
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(b.due_date)}</td>
                   <td className="px-4 py-3 text-right font-bold whitespace-nowrap">{formatCurrency(b.charged_value)}</td>
                   <td className="px-4 py-3 min-w-[300px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoice={invoice} /></td>
