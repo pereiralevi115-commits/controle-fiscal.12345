@@ -24,6 +24,7 @@ import NotasParaVerificar from './pages/NotasParaVerificar';
 import CTe from './pages/CTe';
 import NFSe from './pages/NFSe';
 import Conferencia from './pages/Conferencia';
+import BoletosDDA from './pages/BoletosDDA';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -60,6 +61,8 @@ const AuthenticatedApp = () => {
         return <NFSe />;
       case '/conferencia':
         return <Conferencia />;
+      case '/boletos-dda':
+        return <BoletosDDA />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':

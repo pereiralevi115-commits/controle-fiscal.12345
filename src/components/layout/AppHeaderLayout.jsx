@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Users, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package, ChevronDown, GitCompareArrows } from 'lucide-react';
+import { LogOut, FileText, Layers, ShoppingCart, Truck, BarChart2, Upload, Building2, LayoutDashboard, UserCog, Archive, XCircle, ClipboardCheck, Receipt, Package, GitCompareArrows, ReceiptText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import NavDropdown from '@/components/layout/NavDropdown';
@@ -26,6 +26,7 @@ const gestaoItems = [
 
 const gerencialItems = [
   { key: 'conferencia', name: 'Conferência', path: '/conferencia', icon: GitCompareArrows },
+  { key: 'boletos-dda', name: 'Boletos DDA', path: '/boletos-dda', icon: ReceiptText },
   { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
   { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Building2 },
   { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },

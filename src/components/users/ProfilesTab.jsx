@@ -37,6 +37,8 @@ const PAGE_GROUPS = [
   {
     group: "Gerencial",
     pages: [
+      { key: "conferencia", label: "Conferência", path: "/conferencia" },
+      { key: "boletos-dda", label: "Boletos DDA", path: "/boletos-dda" },
       { key: "canceladas", label: "Canceladas", path: "/canceladas" },
       { key: "fornecedores", label: "Fornecedores", path: "/fornecedores" },
       { key: "filiais", label: "Filiais", path: "/filiais" },
