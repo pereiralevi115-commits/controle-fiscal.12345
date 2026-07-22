@@ -51,7 +51,7 @@ export default function DdaLinkDialog({ boleto, open, onClose, onLink, loading }
       .map((invoice) => ({ invoice, match: getDdaMatch(boleto, invoice) }))
       .filter((row) => !term || matchSearchText(row.invoice).includes(term))
       .filter((row) => passesQuickFilter(row, quickFilter))
-      .sort((a, b) => b.match.score - a.match.score || (b.invoice.total_value || 0) - (a.invoice.total_value || 0))
+      .sort((a, b) => new Date(`${b.invoice.issue_date || "1900-01-01"}T12:00:00`) - new Date(`${a.invoice.issue_date || "1900-01-01"}T12:00:00`))
       .slice(0, 40);
   }, [invoices, boleto, search, quickFilter]);
 
