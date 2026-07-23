@@ -104,8 +104,8 @@ export default function DdaTable({ boletos, onLink }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
+    <div data-dda-table-wrapper="true" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div data-dda-table-filters="true" className="p-4 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-slate-500">Busca</label>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Fornecedor, documento, NF ou linha digitável" className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]" />
@@ -137,7 +137,7 @@ export default function DdaTable({ boletos, onLink }) {
               <th className="text-left px-4 py-3 font-medium">Vencimento</th>
               <th className="text-right px-4 py-3 font-medium">Valor</th>
               <th className="text-left px-4 py-3 font-medium">NF(s) vinculada(s)</th>
-              <th className="text-right px-4 py-3 font-medium">Ação</th>
+              <th data-dda-print-actions="true" className="text-right px-4 py-3 font-medium">Ação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -163,7 +163,7 @@ export default function DdaTable({ boletos, onLink }) {
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(b.due_date)}</td>
                   <td className="px-4 py-3 text-right font-bold whitespace-nowrap">{formatCurrency(b.charged_value)}</td>
                   <td className="px-4 py-3 min-w-[340px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoices={linkedInvoices} refs={refs} /></td>
-                  <td className="px-4 py-3 text-right">
+                  <td data-dda-print-actions="true" className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-2">
                       <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, linkedInvoices)}>Imprimir boleto</Button>
                       <Button variant="outline" size="sm" disabled={linkedInvoices.length === 0 || printingInvoiceId === printingKey} onClick={() => handlePrintInvoices(linkedInvoices)} title={linkedInvoices.length === 0 ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>

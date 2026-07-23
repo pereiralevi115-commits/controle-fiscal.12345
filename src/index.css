@@ -108,6 +108,18 @@
     max-width: none !important;
   }
 
+  [data-print-area="boletos-dda-report"] > div > :not([data-dda-table-wrapper="true"]),
+  [data-dda-table-filters="true"],
+  [data-dda-print-actions="true"] {
+    display: none !important;
+  }
+
+  [data-dda-table-wrapper="true"] {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
   [data-print-area="boletos-dda-report"] .overflow-x-auto {
     overflow: visible !important;
   }
