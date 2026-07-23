@@ -8,6 +8,27 @@ function getTagText(parent, tagName) {
   return elements[0]?.textContent?.trim() || "";
 }
 
+function getCteParty(inf, tagName) {
+  const party = inf?.getElementsByTagName(tagName)[0];
+  return {
+    name: getTagText(party, "xNome"),
+    cnpj: getTagText(party, "CNPJ") || getTagText(party, "CPF"),
+  };
+}
+
+function getCteTaker(inf, ide) {
+  const toma4 = ide?.getElementsByTagName("toma4")[0];
+  if (toma4) {
+    return {
+      name: getTagText(toma4, "xNome"),
+      cnpj: getTagText(toma4, "CNPJ") || getTagText(toma4, "CPF"),
+    };
+  }
+  const toma3 = getTagText(ide, "toma3");
+  const partyTag = { "0": "rem", "1": "exped", "2": "receb", "3": "dest" }[toma3];
+  return partyTag ? getCteParty(inf, partyTag) : { name: "", cnpj: "" };
+}
+
 // Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
 const EVENT_LABELS = {
   "110110": "Carta de Correção",
@@ -279,6 +300,7 @@ function parseCTe(doc) {
   const recipientCity = destEnder ? getTagText(destEnder, "xMun") : "";
   const recipientState = destEnder ? getTagText(destEnder, "UF") : "";
   const recipientZip = destEnder ? getTagText(destEnder, "CEP") : "";
+  const tomador = getCteTaker(inf, ide);
 
   // Valores
   const vPrest = inf.getElementsByTagName("vPrest")[0];
@@ -316,6 +338,7 @@ function parseCTe(doc) {
     recipient_name: recipientName, recipient_cnpj: recipientCnpj, recipient_ie: recipientIe,
     recipient_address: recipientAddress, recipient_number: recipientNumber, recipient_district: recipientDistrict,
     recipient_city: recipientCity, recipient_state: recipientState, recipient_zip: recipientZip,
+    tomador_name: tomador.name, tomador_cnpj: tomador.cnpj,
     total_value: totalValue,
     issue_date: formattedDate,
     due_date: "",

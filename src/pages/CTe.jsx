@@ -34,7 +34,7 @@ export default function CTe() {
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
   const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const isConcretarTomador = (doc) => normalizeText(doc.recipient_name).includes("CONCRETAR");
+  const isConcretarTomador = (doc) => normalizeText(doc.tomador_name).includes("CONCRETAR");
 
   const tomadorCounts = useMemo(() => {
     const concretar = documents.filter(isConcretarTomador).length;

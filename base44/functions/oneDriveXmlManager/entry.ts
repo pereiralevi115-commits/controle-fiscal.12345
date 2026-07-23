@@ -9,6 +9,27 @@ function getTagText(parent, tagName) {
   return elements[0]?.textContent?.trim() || "";
 }
 
+function getCteParty(inf, tagName) {
+  const party = inf?.getElementsByTagName(tagName)[0];
+  return {
+    name: getTagText(party, "xNome"),
+    cnpj: getTagText(party, "CNPJ") || getTagText(party, "CPF"),
+  };
+}
+
+function getCteTaker(inf, ide) {
+  const toma4 = ide?.getElementsByTagName("toma4")[0];
+  if (toma4) {
+    return {
+      name: getTagText(toma4, "xNome"),
+      cnpj: getTagText(toma4, "CNPJ") || getTagText(toma4, "CPF"),
+    };
+  }
+  const toma3 = getTagText(ide, "toma3");
+  const partyTag = { "0": "rem", "1": "exped", "2": "receb", "3": "dest" }[toma3];
+  return partyTag ? getCteParty(inf, partyTag) : { name: "", cnpj: "" };
+}
+
 // Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
 const EVENT_LABELS = {
   "110110": "Carta de Correção",
@@ -174,6 +195,7 @@ function parseCTe(doc) {
   const emit = inf.getElementsByTagName("emit")[0];
   const dest = inf.getElementsByTagName("dest")[0];
   const vPrest = inf.getElementsByTagName("vPrest")[0];
+  const tomador = getCteTaker(inf, ide);
 
   return {
     document_type: "cte",
@@ -185,6 +207,8 @@ function parseCTe(doc) {
     supplier_cnpj: getTagText(emit, "CNPJ"),
     recipient_name: getTagText(dest, "xNome"),
     recipient_cnpj: getTagText(dest, "CNPJ") || getTagText(dest, "CPF"),
+    tomador_name: tomador.name,
+    tomador_cnpj: tomador.cnpj,
     total_value: parseFloat(getTagText(vPrest, "vTPrest")) || 0,
     issue_date: issueDate ? issueDate.substring(0, 10) : "",
     due_date: "",
