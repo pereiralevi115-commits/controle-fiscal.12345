@@ -7,6 +7,7 @@ import CTeDetailDialog from "@/components/invoices/CTeDetailDialog";
 import CTeReport from "@/components/reports/CTeReport";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileBarChart } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAuth } from "@/lib/AuthContext";
@@ -19,6 +20,7 @@ export default function CTe() {
     queryFn: () => base44.entities.Branch.list(),
   });
   const [filters, setFilters] = useState({ search: "", branch: "all", monthYear: "all", sigv: "all", topcon: "all", boleto: "all" });
+  const [tomadorTab, setTomadorTab] = useState("concretar");
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
@@ -31,9 +33,21 @@ export default function CTe() {
   const toggleSelectAll = (checked, docs) =>
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
+  const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const isConcretarTomador = (doc) => normalizeText(doc.recipient_name).includes("CONCRETAR");
+
+  const tomadorCounts = useMemo(() => {
+    const concretar = documents.filter(isConcretarTomador).length;
+    return { concretar, outros: documents.length - concretar };
+  }, [documents]);
+
+  const documentsByTomador = useMemo(() => {
+    return documents.filter((doc) => tomadorTab === "concretar" ? isConcretarTomador(doc) : !isConcretarTomador(doc));
+  }, [documents, tomadorTab]);
+
   const filteredWithoutMonth = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
-    return documents.filter((doc) => {
+    return documentsByTomador.filter((doc) => {
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;
@@ -44,7 +58,7 @@ export default function CTe() {
       if (filters.boleto === "nao" && doc.boleto_recorded) return false;
       return true;
     });
-  }, [documents, filters.search, filters.branch, filters.sigv, filters.topcon, filters.boleto]);
+  }, [documentsByTomador, filters.search, filters.branch, filters.sigv, filters.topcon, filters.boleto]);
 
   const availableMonths = useMemo(() => getMonthsFromInvoices(filteredWithoutMonth), [filteredWithoutMonth]);
 
@@ -83,11 +97,18 @@ export default function CTe() {
           </Button>
         </div>
 
+        <Tabs value={tomadorTab} onValueChange={(value) => { setTomadorTab(value); setSelectedIds([]); }}>
+          <TabsList className="bg-white border border-slate-200 shadow-sm">
+            <TabsTrigger value="concretar">Tomador Concretar ({tomadorCounts.concretar})</TabsTrigger>
+            <TabsTrigger value="outros">Demais tomadores ({tomadorCounts.outros})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <InvoiceFilters
           filters={filters}
           onFilterChange={setFilters}
           branches={branches}
-          invoices={documents}
+          invoices={documentsByTomador}
           availableMonths={availableMonths}
         />
 
