@@ -56,6 +56,8 @@ function InvoiceDetails({ boleto, invoices, refs }) {
 export default function DdaTable({ boletos, onLink }) {
   const [status, setStatus] = useState("todos");
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [printingInvoiceId, setPrintingInvoiceId] = useState(null);
   const linkedIds = useMemo(() => [...new Set(boletos.flatMap((b) => linkedRefs(b).map((ref) => ref.invoice_id)).filter(Boolean))], [boletos]);
   const { data: invoices = [] } = useQuery({
@@ -79,11 +81,14 @@ export default function DdaTable({ boletos, onLink }) {
         const inv = invoiceMap.get(ref.invoice_id);
         return `${ref.invoice_number || ""} ${inv?.number || ""} ${inv?.supplier_name || ""}`;
       }).join(" ");
+      const dueDate = b.due_date ? String(b.due_date).slice(0, 10) : "";
       if (status !== "todos" && b.status !== status) return false;
+      if (startDate && (!dueDate || dueDate < startDate)) return false;
+      if (endDate && (!dueDate || dueDate > endDate)) return false;
       const text = `${b.beneficiary_name || ""} ${b.document_number || ""} ${b.payer_name || ""} ${b.line_digitavel || ""} ${linkedText}`.toLowerCase();
       return !term || text.includes(term);
     });
-  }, [boletos, status, search, invoiceMap]);
+  }, [boletos, status, search, startDate, endDate, invoiceMap]);
 
   const handlePrintInvoices = async (invoiceList) => {
     if (invoiceList.length === 0) return;
@@ -100,13 +105,21 @@ export default function DdaTable({ boletos, onLink }) {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="p-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-5 gap-3">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por fornecedor, documento, NF ou linha digitável" className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913] md:col-span-2" />
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]">
           <option value="todos">Todos os status</option>
           <option value="vinculado">Vinculados</option>
           <option value="pendente">Pendentes</option>
         </select>
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold text-slate-500">Vencimento inicial</label>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold text-slate-500">Vencimento final</label>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]" />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
