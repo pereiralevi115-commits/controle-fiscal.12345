@@ -118,6 +118,8 @@
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    zoom: 80%;
+    width: 125% !important;
   }
 
   [data-print-area="boletos-dda-report"] .overflow-x-auto {
