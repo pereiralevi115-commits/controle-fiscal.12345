@@ -20,6 +20,7 @@ const fixedBranchOrder = [
   "CAPIVARI DE BAIXO",
   "CRICIUMA",
   "PASSO DE TORRES",
+  "BRACO DO NORTE",
   "MAQUINE",
   "CASEIROS",
   "LAHES",
