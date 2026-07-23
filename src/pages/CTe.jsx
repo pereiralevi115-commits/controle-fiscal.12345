@@ -50,8 +50,6 @@ export default function CTe() {
     return documentsByTomador.filter((doc) => {
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
-      if (doc.archived || doc.cancelled) return false;
-      if (doc.sigv_recorded && doc.topcon_recorded && doc.boleto_recorded) return false;
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;
       if (filters.sigv === "nao" && doc.sigv_recorded) return false;
       if (filters.topcon === "sim" && !doc.topcon_recorded) return false;
