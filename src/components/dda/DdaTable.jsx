@@ -105,13 +105,19 @@ export default function DdaTable({ boletos, onLink }) {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-slate-100 grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por fornecedor, documento, NF ou linha digitável" className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913] md:col-span-2" />
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]">
-          <option value="todos">Todos os status</option>
-          <option value="vinculado">Vinculados</option>
-          <option value="pendente">Pendentes</option>
-        </select>
+      <div className="p-4 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold text-slate-500">Busca</label>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Fornecedor, documento, NF ou linha digitável" className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold text-slate-500">Status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]">
+            <option value="todos">Todos os status</option>
+            <option value="vinculado">Vinculados</option>
+            <option value="pendente">Pendentes</option>
+          </select>
+        </div>
         <div className="space-y-1">
           <label className="text-[11px] font-semibold text-slate-500">Vencimento inicial</label>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#FDB913]" />
