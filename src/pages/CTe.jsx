@@ -48,6 +48,7 @@ export default function CTe() {
   const filteredWithoutMonth = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
     return documentsByTomador.filter((doc) => {
+      if (doc.archived || (doc.sigv_recorded && doc.topcon_recorded && doc.boleto_recorded)) return false;
       if (term && !(doc.supplier_name?.toLowerCase().includes(term) || doc.number?.includes(term))) return false;
       if (filters.branch !== "all" && doc.branch_cnpj !== filters.branch) return false;
       if (filters.sigv === "sim" && !doc.sigv_recorded) return false;

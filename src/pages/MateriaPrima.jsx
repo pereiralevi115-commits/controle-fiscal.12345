@@ -75,7 +75,8 @@ export default function MateriaPrima() {
       const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
       const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
       const notArchived = !inv.archived;
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived;
+      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
+      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived && notCompleted;
     });
   }, [invoices, filters.search, filters.status, filters.branch, filters.cancelled, filters.sigv, filters.topcon, filters.boleto, suppliers, allowedCnpjs]);
 
