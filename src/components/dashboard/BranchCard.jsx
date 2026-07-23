@@ -11,6 +11,29 @@ const compactCurrency = (value) => {
   return formatCurrency(v);
 };
 
+const normalizeBranchName = (value) =>
+  String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+
+const fixedBranchOrder = [
+  "ARARANGUA",
+  "ORLEANS",
+  "CAPIVARI DE BAIXO",
+  "CRICIUMA",
+  "PASSO DE TORRES",
+  "MAQUINE",
+  "CASEIROS",
+  "LAHES",
+  "LAGES",
+  "SANTO ANTONIO DA PATRULHA",
+  "VILA FLORES",
+];
+
+const branchOrderIndex = (name) => {
+  const normalized = normalizeBranchName(name);
+  const index = fixedBranchOrder.indexOf(normalized);
+  return index === -1 ? 999 : index;
+};
+
 // Pequeno cartão de métrica por tela
 const ScreenTile = ({ icon: Icon, label, count, value, percent, accent, selected, onClick }) => (
   <button
@@ -129,7 +152,7 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
           return { name: b.name, count, value };
         })
         .filter((b) => b.count > 0 || b.value > 0)
-        .sort((a, b) => b.value - a.value)
+        .sort((a, b) => branchOrderIndex(a.name) - branchOrderIndex(b.name) || a.name.localeCompare(b.name))
     : [];
 
   const screenRowConfig = [
