@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Printer, ReceiptText } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import DdaImportCard from "@/components/dda/DdaImportCard";
 import DdaStats from "@/components/dda/DdaStats";
 import DdaTable from "@/components/dda/DdaTable";
@@ -13,17 +14,40 @@ export default function BoletosDDA() {
   const [selected, setSelected] = useState(null);
   const { data: boletos = [], isLoading } = useQuery({
     queryKey: ["boletosDda"],
-    queryFn: () => base44.entities.BoletoDDA.list("-due_date", 500),
+    queryFn: async () => {
+      const rows = await base44.entities.BoletoDDA.list("-due_date", 500);
+      return rows.filter((boleto) => !boleto.paid && !boleto.paid_at);
+    },
   });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["boletosDda"] });
+    queryClient.invalidateQueries({ queryKey: ["boletosDdaArchived"] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
   };
 
   const linkMutation = useMutation({
     mutationFn: ({ boletoId, invoiceIds }) => base44.functions.invoke("ddaBoletosManager", { action: "linkManual", boleto_id: boletoId, invoice_ids: invoiceIds }),
     onSuccess: () => { setSelected(null); refresh(); },
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: async ({ boleto, payment }) => {
+      const user = await base44.auth.me();
+      return base44.entities.BoletoDDA.update(boleto.id, {
+        paid: true,
+        paid_at: new Date().toISOString(),
+        paid_by_id: user.id,
+        paid_by_name: user.full_name || user.email || "Usuário",
+        payment_date: payment.paymentDate,
+        payment_value: payment.paymentValue,
+        payment_notes: payment.notes,
+      });
+    },
+    onSuccess: () => {
+      refresh();
+      toast.success("Pagamento registrado e boleto arquivado.");
+    },
   });
 
   return (
@@ -50,7 +74,7 @@ export default function BoletosDDA() {
         {isLoading ? (
           <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
         ) : (
-          <DdaTable boletos={boletos} onLink={setSelected} />
+          <DdaTable boletos={boletos} onLink={setSelected} onPay={(boleto, payment) => paymentMutation.mutate({ boleto, payment })} paying={paymentMutation.isPending} />
         )}
         <DdaLinkDialog
           boleto={selected}

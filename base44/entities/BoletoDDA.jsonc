@@ -150,6 +150,36 @@
     "linked_by_name": {
       "type": "string",
       "description": "Nome do usu\u00e1rio que vinculou"
+    },
+    "paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se o boleto foi pago e arquivado"
+    },
+    "paid_at": {
+      "type": "string",
+      "description": "Data/hora em que o pagamento foi registrado"
+    },
+    "paid_by_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que registrou o pagamento"
+    },
+    "paid_by_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que registrou o pagamento"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data efetiva do pagamento"
+    },
+    "payment_value": {
+      "type": "number",
+      "description": "Valor pago"
+    },
+    "payment_notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es do pagamento"
     }
   },
   "required": [

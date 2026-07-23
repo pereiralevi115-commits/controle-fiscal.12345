@@ -27,6 +27,7 @@ const gestaoItems = [
 const gerencialItems = [
   { key: 'conferencia', name: 'Conferência', path: '/conferencia', icon: GitCompareArrows },
   { key: 'boletos-dda', name: 'Boletos DDA', path: '/boletos-dda', icon: ReceiptText },
+  { key: 'boletos-arquivados', accessKey: 'boletos-dda', name: 'Boletos Arquivados', path: '/boletos-arquivados', icon: Archive },
   { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
   { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Building2 },
   { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
@@ -41,12 +42,12 @@ const navItems = [
 export default function AppHeaderLayout({ children, currentPath }) {
   const { canAccessPage, isLoadingAuth } = useAuth();
 
-  const visibleNavItems = navItems.filter(item => canAccessPage(item.key));
-  const visibleNotasItems = notasFiscaisItems.filter(item => canAccessPage(item.key));
+  const visibleNavItems = navItems.filter(item => canAccessPage(item.accessKey || item.key));
+  const visibleNotasItems = notasFiscaisItems.filter(item => canAccessPage(item.accessKey || item.key));
   const isNotasActive = visibleNotasItems.some(item => item.path === currentPath);
-  const visibleGestaoItems = gestaoItems.filter(item => canAccessPage(item.key));
+  const visibleGestaoItems = gestaoItems.filter(item => canAccessPage(item.accessKey || item.key));
   const isGestaoActive = visibleGestaoItems.some(item => item.path === currentPath);
-  const visibleGerencialItems = gerencialItems.filter(item => canAccessPage(item.key));
+  const visibleGerencialItems = gerencialItems.filter(item => canAccessPage(item.accessKey || item.key));
   const isGerencialActive = visibleGerencialItems.some(item => item.path === currentPath);
 
   if (isLoadingAuth) {

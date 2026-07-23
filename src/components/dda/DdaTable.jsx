@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import BoletoBarcode from "@/components/dda/BoletoBarcode";
+import DdaPaymentDialog from "@/components/dda/DdaPaymentDialog";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ const statusClass = {
   vinculado: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
   pendente: "bg-amber-100 text-amber-700 hover:bg-amber-100",
   duplicado: "bg-blue-100 text-blue-700 hover:bg-blue-100",
+  pago: "bg-slate-800 text-white hover:bg-slate-800",
 };
 
 const typeLabel = { nfe: "NF-e", nfse: "NFS-e", cte: "CT-e" };
@@ -20,6 +22,7 @@ const yesNoClass = (value) => value ? "bg-emerald-100 text-emerald-700" : "bg-sl
 const linkedRefs = (boleto) => Array.isArray(boleto.linked_invoices) && boleto.linked_invoices.length > 0
   ? boleto.linked_invoices
   : boleto.invoice_id ? [{ invoice_id: boleto.invoice_id, invoice_type: boleto.invoice_type, invoice_number: boleto.invoice_number }] : [];
+const isValidEntityId = (id) => /^[a-f\d]{24}$/i.test(String(id || ""));
 
 function AuditBadge({ label, value, name, date }) {
   return (
@@ -53,13 +56,27 @@ function InvoiceDetails({ boleto, invoices, refs }) {
   );
 }
 
-export default function DdaTable({ boletos, onLink }) {
+function PaymentInfo({ boleto }) {
+  if (!boleto.paid && !boleto.paid_at) return null;
+  return (
+    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+      <p className="font-semibold text-slate-800">Pagamento registrado</p>
+      <p>Data: {formatDate(boleto.payment_date || boleto.paid_at)}</p>
+      <p>Valor: {formatCurrency(boleto.payment_value || boleto.charged_value)}</p>
+      <p>Por: {boleto.paid_by_name || "registro antigo"}</p>
+      {boleto.payment_notes && <p>Obs.: {boleto.payment_notes}</p>}
+    </div>
+  );
+}
+
+export default function DdaTable({ boletos, onLink, onPay, paying = false, archived = false }) {
   const [status, setStatus] = useState("todos");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [printingInvoiceId, setPrintingInvoiceId] = useState(null);
-  const linkedIds = useMemo(() => [...new Set(boletos.flatMap((b) => linkedRefs(b).map((ref) => ref.invoice_id)).filter(Boolean))], [boletos]);
+  const [paymentBoleto, setPaymentBoleto] = useState(null);
+  const linkedIds = useMemo(() => [...new Set(boletos.flatMap((b) => linkedRefs(b).map((ref) => ref.invoice_id)).filter(isValidEntityId))], [boletos]);
   const { data: invoices = [] } = useQuery({
     queryKey: ["ddaLinkedInvoices", linkedIds.join(",")],
     enabled: linkedIds.length > 0,
@@ -83,10 +100,11 @@ export default function DdaTable({ boletos, onLink }) {
         return `${ref.invoice_number || ""} ${inv?.number || ""} ${inv?.supplier_name || ""}`;
       }).join(" ");
       const dueDate = b.due_date ? String(b.due_date).slice(0, 10) : "";
-      if (status !== "todos" && b.status !== status) return false;
+      const statusLabel = b.paid || b.paid_at ? "pago" : b.status;
+      if (status !== "todos" && statusLabel !== status) return false;
       if (startDate && (!dueDate || dueDate < startDate)) return false;
       if (endDate && (!dueDate || dueDate > endDate)) return false;
-      const text = `${b.beneficiary_name || ""} ${b.document_number || ""} ${b.payer_name || ""} ${b.line_digitavel || ""} ${linkedText}`.toLowerCase();
+      const text = `${b.beneficiary_name || ""} ${b.document_number || ""} ${b.payer_name || ""} ${b.line_digitavel || ""} ${b.paid_by_name || ""} ${linkedText}`.toLowerCase();
       return !term || text.includes(term);
     });
   }, [boletos, status, search, startDate, endDate, invoiceMap]);
@@ -117,6 +135,7 @@ export default function DdaTable({ boletos, onLink }) {
             <option value="todos">Todos os status</option>
             <option value="vinculado">Vinculados</option>
             <option value="pendente">Pendentes</option>
+            {archived && <option value="pago">Pagos</option>}
           </select>
         </div>
         <div className="space-y-1">
@@ -145,8 +164,10 @@ export default function DdaTable({ boletos, onLink }) {
             {filtered.map((b) => {
               const refs = linkedRefs(b);
               const linkedInvoices = refs.map((ref) => invoiceMap.get(ref.invoice_id)).filter(Boolean);
-              const firstInvoice = linkedInvoices[0] || null;
               const printingKey = linkedInvoices.map((invoice) => invoice.id).join(",");
+              const paid = b.paid || b.paid_at;
+              const statusLabel = paid ? "pago" : b.status;
+              const canPay = !archived && !paid && refs.length > 0;
               return (
                 <tr key={b.id} className="align-top hover:bg-slate-50">
                   <td className="px-4 py-3 min-w-[260px]">
@@ -163,14 +184,15 @@ export default function DdaTable({ boletos, onLink }) {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(b.due_date)}</td>
                   <td className="px-4 py-3 text-right font-bold whitespace-nowrap">{formatCurrency(b.charged_value)}</td>
-                  <td className="px-4 py-3 min-w-[340px]"><Badge className={statusClass[b.status] || statusClass.pendente}>{b.status}</Badge><InvoiceDetails boleto={b} invoices={linkedInvoices} refs={refs} /></td>
+                  <td className="px-4 py-3 min-w-[340px]"><Badge className={statusClass[statusLabel] || statusClass.pendente}>{statusLabel}</Badge><InvoiceDetails boleto={b} invoices={linkedInvoices} refs={refs} /><PaymentInfo boleto={b} /></td>
                   <td data-dda-print-actions="true" className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-2">
                       <Button variant="outline" size="sm" onClick={() => printDdaBoleto(b, linkedInvoices)}>Imprimir boleto</Button>
                       <Button variant="outline" size="sm" disabled={linkedInvoices.length === 0 || printingInvoiceId === printingKey} onClick={() => handlePrintInvoices(linkedInvoices)} title={linkedInvoices.length === 0 ? "Disponível após vincular uma NF" : "Abrir nota fiscal para impressão"}>
                         {printingInvoiceId === printingKey ? "Abrindo..." : linkedInvoices.length > 1 ? "Imprimir NFs" : "Imprimir NF"}
                       </Button>
-                      {b.status === "pendente" && <Button variant="outline" size="sm" onClick={() => onLink(b)}>Vincular</Button>}
+                      {canPay && <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setPaymentBoleto(b)}>Pagar</Button>}
+                      {!archived && b.status === "pendente" && <Button variant="outline" size="sm" onClick={() => onLink(b)}>Vincular</Button>}
                     </div>
                   </td>
                 </tr>
@@ -180,6 +202,16 @@ export default function DdaTable({ boletos, onLink }) {
           </tbody>
         </table>
       </div>
+      <DdaPaymentDialog
+        boleto={paymentBoleto}
+        open={!!paymentBoleto}
+        onClose={() => setPaymentBoleto(null)}
+        loading={paying}
+        onConfirm={(boleto, payment) => {
+          onPay?.(boleto, payment);
+          setPaymentBoleto(null);
+        }}
+      />
     </div>
   );
 }
