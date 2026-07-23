@@ -64,9 +64,10 @@ export default function DdaTable({ boletos, onLink }) {
     queryKey: ["ddaLinkedInvoices", linkedIds.join(",")],
     enabled: linkedIds.length > 0,
     queryFn: async () => {
-      const rows = [];
-      for (const id of linkedIds) rows.push(await base44.entities.Invoice.get(id));
-      return rows;
+      const chunks = [];
+      for (let index = 0; index < linkedIds.length; index += 50) chunks.push(linkedIds.slice(index, index + 50));
+      const groups = await Promise.all(chunks.map((chunk) => base44.entities.Invoice.filter({ id: { $in: chunk } }, undefined, chunk.length)));
+      return groups.flat();
     },
   });
   const { data: branches = [] } = useQuery({ queryKey: ["ddaBranches"], queryFn: () => base44.entities.Branch.list() });
