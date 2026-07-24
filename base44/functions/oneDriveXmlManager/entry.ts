@@ -819,7 +819,7 @@ async function reprocessCteFolderById(base44, accessToken, folder, skip = 0, bat
   const allXmlFiles = await listAllXmlFiles(accessToken, folder.folder_id);
   const cteXmlFiles = allXmlFiles.filter(isCteFileCandidate);
   const totalFiles = cteXmlFiles.length;
-  const safeBatchSize = Math.min(Math.max(Number(batchSize) || BATCH_SIZE, BATCH_SIZE), 25);
+  const safeBatchSize = Math.min(Math.max(Number(batchSize) || BATCH_SIZE, BATCH_SIZE), 35);
   const batch = cteXmlFiles.slice(skip, skip + safeBatchSize);
 
   if (batch.length === 0) {
