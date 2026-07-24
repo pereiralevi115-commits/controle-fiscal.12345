@@ -120,6 +120,14 @@
       "type": "string",
       "description": "CEP do destinat\u00e1rio"
     },
+    "tomador_name": {
+      "type": "string",
+      "description": "Nome/Raz\u00e3o social do tomador do servi\u00e7o de transporte (CT-e)"
+    },
+    "tomador_cnpj": {
+      "type": "string",
+      "description": "CNPJ/CPF do tomador do servi\u00e7o de transporte (CT-e)"
+    },
     "branch_cnpj": {
       "type": "string",
       "description": "CNPJ da filial destinat\u00e1ria"
