@@ -9,6 +9,7 @@ import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import NFReport from "@/components/reports/NFReport";
+import NFSeReport from "@/components/reports/NFSeReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
@@ -25,6 +26,7 @@ export default function NF() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
+  const [activeTab, setActiveTab] = useState("nfe");
   const [sortConfig, setSortConfig] = useState([
     { key: "issue_date", direction: "desc" }
   ]);
@@ -201,7 +203,7 @@ export default function NF() {
           </Button>
         </div>
 
-        <Tabs defaultValue="nfe" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="nfe">NF-e ({filteredInvoices.length})</TabsTrigger>
             <TabsTrigger value="nfse">NFS-e ({filteredNfse.length})</TabsTrigger>
@@ -262,12 +264,21 @@ export default function NF() {
           branches={branches}
         />
 
-        <NFReport
-          open={showReport}
-          onClose={() => setShowReport(false)}
-          invoices={filteredInvoices}
-          branches={branches}
-        />
+        {activeTab === "nfse" ? (
+          <NFSeReport
+            open={showReport}
+            onClose={() => setShowReport(false)}
+            invoices={filteredNfse}
+            branches={branches}
+          />
+        ) : (
+          <NFReport
+            open={showReport}
+            onClose={() => setShowReport(false)}
+            invoices={filteredInvoices}
+            branches={branches}
+          />
+        )}
       </div>
     </div>
   );
