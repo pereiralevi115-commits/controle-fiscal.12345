@@ -131,14 +131,15 @@ async function buildPDF(invoice) {
   const recipientCity = [invoice.recipient_city, invoice.recipient_state].filter(Boolean).join(" - ");
   const tomadorName = invoice.cte_tomador_name || invoice.tomador_name || invoice.recipient_name;
   const tomadorCnpj = invoice.cte_tomador_cnpj || invoice.tomador_cnpj || invoice.recipient_cnpj;
+  const tomadorLabel = { remetente: "REMETENTE", expedidor: "EXPEDIDOR", recebedor: "RECEBEDOR", destinatario: "DESTINATÁRIO", outros: "OUTROS" }[invoice.tomador_type] || "OUTROS";
   const tomadorAddress = invoice.cte_tomador_address || recipientAddr;
   const tomadorCity = invoice.cte_tomador_city || recipientCity;
   const tomadorCep = invoice.cte_tomador_zip || invoice.recipient_zip;
   const tomadorIe = invoice.cte_tomador_ie || invoice.recipient_ie;
   const accessKey = onlyDigits(invoice.access_key);
-  const issue = formatDateTime(invoice.issue_date);
+  const issue = formatDateTime(invoice.issue_datetime || invoice.issue_date);
   const protocol = invoice.protocol_number || "";
-  const authDate = formatDateTime(invoice.protocol_date || invoice.issue_date);
+  const authDate = formatDateTime(invoice.protocol_datetime || invoice.protocol_date || invoice.issue_datetime || invoice.issue_date);
   const modal = (invoice.cte_modal === "01" || !invoice.cte_modal) ? "RODOVIÁRIO" : v(invoice.cte_modal).toUpperCase();
 
   // Recibo superior
@@ -226,7 +227,7 @@ async function buildPDF(invoice) {
   cellLabel("TIPO DO SERVIÇO", m + 118, y);
   center("NORMAL", m + 118, 96, y - 18, 11, fR);
   cellLabel("TOMADOR DO SERVIÇO", m, y - 22);
-  center(String(tomadorName || "").toUpperCase().includes("CONCRETAR") ? "DESTINATÁRIO" : "OUTROS", m, 118, y - 40, 11, fR);
+  center(tomadorLabel, m, 118, y - 40, 11, fR);
   cellLabel("FORMA DE PAGAMENTO", m + 118, y - 22);
   center("OUTROS", m + 118, 96, y - 40, 11, fR);
   cellLabel("PROTOCOLO DE AUTORIZAÇÃO DE USO", m + 214, y - 22);
@@ -241,9 +242,9 @@ async function buildPDF(invoice) {
   box(m, y, w / 2, 20);
   box(m + w / 2, y, w / 2, 20);
   cellLabel("ORIGEM DA PRESTAÇÃO", m, y);
-  txt(supplierCity, m + 4, y - 16, 9, fR, w / 2 - 8);
+  txt([invoice.cte_origin_city, invoice.cte_origin_state].filter(Boolean).join(" - ") || supplierCity, m + 4, y - 16, 9, fR, w / 2 - 8);
   cellLabel("DESTINO DA PRESTAÇÃO", m + w / 2, y);
-  txt(recipientCity, m + w / 2 + 4, y - 16, 9, fR, w / 2 - 8);
+  txt([invoice.cte_destination_city, invoice.cte_destination_state].filter(Boolean).join(" - ") || recipientCity, m + w / 2 + 4, y - 16, 9, fR, w / 2 - 8);
   y -= 20;
 
   personBlock(m, y, w / 2, 56, "REMETENTE", { name: invoice.sender_name || invoice.supplier_name, address: invoice.sender_address || supplierAddr, city: invoice.sender_city || supplierCity, cep: invoice.sender_zip || invoice.supplier_zip, cnpj: invoice.sender_cnpj || invoice.supplier_cnpj, ie: invoice.sender_ie || invoice.supplier_ie, phone: invoice.sender_phone || invoice.supplier_phone });
@@ -289,7 +290,7 @@ async function buildPDF(invoice) {
   cx = m;
   qLabels.forEach((h, i) => { line(cx, y - 30, cx, y - 65); center(h, cx, qCols[i], y - 38, 5.8, fR); cx += qCols[i]; });
   line(m + 312, y - 30, m + 312, y - 65);
-  txt(v(invoice.cargo_quantity || ""), m + 12, y - 49, 6.8, fR, 40);
+  txt(invoice.cargo_quantity ? `${invoice.cargo_quantity} ${invoice.cargo_quantity_unit || ""}` : "", m + 12, y - 49, 6.8, fR, 40);
   line(m + 312, y - 18, m + w, y - 18);
   cellLabel("NOME DA SEGURADORA", m + 312, y - 18);
   line(m + 312, y - 42, m + w, y - 42);
@@ -316,7 +317,14 @@ async function buildPDF(invoice) {
   right(formatCurrency(invoice.total_value), m + 344, w - 344, y - 27, 9, fR);
   label("VALOR A RECEBER", m + 348, y - 43, 6.5);
   right(formatCurrency(invoice.total_value), m + 344, w - 344, y - 49, 9, fR);
-  txt(`Frete .... ${formatCurrency(invoice.total_value)}`, m + 5, y - 37, 7.5, fR, 160);
+  const freightComponents = Array.isArray(invoice.freight_components) && invoice.freight_components.length > 0
+    ? invoice.freight_components
+    : [{ name: "Frete", value: invoice.total_value }];
+  freightComponents.slice(0, 4).forEach((item, index) => {
+    const baseY = y - 37 - index * 11;
+    const colX = index < 2 ? m + 5 : m + 176;
+    txt(`${v(item.name)} .... ${formatCurrency(item.value)}`, colX, baseY, 7.5, fR, 160);
+  });
   line(m + 5, y - 28, m + 344, y - 74, 0.5);
   y -= 74;
 
@@ -346,11 +354,14 @@ async function buildPDF(invoice) {
   label("TP DOC", m + 4, y - 23, 7);
   label("CPF/CNPJ EMITENTE", m + 68, y - 23, 7);
   label("SÉRIE/NRO. DOCUMENTO", m + 150, y - 23, 7);
-  const originDoc = Array.isArray(invoice.items) && invoice.items[0] ? `${invoice.items[0].code || ""} ${invoice.items[0].description || ""}` : "";
-  txt(originDoc, m + 4, y - 32, 5.2, fB, w / 2 - 8);
+  const originDocs = Array.isArray(invoice.origin_documents) ? invoice.origin_documents : [];
+  const originLeft = originDocs[0] ? `${originDocs[0].document_type || ""} ${originDocs[0].issuer_cnpj || ""} ${[originDocs[0].series, originDocs[0].number].filter(Boolean).join("/")}` : "";
+  txt(originLeft, m + 4, y - 32, 5.2, fB, w / 2 - 8);
   label("TP DOC", m + w / 2 + 4, y - 23, 7);
   label("CPF/CNPJ EMITENTE", m + w / 2 + 68, y - 23, 7);
   label("SÉRIE/NRO. DOCUMENTO", m + w / 2 + 150, y - 23, 7);
+  const originRight = originDocs[1] ? `${originDocs[1].document_type || ""} ${originDocs[1].issuer_cnpj || ""} ${[originDocs[1].series, originDocs[1].number].filter(Boolean).join("/")}` : "";
+  txt(originRight, m + w / 2 + 4, y - 32, 5.2, fB, w / 2 - 8);
   y -= 38;
 
   // Observações

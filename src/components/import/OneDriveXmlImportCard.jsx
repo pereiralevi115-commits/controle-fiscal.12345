@@ -28,6 +28,7 @@ export default function OneDriveXmlImportCard() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [runningAuto, setRunningAuto] = useState(false);
+  const [reprocessingCte, setReprocessingCte] = useState(false);
   const [removingId, setRemovingId] = useState(null);
   const [result, setResult] = useState(null);
   const [settings, setSettings] = useState(null);
@@ -276,6 +277,63 @@ export default function OneDriveXmlImportCard() {
     }
   };
 
+  const handleReprocessCte = async () => {
+    if (connectedFolders.length === 0) {
+      toast.error("Conecte pelo menos uma pasta do OneDrive primeiro.");
+      return;
+    }
+
+    setReprocessingCte(true);
+    setResult(null);
+    setImportProgress(null);
+
+    let folderIndex = 0;
+    let skip = 0;
+    let totalUpdated = 0;
+    let totalErrors = 0;
+    let totalNotFound = 0;
+
+    try {
+      while (true) {
+        const response = await base44.functions.invoke("oneDriveXmlManager", {
+          action: "reprocessCte",
+          folderIndex,
+          skip,
+        });
+        const data = response.data;
+        totalUpdated += data.updated || 0;
+        totalErrors += data.errors || 0;
+        totalNotFound += data.notFound || 0;
+
+        setImportProgress({
+          folder: (data.folderIndex ?? folderIndex) + 1,
+          folderName: data.folderName || "pasta conectada",
+          folderCount: data.folderCount || connectedFolders.length,
+          processed: data.processed || 0,
+          total: data.total || 0,
+        });
+
+        if (data.allDone) {
+          setResult({ success: totalUpdated, errors: totalErrors, error_details: data.error_details || [] });
+          await loadStatus();
+          queryClient.invalidateQueries({ queryKey: ["invoices"] });
+          window.dispatchEvent(new Event("onedrive-audit-refresh"));
+          toast.success(`${totalUpdated} CT-e(s) atualizado(s). ${totalNotFound} XML(s) sem registro correspondente.`);
+          break;
+        }
+
+        folderIndex = data.nextFolderIndex;
+        skip = data.nextSkip;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.error || error.message);
+    } finally {
+      setReprocessingCte(false);
+      setImportProgress(null);
+    }
+  };
+
   const handleOpenFolder = (folder) => {
     loadFolder(folder.id, [...folderStack, currentFolder]);
   };
@@ -344,16 +402,20 @@ export default function OneDriveXmlImportCard() {
           </p>
         ) : null}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="h-10 w-full font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm shadow-indigo-500/20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+          <Button onClick={handleImportFolder} disabled={importing || reprocessingCte || !hasFolder} className="h-10 w-full font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm shadow-indigo-500/20">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing ? "Importando..." : "Importar agora"}
           </Button>
-          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="h-10 w-full font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
+          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || reprocessingCte || !hasFolder} className="h-10 w-full font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
             {runningAuto ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Cloud className="w-4 h-4 mr-2" />}
             {runningAuto ? "Varrendo..." : "Varrer pendentes"}
           </Button>
-          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className={`h-10 w-full font-medium ${autoOn ? "border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"}`}>
+          <Button variant="outline" onClick={handleReprocessCte} disabled={reprocessingCte || importing || runningAuto || !hasFolder} className="h-10 w-full font-medium border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800">
+            {reprocessingCte ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            {reprocessingCte ? "Reprocessando..." : "Reprocessar CT-e"}
+          </Button>
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || reprocessingCte || !hasFolder} className={`h-10 w-full font-medium ${autoOn ? "border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"}`}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {autoOn ? "Desativar auto" : "Ativar automático"}
           </Button>
@@ -362,11 +424,17 @@ export default function OneDriveXmlImportCard() {
         <OneDriveRunFeedback feedback={runFeedback} />
 
         {/* Legenda explicativa dos botões */}
-        <div className="grid sm:grid-cols-2 gap-2 pt-1">
+        <div className="grid sm:grid-cols-3 gap-2 pt-1">
           <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
             <RefreshCw className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-slate-600 leading-relaxed">
               <span className="font-semibold text-slate-700">Importar agora:</span> processa XMLs novos, pendentes ou alterados, com a tela aberta e auditoria por arquivo.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-amber-100 px-3 py-2">
+            <RefreshCw className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-700">Reprocessar CT-e:</span> relê os XMLs oficiais e corrige os CT-e já existentes, sem apagar auditorias.
             </p>
           </div>
           <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">

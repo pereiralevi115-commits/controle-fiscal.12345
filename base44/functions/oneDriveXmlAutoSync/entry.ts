@@ -1,5 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
+import { parseCTeDocument } from '../../shared/cteParser.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de oneDriveXmlManager) ----------
 function getTagText(parent, tagName) {
@@ -176,39 +177,7 @@ function parseNFe(doc) {
 }
 
 function parseCTe(doc) {
-  const inf = doc.getElementsByTagName("infCte")[0];
-  const ide = inf.getElementsByTagName("ide")[0];
-  const number = getTagText(ide, "nCT");
-  const series = getTagText(ide, "serie");
-  const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
-
-  let accessKey = "";
-  const infId = inf.getAttribute("Id") || "";
-  if (infId.startsWith("CTe")) accessKey = infId.substring(3);
-
-  const emit = inf.getElementsByTagName("emit")[0];
-  const dest = inf.getElementsByTagName("dest")[0];
-  const vPrest = inf.getElementsByTagName("vPrest")[0];
-  const tomador = getCteTaker(inf, ide);
-
-  return {
-    document_type: "cte",
-    number, series, access_key: accessKey,
-    operation_nature: getTagText(ide, "natOp"),
-    cte_cfop: getTagText(ide, "CFOP"),
-    cte_modal: getTagText(ide, "modal"),
-    supplier_name: getTagText(emit, "xNome"),
-    supplier_cnpj: getTagText(emit, "CNPJ"),
-    recipient_name: getTagText(dest, "xNome"),
-    recipient_cnpj: getTagText(dest, "CNPJ") || getTagText(dest, "CPF"),
-    tomador_name: tomador.name,
-    tomador_cnpj: tomador.cnpj,
-    total_value: parseFloat(getTagText(vPrest, "vTPrest")) || 0,
-    issue_date: issueDate ? issueDate.substring(0, 10) : "",
-    due_date: "",
-    status: "pendente",
-    items: [], installments: [], payments: [],
-  };
+  return parseCTeDocument(doc, getTagText);
 }
 
 function parseNFSeNacional(doc) {

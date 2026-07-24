@@ -1,5 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
+import { parseCTeDocument } from '../../shared/cteParser.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de parseXml.js) ----------
 function getTagText(parent, tagName) {
@@ -182,39 +183,7 @@ function parseNFe(doc) {
 }
 
 function parseCTe(doc) {
-  const inf = doc.getElementsByTagName("infCte")[0];
-  const ide = inf.getElementsByTagName("ide")[0];
-  const number = getTagText(ide, "nCT");
-  const series = getTagText(ide, "serie");
-  const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
-
-  let accessKey = "";
-  const infId = inf.getAttribute("Id") || "";
-  if (infId.startsWith("CTe")) accessKey = infId.substring(3);
-
-  const emit = inf.getElementsByTagName("emit")[0];
-  const dest = inf.getElementsByTagName("dest")[0];
-  const vPrest = inf.getElementsByTagName("vPrest")[0];
-  const tomador = getCteTaker(inf, ide);
-
-  return {
-    document_type: "cte",
-    number, series, access_key: accessKey,
-    operation_nature: getTagText(ide, "natOp"),
-    cte_cfop: getTagText(ide, "CFOP"),
-    cte_modal: getTagText(ide, "modal"),
-    supplier_name: getTagText(emit, "xNome"),
-    supplier_cnpj: getTagText(emit, "CNPJ"),
-    recipient_name: getTagText(dest, "xNome"),
-    recipient_cnpj: getTagText(dest, "CNPJ") || getTagText(dest, "CPF"),
-    tomador_name: tomador.name,
-    tomador_cnpj: tomador.cnpj,
-    total_value: parseFloat(getTagText(vPrest, "vTPrest")) || 0,
-    issue_date: issueDate ? issueDate.substring(0, 10) : "",
-    due_date: "",
-    status: "pendente",
-    items: [], installments: [], payments: [],
-  };
+  return parseCTeDocument(doc, getTagText);
 }
 
 function parseNFSeNacional(doc) {
@@ -782,6 +751,93 @@ async function importFolderById(base44, accessToken, folder, skip = 0) {
   return { success, errors, error_details: errorDetails, total: totalFiles, processed, remaining, done: remaining <= 0 };
 }
 
+const CTE_UPDATE_FIELDS = [
+  "number", "series", "access_key", "operation_nature", "cte_cfop", "cte_modal", "cte_service_type", "cte_payment_type",
+  "cte_origin_city", "cte_origin_state", "cte_destination_city", "cte_destination_state",
+  "supplier_name", "supplier_cnpj", "supplier_ie", "supplier_address", "supplier_number", "supplier_district", "supplier_city", "supplier_state", "supplier_zip", "supplier_phone",
+  "recipient_name", "recipient_cnpj", "recipient_ie", "recipient_address", "recipient_number", "recipient_district", "recipient_city", "recipient_state", "recipient_zip",
+  "tomador_name", "tomador_cnpj", "tomador_type", "cte_tomador_name", "cte_tomador_cnpj", "cte_tomador_ie", "cte_tomador_address", "cte_tomador_number", "cte_tomador_district", "cte_tomador_city", "cte_tomador_state", "cte_tomador_zip", "cte_tomador_phone",
+  "sender_name", "sender_cnpj", "sender_ie", "sender_address", "sender_number", "sender_district", "sender_city", "sender_state", "sender_zip", "sender_phone",
+  "expedidor_name", "expedidor_cnpj", "expedidor_ie", "expedidor_address", "expedidor_number", "expedidor_district", "expedidor_city", "expedidor_state", "expedidor_zip", "expedidor_phone",
+  "recebedor_name", "recebedor_cnpj", "recebedor_ie", "recebedor_address", "recebedor_number", "recebedor_district", "recebedor_city", "recebedor_state", "recebedor_zip", "recebedor_phone",
+  "branch_cnpj", "total_value", "total_freight", "total_products", "issue_date", "issue_datetime", "tax_icms", "tax_icms_base", "service_description", "protocol_number", "protocol_date", "protocol_datetime",
+  "product_description", "cargo_quantity", "cargo_quantity_unit", "freight_components", "origin_documents", "items"
+];
+
+function cteUpdatePayload(parsed) {
+  const payload = {};
+  parsed.branch_cnpj = parsed.recipient_cnpj;
+  for (const field of CTE_UPDATE_FIELDS) {
+    if (parsed[field] !== undefined) payload[field] = parsed[field];
+  }
+  return payload;
+}
+
+async function reprocessCteXmlFile(base44, accessToken, file, folder) {
+  let content = "";
+  try {
+    content = await downloadFileText(accessToken, file.id);
+  } catch (error) {
+    return { updated: 0, skipped: 0, notFound: 0, errors: 1, detail: `${file.name}: falha ao baixar do OneDrive` };
+  }
+
+  try {
+    const parsed = parseXmlText(content);
+    if (parsed.is_event || parsed.document_type !== "cte") return { updated: 0, skipped: 1, notFound: 0, errors: 0 };
+    if (!parsed.access_key) return { updated: 0, skipped: 0, notFound: 0, errors: 1, detail: `${file.name}: CT-e sem chave de acesso` };
+
+    const existing = await base44.asServiceRole.entities.Invoice.filter({ access_key: parsed.access_key });
+    if (existing.length === 0) return { updated: 0, skipped: 0, notFound: 1, errors: 0 };
+
+    const updateData = cteUpdatePayload(parsed);
+    await base44.asServiceRole.entities.Invoice.update(existing[0].id, updateData);
+    await upsertAudit(base44, {
+      ...auditBase(file, folder, {
+        access_key: parsed.access_key,
+        document_type: "cte",
+        document_number: parsed.number || "",
+        supplier_name: parsed.supplier_name || "",
+        supplier_cnpj: parsed.supplier_cnpj || "",
+        status: "importado",
+        reason: "CT-e existente reprocessado e atualizado a partir do XML oficial.",
+        invoice_id: existing[0].id,
+      }),
+    });
+    return { updated: 1, skipped: 0, notFound: 0, errors: 0 };
+  } catch (error) {
+    return { updated: 0, skipped: 0, notFound: 0, errors: 1, detail: `${file.name}: ${error.message}` };
+  }
+}
+
+async function reprocessCteFolderById(base44, accessToken, folder, skip = 0) {
+  const allXmlFiles = await listAllXmlFiles(accessToken, folder.folder_id);
+  const totalFiles = allXmlFiles.length;
+  const batch = allXmlFiles.slice(skip, skip + BATCH_SIZE);
+
+  if (batch.length === 0) {
+    return { updated: 0, skipped: 0, notFound: 0, errors: 0, error_details: [], total: totalFiles, processed: skip, remaining: 0, done: true };
+  }
+
+  let updated = 0;
+  let skipped = 0;
+  let notFound = 0;
+  let errors = 0;
+  const errorDetails = [];
+
+  for (let i = 0; i < batch.length; i++) {
+    const result = await reprocessCteXmlFile(base44, accessToken, batch[i], folder);
+    updated += result.updated || 0;
+    skipped += result.skipped || 0;
+    notFound += result.notFound || 0;
+    errors += result.errors || 0;
+    if (result.detail) errorDetails.push({ index: skip + i, error: result.detail });
+  }
+
+  const processed = skip + batch.length;
+  const remaining = Math.max(0, totalFiles - processed);
+  return { updated, skipped, notFound, errors, error_details: errorDetails, total: totalFiles, processed, remaining, done: remaining <= 0 };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -977,6 +1033,66 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === 'reprocessCte') {
+      const settings = await getSettings(base44);
+      const connectedFolders = getConnectedFolders(settings);
+      if (connectedFolders.length === 0) {
+        return Response.json({ error: 'Conecte pelo menos uma pasta do OneDrive primeiro.' }, { status: 400 });
+      }
+
+      const folderIndex = payload.folderIndex || 0;
+      const skip = payload.skip || 0;
+      const isFirstBatchOfRun = folderIndex === 0 && skip === 0;
+      if (isFirstBatchOfRun) {
+        const lockedAt = settings?.import_lock_at ? new Date(settings.import_lock_at).getTime() : 0;
+        if (settings?.import_locked && Date.now() - lockedAt < 90 * 1000) {
+          return Response.json({ error: `Já existe uma importação em andamento (${settings.import_lock_source || 'outra'}). Aguarde concluir antes de iniciar outra.`, import_busy: true }, { status: 409 });
+        }
+        await base44.asServiceRole.entities.OneDriveImportSettings.update(settings.id, {
+          import_locked: true, import_lock_source: 'reprocess_cte', import_lock_at: new Date().toISOString(),
+        });
+      }
+
+      const currentFolderEntry = connectedFolders[folderIndex];
+      if (!currentFolderEntry) return Response.json({ allDone: true, done: true });
+
+      const result = await reprocessCteFolderById(base44, accessToken, currentFolderEntry, skip);
+      const folderDone = result.done;
+      const isLastFolder = folderIndex >= connectedFolders.length - 1;
+      const allDone = folderDone && isLastFolder;
+      const nextFolderIndex = folderDone ? folderIndex + 1 : folderIndex;
+      const nextSkip = folderDone ? 0 : result.processed;
+
+      await saveSettings(base44, {
+        folders: connectedFolders,
+        folder_id: null,
+        folder_name: null,
+        folder_path: null,
+        auto_sync_enabled: settings?.auto_sync_enabled || false,
+        import_locked: !allDone,
+        import_lock_source: allDone ? null : 'reprocess_cte',
+        import_lock_at: new Date().toISOString(),
+        last_sync_at: new Date().toISOString(),
+        last_sync_message: allDone
+          ? `Reprocessamento CT-e concluído nas ${connectedFolders.length} pasta(s).`
+          : `Reprocessando CT-e ${folderIndex + 1}/${connectedFolders.length}: ${result.processed}/${result.total} arquivos...`,
+        last_import_total: result.total,
+        last_import_success: result.updated,
+        last_import_errors: result.errors,
+      });
+
+      return Response.json({
+        ...result,
+        folderIndex,
+        folderName: currentFolderEntry.folder_name,
+        folderCount: connectedFolders.length,
+        nextFolderIndex,
+        nextSkip,
+        allDone,
+        done: allDone,
+      });
+    }
+
     if (action === 'importFiles') {
       if (!Array.isArray(fileIds) || fileIds.length === 0) {
         return Response.json({ error: 'Selecione pelo menos um arquivo.' }, { status: 400 });
@@ -998,7 +1114,7 @@ Deno.serve(async (req) => {
       }
 
       const result = xmlContents.length > 0
-        ? await importXmlContents(base44, xmlContents)
+        ? await importXmlBatchLocal(base44, xmlContents)
         : { success: 0, errors: 0, error_details: [], total: 0 };
 
       return Response.json({

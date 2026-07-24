@@ -1,5 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
+import { parseCTeDocument } from '../../shared/cteParser.ts';
 
 function getTagText(parent, tagName) {
   if (!parent) return "";
@@ -256,102 +257,7 @@ function parseNFe(doc) {
 }
 
 function parseCTe(doc) {
-  const inf = doc.getElementsByTagName("infCte")[0];
-
-  const ide = inf.getElementsByTagName("ide")[0];
-  const number = getTagText(ide, "nCT");
-  const series = getTagText(ide, "serie");
-  const issueDate = getTagText(ide, "dhEmi") || getTagText(ide, "dEmi");
-  const natOp = getTagText(ide, "natOp");
-  const cfop = getTagText(ide, "CFOP");
-  const modal = getTagText(ide, "modal");
-
-  let accessKey = "";
-  const infId = inf.getAttribute("Id") || "";
-  if (infId.startsWith("CTe")) accessKey = infId.substring(3);
-  if (!accessKey) {
-    const protCTe = doc.getElementsByTagName("protCTe")[0];
-    if (protCTe) accessKey = getTagText(protCTe, "chCTe");
-  }
-
-  // Emitente
-  const emit = inf.getElementsByTagName("emit")[0];
-  const supplierName = getTagText(emit, "xNome") || getTagText(emit, "xFant");
-  const supplierCnpj = getTagText(emit, "CNPJ");
-  const supplierIe = getTagText(emit, "IE");
-  const emitEnder = emit?.getElementsByTagName("enderEmit")[0];
-  const supplierAddress = emitEnder ? getTagText(emitEnder, "xLgr") : "";
-  const supplierNumber = emitEnder ? getTagText(emitEnder, "nro") : "";
-  const supplierDistrict = emitEnder ? getTagText(emitEnder, "xBairro") : "";
-  const supplierCity = emitEnder ? getTagText(emitEnder, "xMun") : "";
-  const supplierState = emitEnder ? getTagText(emitEnder, "UF") : "";
-  const supplierZip = emitEnder ? getTagText(emitEnder, "CEP") : "";
-  const supplierPhone = emitEnder ? getTagText(emitEnder, "fone") : "";
-
-  // Destinatário (no CT-e fica como dest)
-  const dest = inf.getElementsByTagName("dest")[0];
-  const recipientName = getTagText(dest, "xNome");
-  const recipientCnpj = getTagText(dest, "CNPJ") || getTagText(dest, "CPF");
-  const recipientIe = getTagText(dest, "IE");
-  const destEnder = dest?.getElementsByTagName("enderDest")[0];
-  const recipientAddress = destEnder ? getTagText(destEnder, "xLgr") : "";
-  const recipientNumber = destEnder ? getTagText(destEnder, "nro") : "";
-  const recipientDistrict = destEnder ? getTagText(destEnder, "xBairro") : "";
-  const recipientCity = destEnder ? getTagText(destEnder, "xMun") : "";
-  const recipientState = destEnder ? getTagText(destEnder, "UF") : "";
-  const recipientZip = destEnder ? getTagText(destEnder, "CEP") : "";
-  const tomador = getCteTaker(inf, ide);
-
-  // Valores
-  const vPrest = inf.getElementsByTagName("vPrest")[0];
-  const totalValue = parseFloat(getTagText(vPrest, "vTPrest")) || 0;
-
-  const icmsGroup = inf.getElementsByTagName("imp")[0];
-  const totalICMS = parseFloat(getTagText(icmsGroup, "vICMS")) || 0;
-  const icmsBase = parseFloat(getTagText(icmsGroup, "vBC")) || 0;
-
-  // Observações
-  const compl = inf.getElementsByTagName("compl")[0];
-  const observation = getTagText(compl, "xObs");
-
-  let formattedDate = issueDate ? issueDate.substring(0, 10) : "";
-
-  let protNum = "";
-  let protDate = "";
-  const protCTe = doc.getElementsByTagName("protCTe")[0];
-  if (protCTe) {
-    protNum = getTagText(protCTe, "nProt");
-    const dhRecbto = getTagText(protCTe, "dhRecbto");
-    if (dhRecbto) protDate = dhRecbto.substring(0, 10);
-  }
-
-  return {
-    document_type: "cte",
-    number, series, access_key: accessKey,
-    operation_nature: natOp,
-    cte_cfop: cfop,
-    cte_modal: modal,
-    supplier_name: supplierName, supplier_cnpj: supplierCnpj, supplier_ie: supplierIe,
-    supplier_address: supplierAddress, supplier_number: supplierNumber, supplier_district: supplierDistrict,
-    supplier_city: supplierCity, supplier_state: supplierState, supplier_zip: supplierZip,
-    supplier_phone: supplierPhone,
-    recipient_name: recipientName, recipient_cnpj: recipientCnpj, recipient_ie: recipientIe,
-    recipient_address: recipientAddress, recipient_number: recipientNumber, recipient_district: recipientDistrict,
-    recipient_city: recipientCity, recipient_state: recipientState, recipient_zip: recipientZip,
-    tomador_name: tomador.name, tomador_cnpj: tomador.cnpj,
-    total_value: totalValue,
-    issue_date: formattedDate,
-    due_date: "",
-    status: "pendente",
-    tax_icms: totalICMS,
-    tax_icms_base: icmsBase,
-    service_description: observation,
-    protocol_number: protNum,
-    protocol_date: protDate,
-    items: [],
-    installments: [],
-    payments: [],
-  };
+  return parseCTeDocument(doc, getTagText);
 }
 
 function parseNFSeNacional(doc) {

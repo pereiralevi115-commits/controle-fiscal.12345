@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -12,6 +12,13 @@ import { useAuth } from "@/lib/AuthContext";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
+
+const formatDateTime = (value) => {
+  if (!value) return "—";
+  const date = new Date(value.includes("T") ? value : `${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return format(date, value.includes("T") ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy", { locale: ptBR });
+};
 
 const MODAL_MAP = {
   "01": "Rodoviário",
@@ -32,6 +39,27 @@ const InfoField = ({ label, value }) => (
     <p className="font-medium text-sm">{value || "—"}</p>
   </div>
 );
+
+const PartySection = ({ title, prefix, invoice }) => {
+  const name = invoice[`${prefix}_name`];
+  const cnpj = invoice[`${prefix}_cnpj`];
+  if (!name && !cnpj) return null;
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <SectionHeader title={title} />
+      <div className="grid grid-cols-3 gap-0">
+        <InfoField label="RAZÃO SOCIAL" value={name} />
+        <InfoField label="CNPJ / CPF" value={formatCNPJ(cnpj)} />
+        <InfoField label="INSCRIÇÃO ESTADUAL" value={invoice[`${prefix}_ie`]} />
+      </div>
+      <div className="grid grid-cols-3 gap-0">
+        <InfoField label="ENDEREÇO" value={invoice[`${prefix}_address`] ? `${invoice[`${prefix}_address`]}${invoice[`${prefix}_number`] ? ", " + invoice[`${prefix}_number`] : ""}` : "—"} />
+        <InfoField label="BAIRRO" value={invoice[`${prefix}_district`]} />
+        <InfoField label="MUNICÍPIO / UF" value={invoice[`${prefix}_city`] && invoice[`${prefix}_state`] ? `${invoice[`${prefix}_city`]} / ${invoice[`${prefix}_state`]}` : (invoice[`${prefix}_city`] || invoice[`${prefix}_state`] || "—")} />
+      </div>
+    </div>
+  );
+};
 
 export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, branches }) {
   const { hasPermission } = useAuth();
@@ -59,6 +87,15 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
   const tomadorCnpj = invoice.tomador_cnpj || invoice.recipient_cnpj;
   const tomadorEqualsRecipient =
     normalizeDoc(tomadorCnpj) && normalizeDoc(tomadorCnpj) === normalizeDoc(invoice.recipient_cnpj);
+  const tomadorTypeLabel = {
+    remetente: "Remetente",
+    expedidor: "Expedidor",
+    recebedor: "Recebedor",
+    destinatario: "Destinatário",
+    outros: "Outros",
+  }[invoice.tomador_type] || "—";
+  const freightComponents = Array.isArray(invoice.freight_components) ? invoice.freight_components : [];
+  const originDocuments = Array.isArray(invoice.origin_documents) ? invoice.origin_documents : [];
 
   const handleDownloadPDF = async () => {
     try {
@@ -91,7 +128,7 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <div className="sticky top-0 bg-white border-b border-border p-6 flex items-start justify-between z-10">
           <div>
-            <h2 className="text-2xl font-bold">CT-e {invoice.number} <span className="text-lg font-normal">(Série {invoice.series || "—"})</span></h2>
+            <DialogTitle className="text-2xl font-bold">CT-e {invoice.number} <span className="text-lg font-normal">(Série {invoice.series || "—"})</span></DialogTitle>
             <p className="text-muted-foreground text-sm mt-1">{invoice.supplier_name}</p>
           </div>
           {hasPermission('download_pdf') && (
@@ -116,7 +153,7 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
             <div className="grid grid-cols-4 gap-0">
               <InfoField label="Nº CT-e" value={invoice.number} />
               <InfoField label="SÉRIE" value={invoice.series} />
-              <InfoField label="DATA DE EMISSÃO" value={invoice.issue_date ? format(new Date(invoice.issue_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+              <InfoField label="DATA DE EMISSÃO" value={formatDateTime(invoice.issue_datetime || invoice.issue_date)} />
               <InfoField label="MODAL" value={MODAL_MAP[invoice.cte_modal] || invoice.cte_modal} />
             </div>
             <div className="grid grid-cols-2 gap-0">
@@ -161,14 +198,67 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
             </div>
           </div>
 
+          <PartySection title="REMETENTE" prefix="sender" invoice={invoice} />
+          <PartySection title="EXPEDIDOR" prefix="expedidor" invoice={invoice} />
+          <PartySection title="RECEBEDOR" prefix="recebedor" invoice={invoice} />
+
           {/* TOMADOR DO SERVIÇO */}
           <div className="border rounded-lg overflow-hidden">
             <SectionHeader title="TOMADOR DO SERVIÇO" />
-            <div className="grid grid-cols-3 gap-0">
+            <div className="grid grid-cols-4 gap-0">
               <InfoField label="RAZÃO SOCIAL" value={tomadorName} />
               <InfoField label="CNPJ / CPF" value={formatCNPJ(tomadorCnpj)} />
+              <InfoField label="TIPO DO TOMADOR" value={tomadorTypeLabel} />
               <InfoField label="RELAÇÃO COM DESTINATÁRIO" value={tomadorEqualsRecipient ? "Mesmo CNPJ/CPF do destinatário" : "Diferente do destinatário"} />
             </div>
+          </div>
+
+          {/* CARGA E DOCUMENTOS */}
+          <div className="border rounded-lg overflow-hidden">
+            <SectionHeader title="CARGA / DOCUMENTOS ORIGINÁRIOS" />
+            <div className="grid grid-cols-3 gap-0">
+              <InfoField label="PRODUTO PREDOMINANTE" value={invoice.product_description} />
+              <InfoField label="VALOR DA MERCADORIA" value={formatCurrency(invoice.total_products || 0)} />
+              <InfoField label="QUANTIDADE" value={invoice.cargo_quantity ? `${invoice.cargo_quantity} ${invoice.cargo_quantity_unit || ""}` : "—"} />
+            </div>
+            {freightComponents.length > 0 && (
+              <div className="p-6 border-b border-border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Componentes do Frete</p>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {freightComponents.map((item, index) => (
+                    <div key={`${item.name}-${index}`} className="flex justify-between rounded bg-slate-50 px-3 py-2">
+                      <span>{item.name || "Componente"}</span>
+                      <strong>{formatCurrency(item.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {originDocuments.length > 0 && (
+              <div className="p-6 overflow-x-auto">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Documentos Originários</p>
+                <table className="w-full text-sm border border-slate-200 rounded">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="text-left p-2">Tipo</th>
+                      <th className="text-left p-2">Série/Número</th>
+                      <th className="text-left p-2">Chave</th>
+                      <th className="text-right p-2">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {originDocuments.map((doc, index) => (
+                      <tr key={`${doc.access_key || doc.number}-${index}`} className="border-t">
+                        <td className="p-2">{doc.document_type || "—"}</td>
+                        <td className="p-2">{[doc.series, doc.number].filter(Boolean).join("/") || "—"}</td>
+                        <td className="p-2 font-mono text-xs break-all">{doc.access_key || "—"}</td>
+                        <td className="p-2 text-right">{formatCurrency(doc.value)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* OBSERVAÇÕES */}
@@ -201,7 +291,7 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
               {invoice.protocol_number && (
                 <div className="grid grid-cols-2 gap-0">
                   <InfoField label="Nº PROTOCOLO" value={invoice.protocol_number} />
-                  <InfoField label="DATA DO PROTOCOLO" value={invoice.protocol_date ? format(new Date(invoice.protocol_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+                  <InfoField label="DATA DO PROTOCOLO" value={formatDateTime(invoice.protocol_datetime || invoice.protocol_date)} />
                 </div>
               )}
               {invoice.access_key && (

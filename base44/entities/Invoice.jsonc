@@ -22,7 +22,7 @@
     },
     "access_key": {
       "type": "string",
-      "description": "Chave de acesso da NF-e (44 d\u00edgitos)"
+      "description": "Chave de acesso da NF-e/CT-e (44 d\u00edgitos)"
     },
     "operation_nature": {
       "type": "string",
@@ -34,11 +34,35 @@
     },
     "cte_modal": {
       "type": "string",
-      "description": "Modal de transporte do CT-e (rodovi\u00e1rio, a\u00e9reo, etc.)"
+      "description": "Modal de transporte do CT-e"
     },
     "cte_cfop": {
       "type": "string",
       "description": "CFOP da presta\u00e7\u00e3o do servi\u00e7o de transporte"
+    },
+    "cte_service_type": {
+      "type": "string",
+      "description": "Tipo de servi\u00e7o do CT-e"
+    },
+    "cte_payment_type": {
+      "type": "string",
+      "description": "Forma de pagamento informada no CT-e"
+    },
+    "cte_origin_city": {
+      "type": "string",
+      "description": "Cidade de origem da presta\u00e7\u00e3o do CT-e"
+    },
+    "cte_origin_state": {
+      "type": "string",
+      "description": "UF de origem da presta\u00e7\u00e3o do CT-e"
+    },
+    "cte_destination_city": {
+      "type": "string",
+      "description": "Cidade de destino da presta\u00e7\u00e3o do CT-e"
+    },
+    "cte_destination_state": {
+      "type": "string",
+      "description": "UF de destino da presta\u00e7\u00e3o do CT-e"
     },
     "supplier_name": {
       "type": "string",
@@ -128,6 +152,170 @@
       "type": "string",
       "description": "CNPJ/CPF do tomador do servi\u00e7o de transporte (CT-e)"
     },
+    "tomador_type": {
+      "type": "string",
+      "description": "Rela\u00e7\u00e3o do tomador no CT-e: remetente, expedidor, recebedor, destinatario ou outros"
+    },
+    "cte_tomador_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do tomador do CT-e"
+    },
+    "cte_tomador_cnpj": {
+      "type": "string",
+      "description": "CNPJ/CPF do tomador do CT-e"
+    },
+    "cte_tomador_ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o estadual do tomador do CT-e"
+    },
+    "cte_tomador_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do tomador do CT-e"
+    },
+    "cte_tomador_number": {
+      "type": "string",
+      "description": "N\u00famero do endere\u00e7o do tomador do CT-e"
+    },
+    "cte_tomador_district": {
+      "type": "string",
+      "description": "Bairro do tomador do CT-e"
+    },
+    "cte_tomador_city": {
+      "type": "string",
+      "description": "Cidade do tomador do CT-e"
+    },
+    "cte_tomador_state": {
+      "type": "string",
+      "description": "UF do tomador do CT-e"
+    },
+    "cte_tomador_zip": {
+      "type": "string",
+      "description": "CEP do tomador do CT-e"
+    },
+    "cte_tomador_phone": {
+      "type": "string",
+      "description": "Telefone do tomador do CT-e"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do remetente do CT-e"
+    },
+    "sender_cnpj": {
+      "type": "string",
+      "description": "CNPJ/CPF do remetente do CT-e"
+    },
+    "sender_ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o estadual do remetente do CT-e"
+    },
+    "sender_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do remetente do CT-e"
+    },
+    "sender_number": {
+      "type": "string",
+      "description": "N\u00famero do endere\u00e7o do remetente do CT-e"
+    },
+    "sender_district": {
+      "type": "string",
+      "description": "Bairro do remetente do CT-e"
+    },
+    "sender_city": {
+      "type": "string",
+      "description": "Cidade do remetente do CT-e"
+    },
+    "sender_state": {
+      "type": "string",
+      "description": "UF do remetente do CT-e"
+    },
+    "sender_zip": {
+      "type": "string",
+      "description": "CEP do remetente do CT-e"
+    },
+    "sender_phone": {
+      "type": "string",
+      "description": "Telefone do remetente do CT-e"
+    },
+    "expedidor_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do expedidor do CT-e"
+    },
+    "expedidor_cnpj": {
+      "type": "string",
+      "description": "CNPJ/CPF do expedidor do CT-e"
+    },
+    "expedidor_ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o estadual do expedidor do CT-e"
+    },
+    "expedidor_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do expedidor do CT-e"
+    },
+    "expedidor_number": {
+      "type": "string",
+      "description": "N\u00famero do endere\u00e7o do expedidor do CT-e"
+    },
+    "expedidor_district": {
+      "type": "string",
+      "description": "Bairro do expedidor do CT-e"
+    },
+    "expedidor_city": {
+      "type": "string",
+      "description": "Cidade do expedidor do CT-e"
+    },
+    "expedidor_state": {
+      "type": "string",
+      "description": "UF do expedidor do CT-e"
+    },
+    "expedidor_zip": {
+      "type": "string",
+      "description": "CEP do expedidor do CT-e"
+    },
+    "expedidor_phone": {
+      "type": "string",
+      "description": "Telefone do expedidor do CT-e"
+    },
+    "recebedor_name": {
+      "type": "string",
+      "description": "Raz\u00e3o social do recebedor do CT-e"
+    },
+    "recebedor_cnpj": {
+      "type": "string",
+      "description": "CNPJ/CPF do recebedor do CT-e"
+    },
+    "recebedor_ie": {
+      "type": "string",
+      "description": "Inscri\u00e7\u00e3o estadual do recebedor do CT-e"
+    },
+    "recebedor_address": {
+      "type": "string",
+      "description": "Endere\u00e7o do recebedor do CT-e"
+    },
+    "recebedor_number": {
+      "type": "string",
+      "description": "N\u00famero do endere\u00e7o do recebedor do CT-e"
+    },
+    "recebedor_district": {
+      "type": "string",
+      "description": "Bairro do recebedor do CT-e"
+    },
+    "recebedor_city": {
+      "type": "string",
+      "description": "Cidade do recebedor do CT-e"
+    },
+    "recebedor_state": {
+      "type": "string",
+      "description": "UF do recebedor do CT-e"
+    },
+    "recebedor_zip": {
+      "type": "string",
+      "description": "CEP do recebedor do CT-e"
+    },
+    "recebedor_phone": {
+      "type": "string",
+      "description": "Telefone do recebedor do CT-e"
+    },
     "branch_cnpj": {
       "type": "string",
       "description": "CNPJ da filial destinat\u00e1ria"
@@ -140,6 +328,10 @@
       "type": "string",
       "format": "date",
       "description": "Data de emiss\u00e3o da nota fiscal"
+    },
+    "issue_datetime": {
+      "type": "string",
+      "description": "Data e hora completa de emiss\u00e3o"
     },
     "due_date": {
       "type": "string",
@@ -218,7 +410,7 @@
     },
     "fiscal_events": {
       "type": "array",
-      "description": "Hist\u00f3rico de eventos fiscais oficiais (Cancelamento, Carta de Corre\u00e7\u00e3o, etc.)",
+      "description": "Hist\u00f3rico de eventos fiscais oficiais",
       "items": {
         "type": "object",
         "properties": {
@@ -242,7 +434,7 @@
     },
     "items": {
       "type": "array",
-      "description": "Itens da nota fiscal",
+      "description": "Itens da nota fiscal ou documentos origin\u00e1rios resumidos",
       "items": {
         "type": "object",
         "properties": {
@@ -309,7 +501,7 @@
     },
     "total_products": {
       "type": "number",
-      "description": "Valor total dos produtos"
+      "description": "Valor total dos produtos/mercadoria"
     },
     "total_freight": {
       "type": "number",
@@ -326,6 +518,64 @@
     "total_other_charges": {
       "type": "number",
       "description": "Outras despesas acess\u00f3rias"
+    },
+    "product_description": {
+      "type": "string",
+      "description": "Produto predominante/carga do CT-e"
+    },
+    "cargo_quantity": {
+      "type": "number",
+      "description": "Quantidade principal da carga do CT-e"
+    },
+    "cargo_quantity_unit": {
+      "type": "string",
+      "description": "Unidade/medida principal da carga do CT-e"
+    },
+    "freight_components": {
+      "type": "array",
+      "description": "Componentes do valor da presta\u00e7\u00e3o do CT-e",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "origin_documents": {
+      "type": "array",
+      "description": "Documentos origin\u00e1rios vinculados ao CT-e",
+      "items": {
+        "type": "object",
+        "properties": {
+          "document_type": {
+            "type": "string"
+          },
+          "access_key": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "series": {
+            "type": "string"
+          },
+          "issuer_cnpj": {
+            "type": "string"
+          },
+          "issue_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      }
     },
     "additional_info": {
       "type": "string",
@@ -366,6 +616,10 @@
       "type": "string",
       "format": "date",
       "description": "Data do protocolo de autoriza\u00e7\u00e3o"
+    },
+    "protocol_datetime": {
+      "type": "string",
+      "description": "Data e hora completas do protocolo de autoriza\u00e7\u00e3o"
     },
     "payments": {
       "type": "array",
