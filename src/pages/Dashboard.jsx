@@ -14,6 +14,9 @@ import { useAuth } from "@/lib/AuthContext";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
+const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+const isConcretarTomador = (invoice) => normalizeText(invoice.tomador_name).includes("CONCRETAR");
+
 export default function Dashboard() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -222,7 +225,12 @@ export default function Dashboard() {
       if (supplier?.gestao_frota || supplier?.gestao_compras || supplier?.controladoria) return false;
       return true;
     });
-    const cteStatsOf = (arr) => ({ count: arr.length, value: arr.reduce((s, i) => s + (i.total_value || 0), 0) });
+    const cteStatsOf = (arr) => {
+      const concretar = arr.filter(isConcretarTomador);
+      const outros = arr.filter((i) => !isConcretarTomador(i));
+      const summarizeCte = (items) => ({ count: items.length, value: items.reduce((s, i) => s + (i.total_value || 0), 0) });
+      return { count: arr.length, value: arr.reduce((s, i) => s + (i.total_value || 0), 0), concretar: summarizeCte(concretar), outros: summarizeCte(outros) };
+    };
     const nfseStatsOf = (arr) => ({
       count: arr.length,
       value: arr.reduce((s, i) => s + (i.total_value || 0), 0),
@@ -320,6 +328,8 @@ export default function Dashboard() {
         notas:          { count: row.screens.notas,          value: row.screenStats?.notas?.value || 0 },
         nfse:           { count: row.screens.nfse, value: row.screenStats?.nfse?.value || 0 },
         cte:            { count: cteStatsOf(cteByBranch[row.cnpj] || []).count,   value: cteStatsOf(cteByBranch[row.cnpj] || []).value },
+        cte_concretar:  { count: cteStatsOf(cteByBranch[row.cnpj] || []).concretar.count, value: cteStatsOf(cteByBranch[row.cnpj] || []).concretar.value },
+        cte_outros:     { count: cteStatsOf(cteByBranch[row.cnpj] || []).outros.count, value: cteStatsOf(cteByBranch[row.cnpj] || []).outros.value },
         materia_prima:  { count: row.screens.materia_prima,  value: row.screenStats?.materia_prima?.value || 0 },
         compras_nfe:        { count: row.screens.compras_nfe,        value: row.screenStats?.compras_split?.nfe?.value || 0 },
         compras_nfse:       { count: row.screens.compras_nfse,       value: row.screenStats?.compras_split?.nfse?.value || 0 },

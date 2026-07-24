@@ -135,7 +135,8 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
   ] : [];
 
   const cteTiles = (screens && cteStats) ? [
-    { key: "cte", icon: FileBox, label: "CT-e", count: cteStats.count, value: cteStats.value, accent: { bg: "bg-teal-50", text: "text-teal-600" } },
+    { key: "cte_concretar", icon: FileBox, label: "CT-e Concretar", count: cteStats.concretar?.count || 0, value: cteStats.concretar?.value || 0, accent: { bg: "bg-teal-50", text: "text-teal-600" } },
+    { key: "cte_outros", icon: FileBox, label: "CT-e Outros", count: cteStats.outros?.count || 0, value: cteStats.outros?.value || 0, accent: { bg: "bg-slate-100", text: "text-slate-600" } },
   ] : [];
 
   const tiles = screens ? [...nfeTiles, ...nfseTiles, ...materiaPrimaTiles, ...cteTiles] : null;
@@ -192,36 +193,36 @@ export default function BranchCard({ name, total, sigv, topcon, boleto, value, s
         <div className="px-6 py-5 border-b border-slate-100">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Registros por tela</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {nfeTiles.map((t) => (
+            {nfeTiles.map(({ key, ...tile }) => (
               <ScreenTile
-                key={t.key}
-                {...t}
-                selected={selectedTiles.includes(t.key)}
-                onClick={() => toggleTile(t.key)}
+                key={key}
+                {...tile}
+                selected={selectedTiles.includes(key)}
+                onClick={() => toggleTile(key)}
               />
             ))}
           </div>
 
           {nfseTiles.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {nfseTiles.map((t) => (
-                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              {nfseTiles.map(({ key, ...tile }) => (
+                <ScreenTile key={key} {...tile} selected={selectedTiles.includes(key)} onClick={() => toggleTile(key)} />
               ))}
             </div>
           )}
 
           {materiaPrimaTiles.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {materiaPrimaTiles.map((t) => (
-                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              {materiaPrimaTiles.map(({ key, ...tile }) => (
+                <ScreenTile key={key} {...tile} selected={selectedTiles.includes(key)} onClick={() => toggleTile(key)} />
               ))}
             </div>
           )}
 
           {cteTiles.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {cteTiles.map((t) => (
-                <ScreenTile key={t.key} {...t} selected={selectedTiles.includes(t.key)} onClick={() => toggleTile(t.key)} />
+              {cteTiles.map(({ key, ...tile }) => (
+                <ScreenTile key={key} {...tile} selected={selectedTiles.includes(key)} onClick={() => toggleTile(key)} />
               ))}
             </div>
           )}
