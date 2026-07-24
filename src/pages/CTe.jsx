@@ -126,6 +126,7 @@ export default function CTe() {
             branches={branches}
             emptyLabel="Nenhum CT-e encontrado"
             showActionButtons
+            showTomador
             onViewDetails={setSelected}
             selectable={isAdmin}
             selectedIds={selectedIds}

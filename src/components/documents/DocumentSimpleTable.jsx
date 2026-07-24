@@ -16,7 +16,7 @@ import InvoiceDeleteButton from "@/components/invoices/InvoiceDeleteButton";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
+export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showTomador = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   const [sortKey, setSortKey] = useState(null);
@@ -37,6 +37,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
       switch (sortKey) {
         case "filial": return getBranchName(doc.branch_cnpj).toLowerCase();
         case "emitente": return (doc.supplier_name || "").toLowerCase();
+        case "tomador": return (doc.tomador_name || doc.recipient_name || "").toLowerCase();
         case "numero": return parseInt(doc.number, 10) || 0;
         case "emissao": return doc.issue_date || "";
         case "descricao": return (doc.service_description || "").toLowerCase();
@@ -112,6 +113,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
             )}
             <SortableHead column="filial" label="Filial" />
             <SortableHead column="emitente" label="Emitente" />
+            {showTomador && <SortableHead column="tomador" label="Tomador" />}
             <SortableHead column="numero" label="Número" />
             <SortableHead column="emissao" label="Emissão" />
             {showDescription && <SortableHead column="descricao" label="Descrição / Observações" />}
@@ -136,6 +138,12 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
                 <div>{doc.supplier_name}</div>
                 <div className="text-xs text-muted-foreground">{formatCNPJ(doc.supplier_cnpj)}</div>
               </TableCell>
+              {showTomador && (
+                <TableCell className="text-sm">
+                  <div>{doc.tomador_name || doc.recipient_name || "—"}</div>
+                  <div className="text-xs text-muted-foreground">{formatCNPJ(doc.tomador_cnpj || doc.recipient_cnpj)}</div>
+                </TableCell>
+              )}
               <TableCell className="font-medium text-sm">
                 {doc.series ? `${doc.series}/${doc.number}` : doc.number}
               </TableCell>
