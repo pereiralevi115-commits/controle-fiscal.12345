@@ -809,10 +809,18 @@ async function reprocessCteXmlFile(base44, accessToken, file, folder) {
   }
 }
 
-async function reprocessCteFolderById(base44, accessToken, folder, skip = 0) {
+function isCteFileCandidate(file) {
+  const key = accessKeyFromName(file?.name || "");
+  if (key && key.substring(20, 22) === "57") return true;
+  return /cte/i.test(file?.name || "");
+}
+
+async function reprocessCteFolderById(base44, accessToken, folder, skip = 0, batchSize = BATCH_SIZE) {
   const allXmlFiles = await listAllXmlFiles(accessToken, folder.folder_id);
-  const totalFiles = allXmlFiles.length;
-  const batch = allXmlFiles.slice(skip, skip + BATCH_SIZE);
+  const cteXmlFiles = allXmlFiles.filter(isCteFileCandidate);
+  const totalFiles = cteXmlFiles.length;
+  const safeBatchSize = Math.min(Math.max(Number(batchSize) || BATCH_SIZE, BATCH_SIZE), 25);
+  const batch = cteXmlFiles.slice(skip, skip + safeBatchSize);
 
   if (batch.length === 0) {
     return { updated: 0, skipped: 0, notFound: 0, errors: 0, error_details: [], total: totalFiles, processed: skip, remaining: 0, done: true };
@@ -1056,7 +1064,7 @@ Deno.serve(async (req) => {
       const currentFolderEntry = connectedFolders[folderIndex];
       if (!currentFolderEntry) return Response.json({ allDone: true, done: true });
 
-      const result = await reprocessCteFolderById(base44, accessToken, currentFolderEntry, skip);
+      const result = await reprocessCteFolderById(base44, accessToken, currentFolderEntry, skip, payload.batchSize);
       const folderDone = result.done;
       const isLastFolder = folderIndex >= connectedFolders.length - 1;
       const allDone = folderDone && isLastFolder;
