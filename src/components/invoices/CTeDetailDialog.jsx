@@ -54,6 +54,11 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
 
   const formatAddr = (addr, num) => addr ? `${addr}${num ? ", " + num : ""}` : "—";
   const cityState = (city, state) => city && state ? `${city} / ${state}` : (city || state || "—");
+  const normalizeDoc = (value) => String(value || "").replace(/\D/g, "");
+  const tomadorName = invoice.tomador_name || invoice.recipient_name;
+  const tomadorCnpj = invoice.tomador_cnpj || invoice.recipient_cnpj;
+  const tomadorEqualsRecipient =
+    normalizeDoc(tomadorCnpj) && normalizeDoc(tomadorCnpj) === normalizeDoc(invoice.recipient_cnpj);
 
   const handleDownloadPDF = async () => {
     try {
@@ -138,9 +143,9 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
             </div>
           </div>
 
-          {/* DESTINATÁRIO / TOMADOR */}
+          {/* DESTINATÁRIO */}
           <div className="border rounded-lg overflow-hidden">
-            <SectionHeader title="DESTINATÁRIO / TOMADOR" />
+            <SectionHeader title="DESTINATÁRIO" />
             <div className="grid grid-cols-3 gap-0">
               <InfoField label="RAZÃO SOCIAL" value={invoice.recipient_name} />
               <InfoField label="CNPJ / CPF" value={formatCNPJ(invoice.recipient_cnpj)} />
@@ -153,6 +158,16 @@ export default function CTeDetailDialog({ invoice: invoiceProp, open, onClose, b
             </div>
             <div className="grid grid-cols-1 gap-0">
               <InfoField label="FILIAL" value={branches?.find((b) => b.cnpj === invoice.branch_cnpj)?.name} />
+            </div>
+          </div>
+
+          {/* TOMADOR DO SERVIÇO */}
+          <div className="border rounded-lg overflow-hidden">
+            <SectionHeader title="TOMADOR DO SERVIÇO" />
+            <div className="grid grid-cols-3 gap-0">
+              <InfoField label="RAZÃO SOCIAL" value={tomadorName} />
+              <InfoField label="CNPJ / CPF" value={formatCNPJ(tomadorCnpj)} />
+              <InfoField label="RELAÇÃO COM DESTINATÁRIO" value={tomadorEqualsRecipient ? "Mesmo CNPJ/CPF do destinatário" : "Diferente do destinatário"} />
             </div>
           </div>
 
