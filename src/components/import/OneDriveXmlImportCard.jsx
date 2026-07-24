@@ -296,7 +296,7 @@ export default function OneDriveXmlImportCard() {
 
       {/* ── Passo 1: Pastas conectadas + status ── */}
       <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-violet-50/40 p-5 space-y-3.5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold shadow-sm shadow-indigo-500/30">1</span>
             Pastas conectadas
@@ -344,16 +344,16 @@ export default function OneDriveXmlImportCard() {
           </p>
         ) : null}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
-          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="h-10 w-full font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm shadow-indigo-500/20">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+          <Button onClick={handleImportFolder} disabled={importing || !hasFolder} className="h-10 w-full min-w-0 font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm shadow-indigo-500/20">
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
             {importing ? "Importando..." : "Importar agora"}
           </Button>
-          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="h-10 w-full font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
+          <Button variant="outline" onClick={handleRunAuto} disabled={runningAuto || importing || !hasFolder} className="h-10 w-full min-w-0 font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
             {runningAuto ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Cloud className="w-4 h-4 mr-2" />}
             {runningAuto ? "Varrendo..." : "Varrer pendentes"}
           </Button>
-          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className={`h-10 w-full font-medium ${autoOn ? "border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"}`}>
+          <Button variant="outline" onClick={handleToggleAutoSync} disabled={saving || !hasFolder} className={`h-10 w-full min-w-0 font-medium ${autoOn ? "border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700" : "border-indigo-200 text-indigo-700 hover:bg-indigo-50"}`}>
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {autoOn ? "Desativar auto" : "Ativar automático"}
           </Button>
@@ -362,7 +362,7 @@ export default function OneDriveXmlImportCard() {
         <OneDriveRunFeedback feedback={runFeedback} />
 
         {/* Legenda explicativa dos botões */}
-        <div className="grid sm:grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-1 gap-2 pt-1">
           <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-100 px-3 py-2">
             <RefreshCw className="w-3.5 h-3.5 text-indigo-500 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-slate-600 leading-relaxed">
