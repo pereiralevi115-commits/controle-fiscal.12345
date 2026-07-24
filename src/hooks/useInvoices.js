@@ -28,6 +28,7 @@ const LIST_FIELDS = [
   "recipient_cnpj",
   "tomador_name",
   "tomador_cnpj",
+  "tomador_type",
   "series",
   "number",
   "issue_date",

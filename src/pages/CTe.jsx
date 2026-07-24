@@ -34,7 +34,12 @@ export default function CTe() {
     setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
   const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const isConcretarTomador = (doc) => normalizeText(doc.tomador_name).includes("CONCRETAR");
+  const normalizeDoc = (value) => String(value || "").replace(/\D/g, "");
+  const isConcretarTomador = (doc) => {
+    const isConcretar = normalizeText(doc.tomador_name).includes("CONCRETAR");
+    const sameAsRecipient = normalizeDoc(doc.tomador_cnpj) && normalizeDoc(doc.tomador_cnpj) === normalizeDoc(doc.recipient_cnpj);
+    return isConcretar && doc.tomador_type === "outros" && !sameAsRecipient;
+  };
 
   const tomadorCounts = useMemo(() => {
     const concretar = documents.filter(isConcretarTomador).length;
