@@ -71,15 +71,15 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
       let y = margin;
 
       const cols = [
-        { key: "branch", label: "Filial", w: 26 },
-        { key: "supplier", label: "Fornecedor", w: 45 },
-        { key: "nf", label: "NFS-e", w: 18 },
-        { key: "issue", label: "Emissão", w: 18 },
-        { key: "service", label: "Serviço", w: 92 },
-        { key: "value", label: "Valor", w: 22, align: "right" },
-        { key: "sigv", label: "SIGV", w: 11, align: "center" },
-        { key: "topcon", label: "TOPCON", w: 15, align: "center" },
-        { key: "boleto", label: "BOLETO", w: 17, align: "center" },
+        { key: "branch", label: "Filial", w: 24 },
+        { key: "supplier", label: "Fornecedor", w: 52 },
+        { key: "nf", label: "NFS-e", w: 20 },
+        { key: "issue", label: "Emissão", w: 19 },
+        { key: "service", label: "Serviço", w: 72 },
+        { key: "value", label: "Valor", w: 23, align: "right" },
+        { key: "sigv", label: "SIGV", w: 13, align: "center" },
+        { key: "topcon", label: "TOPCON", w: 18, align: "center" },
+        { key: "boleto", label: "BOLETO", w: 18, align: "center" },
       ];
 
       const truncate = (text, maxChars) => {
@@ -137,7 +137,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
           pdf.setTextColor(15, 23, 42);
           const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
-          const serviceLines = pdf.splitTextToSize(serviceText(inv), 88).slice(0, 3);
+          const serviceLines = pdf.splitTextToSize(serviceText(inv), 68).slice(0, 2);
           const rowHeight = Math.max(7, serviceLines.length * 3.4 + 3);
 
           if (y + rowHeight > pageHeight - margin - 12) {
@@ -154,9 +154,9 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
           }
 
           const values = {
-            branch: truncate(branchName(inv), 18),
-            supplier: truncate(inv.supplier_name, 32),
-            nf: truncate(nf, 12),
+            branch: truncate(branchName(inv), 16),
+            supplier: truncate(inv.supplier_name, 34),
+            nf: truncate(nf, 13),
             issue: formatDate(inv.issue_date),
             service: serviceLines,
             value: formatCurrency(inv.total_value),
@@ -181,6 +181,8 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
             }
             if (c.key === "service") {
               pdf.text(values.service, tx, y + 4, { align: "left", maxWidth: c.w - 4 });
+            } else if (c.key === "supplier") {
+              pdf.text(values[c.key], tx, y + 4, { align: "left", maxWidth: c.w - 4 });
             } else {
               pdf.text(values[c.key], tx, y + 4, { align: c.align || "left" });
             }
@@ -250,19 +252,19 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
           </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded">
-            <table className="w-full min-w-[1120px] text-[11px] table-fixed">
-              <colgroup>
-                <col className="w-[11%]" />
-                <col className="w-[20%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[24%]" />
-                <col className="w-[8%]" />
-                <col className="w-[4%]" />
-                <col className="w-[4%]" />
-                <col className="w-[4%]" />
-              </colgroup>
+            <table className="w-full min-w-[1140px] text-[11px] table-fixed">
+            <colgroup>
+              <col className="w-[9%]" />
+              <col className="w-[21%]" />
+              <col className="w-[8%]" />
+              <col className="w-[8%]" />
+              <col className="w-[8%]" />
+              <col className="w-[22%]" />
+              <col className="w-[8%]" />
+              <col className="w-[5%]" />
+              <col className="w-[5%]" />
+              <col className="w-[6%]" />
+            </colgroup>
               <thead>
                 <tr className="bg-slate-800 text-white">
                   <th className="px-3 py-2 text-left font-semibold">Filial</th>
@@ -278,8 +280,8 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
                 </tr>
               </thead>
               <tbody>
-                {periodInvoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-slate-100 even:bg-slate-50">
+                {periodInvoices.map((inv, index) => (
+                  <tr key={`${inv.id}-${index}`} className="border-b border-slate-100 even:bg-slate-50">
                     <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{branchName(inv)}</td>
                     <td className="px-3 py-2 text-slate-700">{inv.supplier_name}</td>
                     <td className="px-3 py-2 font-medium text-blue-600 whitespace-nowrap">
