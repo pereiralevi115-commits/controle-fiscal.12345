@@ -72,14 +72,15 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
       const cols = [
         { key: "branch", label: "Filial", w: 24 },
-        { key: "supplier", label: "Fornecedor", w: 52 },
-        { key: "nf", label: "NFS-e", w: 20 },
-        { key: "issue", label: "Emissão", w: 19 },
-        { key: "service", label: "Serviço", w: 72 },
-        { key: "value", label: "Valor", w: 23, align: "right" },
-        { key: "sigv", label: "SIGV", w: 13, align: "center" },
-        { key: "topcon", label: "TOPCON", w: 18, align: "center" },
-        { key: "boleto", label: "BOLETO", w: 18, align: "center" },
+        { key: "supplier", label: "Fornecedor", w: 50 },
+        { key: "nf", label: "NFS-e", w: 19 },
+        { key: "issue", label: "Emissão", w: 18 },
+        { key: "due", label: "Vencimento", w: 20 },
+        { key: "service", label: "Serviço", w: 70 },
+        { key: "value", label: "Valor", w: 22, align: "right" },
+        { key: "sigv", label: "SIGV", w: 14, align: "center" },
+        { key: "topcon", label: "TOPCON", w: 20, align: "center" },
+        { key: "boleto", label: "BOLETO", w: 20, align: "center" },
       ];
 
       const truncate = (text, maxChars) => {
@@ -137,7 +138,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
 
           pdf.setTextColor(15, 23, 42);
           const nf = inv.series ? `${inv.series}/${inv.number}` : inv.number;
-          const serviceLines = pdf.splitTextToSize(serviceText(inv), 68).slice(0, 2);
+          const serviceLines = pdf.splitTextToSize(serviceText(inv), 66).slice(0, 2);
           const rowHeight = Math.max(7, serviceLines.length * 3.4 + 3);
 
           if (y + rowHeight > pageHeight - margin - 12) {
@@ -158,6 +159,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
             supplier: truncate(inv.supplier_name, 34),
             nf: truncate(nf, 13),
             issue: formatDate(inv.issue_date),
+            due: formatDate(inv.due_date),
             service: serviceLines,
             value: formatCurrency(inv.total_value),
             sigv: inv.sigv_recorded ? "Sim" : "—",
