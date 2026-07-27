@@ -40,15 +40,14 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
     });
 
     return filtered.sort((a, b) => {
+      const aDue = a.due_date || "9999-12-31";
+      const bDue = b.due_date || "9999-12-31";
+      if (aDue !== bDue) return aDue.localeCompare(bDue);
+
       const an = branchName(a).toUpperCase();
       const bn = branchName(b).toUpperCase();
-      const ai = BRANCH_ORDER.findIndex(n => an.includes(n));
-      const bi = BRANCH_ORDER.findIndex(n => bn.includes(n));
-      const aIdx = ai === -1 ? 999 : ai;
-      const bIdx = bi === -1 ? 999 : bi;
-      if (aIdx !== bIdx) return aIdx - bIdx;
       if (an !== bn) return an.localeCompare(bn);
-      return new Date(a.due_date || 0) - new Date(b.due_date || 0);
+      return String(a.number || "").localeCompare(String(b.number || ""));
     });
   }, [invoices, startDate, endDate]);
 
