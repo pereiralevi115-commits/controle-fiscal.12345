@@ -371,6 +371,18 @@
       "type": "string",
       "description": "Motivo do cancelamento"
     },
+    "cancelled_by_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que marcou a nota como cancelada"
+    },
+    "cancelled_by_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que marcou a nota como cancelada"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "description": "Data e hora em que a nota foi marcada como cancelada"
+    },
     "archived": {
       "type": "boolean",
       "default": false,
