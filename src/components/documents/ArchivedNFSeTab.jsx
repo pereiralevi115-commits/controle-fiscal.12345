@@ -14,6 +14,12 @@ const formatCurrency = (v) =>
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+const formatCancellationActor = (invoice) => {
+  if (invoice.cancelled_by_name) return invoice.cancelled_by_name;
+  if (invoice.cancelled_at) return "Usuário não identificado";
+  return "Registro antigo";
+};
+
 /**
  * Aba "NFS-e" das telas Arquivadas/Canceladas. Recebe as NFS-e já filtradas
  * pela regra da tela (arquivadas ou canceladas) e aplica busca + filtro de mês.
@@ -103,6 +109,7 @@ export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undo
                   <TableHead className="font-semibold">NF</TableHead>
                   <TableHead className="font-semibold">Emissão</TableHead>
                   {showCancellation && <TableHead className="font-semibold">Cancelamento</TableHead>}
+                  {showCancellation && <TableHead className="font-semibold">Cancelado por</TableHead>}
                   <TableHead className="font-semibold">Descrição / Observações</TableHead>
                   <TableHead className="font-semibold text-right">Valor</TableHead>
                   <TableHead className="font-semibold text-right">Ação</TableHead>
@@ -129,6 +136,16 @@ export default function ArchivedNFSeTab({ documents, branches = [], onUndo, undo
                         {doc.cancellation_date
                           ? format(new Date(doc.cancellation_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                           : "—"}
+                      </TableCell>
+                    )}
+                    {showCancellation && (
+                      <TableCell className="text-sm text-slate-700 font-medium">
+                        <div>{formatCancellationActor(doc)}</div>
+                        {doc.cancelled_at && (
+                          <div className="text-xs text-slate-400 font-normal">
+                            {format(new Date(doc.cancelled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </div>
+                        )}
                       </TableCell>
                     )}
                     <TableCell className="text-sm text-slate-600 max-w-md">

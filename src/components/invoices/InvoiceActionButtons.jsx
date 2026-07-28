@@ -56,8 +56,15 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   };
 
   const handleChoiceCancelar = () => {
-    const today = new Date().toISOString().split("T")[0];
-    recordMutation.mutate({ cancelled: true, cancellation_date: today }, {
+    const now = new Date().toISOString();
+    const today = now.split("T")[0];
+    recordMutation.mutate({
+      cancelled: true,
+      cancellation_date: today,
+      cancelled_by_id: user?.id || "",
+      cancelled_by_name: getActorName(),
+      cancelled_at: now,
+    }, {
       onSuccess: () => {
         toast.success("Nota cancelada!");
         setShowChoiceDialog(false);

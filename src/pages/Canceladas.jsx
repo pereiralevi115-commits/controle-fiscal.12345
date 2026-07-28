@@ -19,6 +19,12 @@ const formatCurrency = (v) =>
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+const formatCancellationActor = (invoice) => {
+  if (invoice.cancelled_by_name) return invoice.cancelled_by_name;
+  if (invoice.cancelled_at) return "Usuário não identificado";
+  return "Registro antigo";
+};
+
 export default function Canceladas({ embedded } = {}) {
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const [search, setSearch] = useState("");
@@ -26,7 +32,7 @@ export default function Canceladas({ embedded } = {}) {
   const queryClient = useQueryClient();
 
   const undoMutation = useMutation({
-    mutationFn: (id) => base44.entities.Invoice.update(id, { cancelled: false, cancellation_date: null }),
+    mutationFn: (id) => base44.entities.Invoice.update(id, { cancelled: false, cancellation_date: null, cancelled_by_id: "", cancelled_by_name: "", cancelled_at: "" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success("Cancelamento desfeito!");
@@ -159,6 +165,7 @@ export default function Canceladas({ embedded } = {}) {
                     <TableHead className="font-semibold">NF</TableHead>
                     <TableHead className="font-semibold">Emissão</TableHead>
                     <TableHead className="font-semibold">Cancelamento</TableHead>
+                    <TableHead className="font-semibold">Cancelado por</TableHead>
                     <TableHead className="font-semibold text-right">Valor</TableHead>
                     <TableHead className="font-semibold text-right">Ação</TableHead>
                   </TableRow>
@@ -180,6 +187,14 @@ export default function Canceladas({ embedded } = {}) {
                         {inv.cancellation_date
                           ? format(new Date(inv.cancellation_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                           : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-700 font-medium">
+                        <div>{formatCancellationActor(inv)}</div>
+                        {inv.cancelled_at && (
+                          <div className="text-xs text-slate-400 font-normal">
+                            {format(new Date(inv.cancelled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(inv.total_value)}</TableCell>
                       <TableCell className="text-right">
