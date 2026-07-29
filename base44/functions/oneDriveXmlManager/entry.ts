@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
 import { parseCTeDocument } from '../../shared/cteParser.ts';
+import { reconcilePendingEventsForInvoice } from '../../shared/fiscalEventReconcile.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de parseXml.js) ----------
 function getTagText(parent, tagName) {
@@ -412,7 +413,8 @@ async function importXmlBatchLocal(base44, xmlContents) {
         continue;
       }
 
-      await base44.asServiceRole.entities.Invoice.create(parsed);
+      const created = await base44.asServiceRole.entities.Invoice.create(parsed);
+      await reconcilePendingEventsForInvoice(base44, created);
       success++;
     } catch (err) {
       errors++;
@@ -709,6 +711,7 @@ async function processOneDriveXmlFile(base44, accessToken, file, folder) {
     }
 
     const created = await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "manual" });
+    await reconcilePendingEventsForInvoice(base44, created);
     await upsertAudit(base44, { ...base, status: "importado", reason: "Documento importado manualmente pelo OneDrive.", invoice_id: created.id });
     return { success: 1, errors: 0 };
   } catch (error) {

@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
 import { parseCTeDocument } from '../../shared/cteParser.ts';
+import { reconcilePendingEventsForInvoice } from '../../shared/fiscalEventReconcile.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de oneDriveXmlManager) ----------
 function getTagText(parent, tagName) {
@@ -368,7 +369,8 @@ async function importXmlContents(base44, xmlContents) {
       }
       if (existing.length > 0) continue;
 
-      await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "auto" });
+      const created = await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "auto" });
+      await reconcilePendingEventsForInvoice(base44, created);
       success++;
     } catch (_) {
       errors++;
@@ -655,6 +657,7 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
       }
 
       const created = await base44.asServiceRole.entities.Invoice.create({ ...parsed, import_source: "auto" });
+      await reconcilePendingEventsForInvoice(base44, created);
       await upsertAudit(base44, { ...base, status: "importado", reason: "Documento importado automaticamente.", invoice_id: created.id });
       success++;
     } catch (error) {

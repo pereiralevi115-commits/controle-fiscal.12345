@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { reconcileExistingPendingFiscalEvents } from '../../shared/fiscalEventReconcile.ts';
 
 // Aplica um evento aprovado ao documento (grava no histórico, sem duplicar).
 async function applyEvent(base44, invoice, p) {
@@ -32,7 +33,12 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { action, eventId, eventIds = [] } = await req.json();
+    const { action, eventId, eventIds = [], limit } = await req.json();
+
+    if (action === 'reconcile_existing') {
+      const result = await reconcileExistingPendingFiscalEvents(base44, limit || 100);
+      return Response.json({ ok: true, ...result });
+    }
 
     if (action === 'approve_many') {
       const ids = Array.isArray(eventIds) ? eventIds.filter(Boolean) : [];
