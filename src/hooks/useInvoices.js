@@ -79,7 +79,16 @@ const LIST_FIELDS = [
 
 const PAGE_SIZE = 5000; // limite máximo por requisição do servidor
 
-async function fetchAllInvoices() {
+async function fetchAllInvoices(allowedCnpjs) {
+  if (Array.isArray(allowedCnpjs) && allowedCnpjs.length > 0) {
+    const pages = await Promise.all(
+      allowedCnpjs.map((cnpj) =>
+        base44.entities.Invoice.filter({ branch_cnpj: cnpj }, "-issue_date", PAGE_SIZE)
+      )
+    );
+    return pages.flat().sort((a, b) => (b.issue_date || "").localeCompare(a.issue_date || ""));
+  }
+
   const all = [];
   let skip = 0;
   while (true) {
@@ -103,10 +112,13 @@ function filterByType(invoices, type) {
   });
 }
 
-export function useInvoices(documentType = "nfe") {
+export function useInvoices(documentType = "nfe", allowedCnpjs = null, enabled = true) {
+  const branchKey = Array.isArray(allowedCnpjs) && allowedCnpjs.length > 0 ? allowedCnpjs.join("|") : "all";
+
   return useQuery({
-    queryKey: ["invoices"],
-    queryFn: fetchAllInvoices,
+    queryKey: ["invoices", branchKey],
+    queryFn: () => fetchAllInvoices(allowedCnpjs),
     select: (data) => filterByType(data, documentType),
+    enabled,
   });
 }

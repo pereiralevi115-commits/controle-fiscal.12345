@@ -29,7 +29,7 @@ export default function Invoices() {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: invoices = [], isLoading } = useInvoices("nfe");
+  const { data: invoices = [], isLoading } = useInvoices("nfe", allowedCnpjs, !branchFilterLoading);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],

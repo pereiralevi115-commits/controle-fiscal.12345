@@ -21,6 +21,12 @@ export default function DueDateCell({ invoice }) {
 
   const isEdited = !!invoice.due_date_edited;
 
+  const formatDateSafe = (value) => {
+    if (!value) return "—";
+    const date = new Date(`${value}T12:00:00`);
+    return Number.isNaN(date.getTime()) ? "—" : format(date, "dd/MM/yyyy", { locale: ptBR });
+  };
+
   const mutation = useMutation({
     mutationFn: (newDate) =>
       base44.entities.Invoice.update(invoice.id, {
@@ -93,9 +99,7 @@ export default function DueDateCell({ invoice }) {
     if (e.key === "Enter") handleSave();
   };
 
-  const displayDate = invoice.due_date
-    ? format(new Date(invoice.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
-    : "—";
+  const displayDate = formatDateSafe(invoice.due_date);
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
@@ -110,7 +114,7 @@ export default function DueDateCell({ invoice }) {
   const tooltipContent = hasPaymentInfo
     ? invoice.installments?.length > 0
       ? `DADOS DE PAGAMENTO\n\n${invoice.installments.map((inst, idx) =>
-          `Parcela ${String(inst.number || idx + 1).padStart(3, "0")}\n${inst.due_date ? format(new Date(inst.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—"} - ${formatCurrency(inst.value)}`
+          `Parcela ${String(inst.number || idx + 1).padStart(3, "0")}\n${formatDateSafe(inst.due_date)} - ${formatCurrency(inst.value)}`
         ).join("\n\n")}`
       : `DADOS DE PAGAMENTO\n\n${invoice.payments.map((pay) =>
           `${paymentTypeMap[pay.payment_type] || "Pagamento"}\n${formatCurrency(pay.value)}`
