@@ -16,6 +16,17 @@ export default async function(req) {
             return Response.json({ error: "Filial Criciúma não encontrada" }, { status: 404 });
         }
 
+        const profiles = user.profile_id
+            ? await base44.asServiceRole.entities.UserProfile.filter({ id: user.profile_id })
+            : [];
+        const profile = profiles?.[0] || null;
+        const isLider = profile?.name?.toLowerCase() === "líder" || profile?.name?.toLowerCase() === "lider";
+        const allowedBranchIds = Array.isArray(user.branch_ids) ? user.branch_ids : [];
+
+        if (user.role !== "admin" && isLider && !allowedBranchIds.includes(branch.id)) {
+            return Response.json({ error: "Você não tem acesso à filial Criciúma" }, { status: 403 });
+        }
+
         const allInvoices = await base44.asServiceRole.entities.Invoice.list("-issue_date", 5000);
         const invoices = allInvoices
             .filter(inv => inv.branch_cnpj === branch.cnpj && !inv.cancelled)
