@@ -11,8 +11,16 @@ import jsPDF from "jspdf";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-const formatDate = (date) =>
-  date ? format(new Date(date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "—";
+const parseDate = (date) => {
+  if (!date) return null;
+  const parsed = new Date(`${String(date).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDate = (date) => {
+  const parsed = parseDate(date);
+  return parsed ? format(parsed, "dd/MM/yyyy", { locale: ptBR }) : "—";
+};
 
 export default function NFReport({ open, onClose, invoices, branches }) {
   const printRef = useRef();

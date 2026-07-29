@@ -1,24 +1,12 @@
-Deno.serve(async (req) => {
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+export default async function(req) {
     try {
-        let body = {};
-        try { body = await req.json(); } catch (_) {}
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        if (!user) return Response.json({ error: "Não autorizado" }, { status: 401 });
 
-        const senha = body.senha || req.headers.get("x-api-password");
-        if (senha !== "123456") {
-            return Response.json({ error: "Senha inválida" }, { status: 401 });
-        }
-
-        const appId = Deno.env.get("BASE44_APP_ID");
-        const baseUrl = `https://api.base44.com/api/apps/${appId}`;
-        const headers = {
-            "Content-Type": "application/json",
-            "x-api-key": req.headers.get("x-api-key") || "",
-            "authorization": req.headers.get("authorization") || "",
-        };
-
-        // Buscar filiais
-        const branchRes = await fetch(`${baseUrl}/entities/Branch`, { headers });
-        const branches = await branchRes.json();
+        const branches = await base44.asServiceRole.entities.Branch.list();
         const branch = branches.find(b =>
             b.name?.toUpperCase().includes("CRICIUMA") ||
             b.name?.toUpperCase().includes("CRICIÚMA")
@@ -28,10 +16,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: "Filial Criciúma não encontrada" }, { status: 404 });
         }
 
-        // Buscar notas
-        const invRes = await fetch(`${baseUrl}/entities/Invoice?sort=-issue_date&limit=5000`, { headers });
-        const allInvoices = await invRes.json();
-
+        const allInvoices = await base44.asServiceRole.entities.Invoice.list("-issue_date", 5000);
         const invoices = allInvoices
             .filter(inv => inv.branch_cnpj === branch.cnpj && !inv.cancelled)
             .map(inv => ({
@@ -52,8 +37,7 @@ Deno.serve(async (req) => {
             }));
 
         return Response.json({ branch: { name: branch.name, cnpj: branch.cnpj }, total: invoices.length, invoices });
-
     } catch (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
-});
+}
