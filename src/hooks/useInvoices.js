@@ -112,7 +112,7 @@ function filterByType(invoices, type) {
   });
 }
 
-export function useInvoices(documentType = "nfe", allowedCnpjs = null, enabled = true) {
+export function useInvoices(documentType = "nfe", allowedCnpjs = null, enabled = true, options = {}) {
   const branchKey = Array.isArray(allowedCnpjs) && allowedCnpjs.length > 0 ? allowedCnpjs.join("|") : "all";
 
   return useQuery({
@@ -120,5 +120,6 @@ export function useInvoices(documentType = "nfe", allowedCnpjs = null, enabled =
     queryFn: () => fetchAllInvoices(allowedCnpjs),
     select: (data) => filterByType(data, documentType),
     enabled,
+    ...options,
   });
 }

@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [endDate, setEndDate] = useState("");
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
   const { user, userProfile, canAccessPage } = useAuth();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices(["nfe", "nfse"]);
+  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices(["nfe", "nfse"], null, true, { refetchOnMount: "always" });
 
   const { data: branches = [], isLoading: loadingBranches } = useQuery({
     queryKey: ["branches"],
@@ -38,10 +38,12 @@ export default function Dashboard() {
   const { data: cteList = [] } = useQuery({
     queryKey: ["invoices", "cte"],
     queryFn: () => base44.entities.Invoice.filter({ document_type: "cte", cancelled: false }, "-issue_date", 5000),
+    refetchOnMount: "always",
   });
   const { data: nfseList = [] } = useQuery({
     queryKey: ["invoices", "nfse"],
     queryFn: () => base44.entities.Invoice.filter({ document_type: "nfse", cancelled: false }, "-issue_date", 5000),
+    refetchOnMount: "always",
   });
 
   const isLoading = loadingInvoices || loadingBranches || loadingSuppliers || branchFilterLoading;
