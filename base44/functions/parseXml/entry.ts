@@ -30,6 +30,28 @@ function getCteTaker(inf, ide) {
   return partyTag ? getCteParty(inf, partyTag) : { name: "", cnpj: "" };
 }
 
+function getNFSeNationalRecipient(inf, toma) {
+  const tomaCnpj = getTagText(toma, "CNPJ") || getTagText(toma, "CPF");
+  const source = tomaCnpj ? toma : (
+    inf?.getElementsByTagName("interm")[0]
+    || inf?.getElementsByTagName("IntermediarioServico")[0]
+    || inf?.getElementsByTagName("Intermediario")[0]
+    || inf?.getElementsByTagName("IdentificacaoIntermediario")[0]
+  );
+  const end = source?.getElementsByTagName("end")[0] || source?.getElementsByTagName("Endereco")[0];
+  const endNac = end?.getElementsByTagName("endNac")[0] || source?.getElementsByTagName("endNac")[0];
+  return {
+    name: getTagText(source, "xNome") || getTagText(source, "RazaoSocial") || getTagText(source, "Nome"),
+    cnpj: getTagText(source, "CNPJ") || getTagText(source, "CPF") || getTagText(source, "Cnpj") || getTagText(source, "Cpf"),
+    address: getTagText(end, "xLgr") || getTagText(end, "Logradouro") || getTagText(end, "Endereco"),
+    number: getTagText(end, "nro") || getTagText(end, "Numero"),
+    district: getTagText(end, "xBairro") || getTagText(end, "Bairro"),
+    city: getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid") || getTagText(end, "xMun") || getTagText(end, "Cidade") || getTagText(end, "CodigoMunicipio"),
+    state: getTagText(end, "UF") || getTagText(end, "Uf") || getTagText(end, "Estado"),
+    zip: getTagText(endNac, "CEP") || getTagText(end, "CEP") || getTagText(end, "Cep"),
+  };
+}
+
 // Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
 const EVENT_LABELS = {
   "110110": "Carta de Correção",
@@ -293,9 +315,10 @@ function parseNFSeNacional(doc) {
   const recipientNumber = tomaEnd ? getTagText(tomaEnd, "nro") : "";
   const recipientDistrict = tomaEnd ? getTagText(tomaEnd, "xBairro") : "";
   const tomaEndNac = tomaEnd?.getElementsByTagName("endNac")[0];
-  const recipientZip = tomaEndNac ? getTagText(tomaEndNac, "CEP") : (tomaEnd ? getTagText(tomaEnd, "CEP") : "");
-  const recipientState = tomaEnd ? getTagText(tomaEnd, "UF") : "";
-  const recipientCity = getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid");
+  const branchParty = getNFSeNationalRecipient(inf, toma);
+  const recipientZip = branchParty.zip || (tomaEndNac ? getTagText(tomaEndNac, "CEP") : (tomaEnd ? getTagText(tomaEnd, "CEP") : ""));
+  const recipientState = branchParty.state || (tomaEnd ? getTagText(tomaEnd, "UF") : "");
+  const recipientCity = branchParty.city || getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid");
 
   // Valores (nó <valores> direto sob infNFSe)
   const valoresEls = inf.getElementsByTagName("valores");
@@ -326,14 +349,15 @@ function parseNFSeNacional(doc) {
     supplier_zip: supplierZip,
     supplier_phone: supplierPhone,
     supplier_email: supplierEmail,
-    recipient_name: recipientName,
-    recipient_cnpj: recipientCnpj,
-    recipient_address: recipientAddress,
-    recipient_number: recipientNumber,
-    recipient_district: recipientDistrict,
+    recipient_name: branchParty.name || recipientName,
+    recipient_cnpj: branchParty.cnpj || recipientCnpj,
+    recipient_address: branchParty.address || recipientAddress,
+    recipient_number: branchParty.number || recipientNumber,
+    recipient_district: branchParty.district || recipientDistrict,
     recipient_city: recipientCity,
     recipient_state: recipientState,
     recipient_zip: recipientZip,
+    branch_cnpj: branchParty.cnpj || recipientCnpj,
     total_value: totalValue,
     issue_date: issueDate,
     due_date: "",
@@ -674,7 +698,7 @@ Deno.serve(async (req) => {
             parsedEvents.push({ index: i, parsed });
             continue;
           }
-          parsed.branch_cnpj = parsed.recipient_cnpj;
+          parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
           parsedDocs.push({ index: i, parsed });
         } catch (err) {
           errors.push({ index: i, error: err.message });

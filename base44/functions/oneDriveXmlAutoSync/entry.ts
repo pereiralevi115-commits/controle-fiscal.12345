@@ -32,6 +32,28 @@ function getCteTaker(inf, ide) {
   return partyTag ? getCteParty(inf, partyTag) : { name: "", cnpj: "" };
 }
 
+function getNFSeNationalRecipient(inf, toma) {
+  const tomaCnpj = getTagText(toma, "CNPJ") || getTagText(toma, "CPF");
+  const source = tomaCnpj ? toma : (
+    inf?.getElementsByTagName("interm")[0]
+    || inf?.getElementsByTagName("IntermediarioServico")[0]
+    || inf?.getElementsByTagName("Intermediario")[0]
+    || inf?.getElementsByTagName("IdentificacaoIntermediario")[0]
+  );
+  const end = source?.getElementsByTagName("end")[0] || source?.getElementsByTagName("Endereco")[0];
+  const endNac = end?.getElementsByTagName("endNac")[0] || source?.getElementsByTagName("endNac")[0];
+  return {
+    name: getTagText(source, "xNome") || getTagText(source, "RazaoSocial") || getTagText(source, "Nome"),
+    cnpj: getTagText(source, "CNPJ") || getTagText(source, "CPF") || getTagText(source, "Cnpj") || getTagText(source, "Cpf"),
+    address: getTagText(end, "xLgr") || getTagText(end, "Logradouro") || getTagText(end, "Endereco"),
+    number: getTagText(end, "nro") || getTagText(end, "Numero"),
+    district: getTagText(end, "xBairro") || getTagText(end, "Bairro"),
+    city: getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid") || getTagText(end, "xMun") || getTagText(end, "Cidade") || getTagText(end, "CodigoMunicipio"),
+    state: getTagText(end, "UF") || getTagText(end, "Uf") || getTagText(end, "Estado"),
+    zip: getTagText(endNac, "CEP") || getTagText(end, "CEP") || getTagText(end, "Cep"),
+  };
+}
+
 const EVENT_LABELS = {
   "110110": "Carta de Correção",
   "110111": "Cancelamento",
@@ -189,6 +211,7 @@ function parseNFSeNacional(doc) {
 
   const emit = inf.getElementsByTagName("emit")[0];
   const toma = inf.getElementsByTagName("toma")[0];
+  const branchParty = getNFSeNationalRecipient(inf, toma);
   const valores = inf.getElementsByTagName("valores")[0];
   const serv = inf.getElementsByTagName("serv")[0];
   const dps = inf.getElementsByTagName("infDPS")[0];
@@ -202,8 +225,15 @@ function parseNFSeNacional(doc) {
     supplier_cnpj: getTagText(emit, "CNPJ") || getTagText(emit, "CPF"),
     supplier_ie: getTagText(emit, "IM"),
     supplier_city: getTagText(inf, "xLocEmi"),
-    recipient_name: getTagText(toma, "xNome"),
-    recipient_cnpj: getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    recipient_name: branchParty.name || getTagText(toma, "xNome"),
+    recipient_cnpj: branchParty.cnpj || getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    recipient_address: branchParty.address,
+    recipient_number: branchParty.number,
+    recipient_district: branchParty.district,
+    recipient_city: branchParty.city,
+    recipient_state: branchParty.state,
+    recipient_zip: branchParty.zip,
+    branch_cnpj: branchParty.cnpj || getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
     total_value: parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0,
     issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
     due_date: "",
@@ -342,7 +372,7 @@ async function importXmlContents(base44, xmlContents) {
         continue;
       }
 
-      parsed.branch_cnpj = parsed.recipient_cnpj;
+      parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
 
       // Pula notas excluídas manualmente pelo admin (não devem voltar).
       let blocked = [];
@@ -635,7 +665,7 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
         continue;
       }
 
-      parsed.branch_cnpj = parsed.recipient_cnpj;
+      parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
       let blocked = [];
       if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
       if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {

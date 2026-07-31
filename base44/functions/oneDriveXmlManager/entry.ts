@@ -32,6 +32,28 @@ function getCteTaker(inf, ide) {
   return partyTag ? getCteParty(inf, partyTag) : { name: "", cnpj: "" };
 }
 
+function getNFSeNationalRecipient(inf, toma) {
+  const tomaCnpj = getTagText(toma, "CNPJ") || getTagText(toma, "CPF");
+  const source = tomaCnpj ? toma : (
+    inf?.getElementsByTagName("interm")[0]
+    || inf?.getElementsByTagName("IntermediarioServico")[0]
+    || inf?.getElementsByTagName("Intermediario")[0]
+    || inf?.getElementsByTagName("IdentificacaoIntermediario")[0]
+  );
+  const end = source?.getElementsByTagName("end")[0] || source?.getElementsByTagName("Endereco")[0];
+  const endNac = end?.getElementsByTagName("endNac")[0] || source?.getElementsByTagName("endNac")[0];
+  return {
+    name: getTagText(source, "xNome") || getTagText(source, "RazaoSocial") || getTagText(source, "Nome"),
+    cnpj: getTagText(source, "CNPJ") || getTagText(source, "CPF") || getTagText(source, "Cnpj") || getTagText(source, "Cpf"),
+    address: getTagText(end, "xLgr") || getTagText(end, "Logradouro") || getTagText(end, "Endereco"),
+    number: getTagText(end, "nro") || getTagText(end, "Numero"),
+    district: getTagText(end, "xBairro") || getTagText(end, "Bairro"),
+    city: getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid") || getTagText(end, "xMun") || getTagText(end, "Cidade") || getTagText(end, "CodigoMunicipio"),
+    state: getTagText(end, "UF") || getTagText(end, "Uf") || getTagText(end, "Estado"),
+    zip: getTagText(endNac, "CEP") || getTagText(end, "CEP") || getTagText(end, "Cep"),
+  };
+}
+
 // Mapeia o código do tipo de evento (tpEvento) para um rótulo legível.
 const EVENT_LABELS = {
   "110110": "Carta de Correção",
@@ -197,9 +219,10 @@ function parseNFSeNacional(doc) {
   const emit = inf.getElementsByTagName("emit")[0];
   const emitEnder = emit?.getElementsByTagName("enderNac")[0];
 
-  // Tomador
+  // Tomador ou intermediário usado como filial quando o tomador não vem identificado
   const toma = inf.getElementsByTagName("toma")[0];
   const tomaEnd = toma?.getElementsByTagName("end")[0];
+  const branchParty = getNFSeNationalRecipient(inf, toma);
 
   const valores = inf.getElementsByTagName("valores")[0];
   const serv = inf.getElementsByTagName("serv")[0];
@@ -221,13 +244,15 @@ function parseNFSeNacional(doc) {
     supplier_zip: emitEnder ? getTagText(emitEnder, "CEP") : "",
     supplier_phone: getTagText(emit, "fone"),
     supplier_email: getTagText(emit, "email"),
-    recipient_name: getTagText(toma, "xNome"),
-    recipient_cnpj: getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
-    recipient_address: tomaEnd ? getTagText(tomaEnd, "xLgr") : "",
-    recipient_number: tomaEnd ? getTagText(tomaEnd, "nro") : "",
-    recipient_district: tomaEnd ? getTagText(tomaEnd, "xBairro") : "",
-    recipient_city: getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid"),
-    recipient_zip: tomaEnd ? getTagText(tomaEnd, "CEP") : "",
+    recipient_name: branchParty.name || getTagText(toma, "xNome"),
+    recipient_cnpj: branchParty.cnpj || getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
+    recipient_address: branchParty.address || (tomaEnd ? getTagText(tomaEnd, "xLgr") : ""),
+    recipient_number: branchParty.number || (tomaEnd ? getTagText(tomaEnd, "nro") : ""),
+    recipient_district: branchParty.district || (tomaEnd ? getTagText(tomaEnd, "xBairro") : ""),
+    recipient_city: branchParty.city || getTagText(inf, "xLocPrestacao") || getTagText(inf, "xLocIncid"),
+    recipient_state: branchParty.state,
+    recipient_zip: branchParty.zip || (tomaEnd ? getTagText(tomaEnd, "CEP") : ""),
+    branch_cnpj: branchParty.cnpj || getTagText(toma, "CNPJ") || getTagText(toma, "CPF"),
     total_value: parseFloat(getTagText(valores, "vLiq") || getTagText(valores, "vBC")) || 0,
     issue_date: issueDateRaw ? issueDateRaw.substring(0, 10) : "",
     due_date: "",
@@ -377,7 +402,7 @@ async function importXmlBatchLocal(base44, xmlContents) {
         continue;
       }
 
-      parsed.branch_cnpj = parsed.recipient_cnpj;
+      parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
 
       // Pula notas que foram excluídas manualmente pelo admin (não devem voltar).
       let blocked = [];
@@ -688,7 +713,7 @@ async function processOneDriveXmlFile(base44, accessToken, file, folder) {
       return { success: res.applied ? 1 : 0, errors: 0 };
     }
 
-    parsed.branch_cnpj = parsed.recipient_cnpj;
+    parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
 
     let blocked = [];
     if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
@@ -769,7 +794,7 @@ const CTE_UPDATE_FIELDS = [
 
 function cteUpdatePayload(parsed) {
   const payload = {};
-  parsed.branch_cnpj = parsed.recipient_cnpj;
+  parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
   for (const field of CTE_UPDATE_FIELDS) {
     if (parsed[field] !== undefined) payload[field] = parsed[field];
   }
