@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
 const PAGE_SIZE = 50;
+const IMPOSSIBLE_QUERY = { id: '__no_invoice_match__' };
 
 const SUMMARY_FIELDS = [
   'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'recipient_name', 'recipient_cnpj',
@@ -37,6 +38,17 @@ function monthYearOf(value) {
   return `${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
 }
 
+function issueDateRange(monthYear) {
+  if (!monthYear || monthYear === 'all') return null;
+  const [month, year] = String(monthYear).split('-').map((part) => Number(part));
+  if (!month || !year) return null;
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    $gte: `${year}-${String(month).padStart(2, '0')}-01`,
+    $lte: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
 function sortRows(list, config) {
   const safeConfig = Array.isArray(config) && config.length > 0 ? config : [{ key: 'issue_date', direction: 'desc' }];
   return [...list].sort((a, b) => {
@@ -57,7 +69,7 @@ function sortRows(list, config) {
 async function listAll(base44, query) {
   const rows = [];
   let skip = 0;
-  const limit = 5000;
+  const limit = 1000;
   while (true) {
     const page = Object.keys(query).length > 0
       ? await base44.asServiceRole.entities.Invoice.filter(query, '-issue_date', limit, skip, SUMMARY_FIELDS)
@@ -78,6 +90,51 @@ async function getAllowedCnpjs(base44, user) {
   if (!isLider) return null;
   const branches = await base44.asServiceRole.entities.Branch.list();
   return branches.filter((b) => user.branch_ids.includes(b.id)).map((b) => b.cnpj);
+}
+
+function applyBranchQuery(query, filters, allowedCnpjs) {
+  let branchValues = Array.isArray(allowedCnpjs) && allowedCnpjs.length > 0 ? [...allowedCnpjs] : null;
+  if (filters?.branch && filters.branch !== 'all') {
+    if (branchValues && !branchValues.includes(filters.branch)) return false;
+    branchValues = [filters.branch];
+  }
+  if (branchValues?.length === 1) query.branch_cnpj = branchValues[0];
+  else if (branchValues?.length > 1) query.branch_cnpj = { $in: branchValues };
+  return true;
+}
+
+function applySupplierQuery(query, filters, suppliers) {
+  if (!filters?.categoryFlag) return true;
+  const cnpjs = suppliers.filter((supplier) => supplier[filters.categoryFlag] === true).map((supplier) => supplier.cnpj).filter(Boolean);
+  if (cnpjs.length === 0) return false;
+  query.supplier_cnpj = { $in: cnpjs };
+  return true;
+}
+
+function buildInvoiceQuery(filters, allowedCnpjs, suppliers) {
+  const query = {};
+  const documentType = filters?.documentType || 'nfe';
+
+  if (documentType !== 'nfe') query.document_type = documentType;
+  if (!applyBranchQuery(query, filters, allowedCnpjs)) return IMPOSSIBLE_QUERY;
+  if (!applySupplierQuery(query, filters, suppliers)) return IMPOSSIBLE_QUERY;
+
+  if (filters?.status && filters.status !== 'all') query.status = filters.status;
+  if (filters?.cancelled === 'canceladas') query.cancelled = true;
+  else if (filters?.cancelled === 'ativas' || filters?.archivedMode === 'archived') query.cancelled = { $ne: true };
+
+  if (filters?.archivedMode !== 'archived' && filters?.cancelled !== 'canceladas') {
+    query.archived = { $ne: true };
+  }
+
+  if (filters?.sigv === 'sim') query.sigv_recorded = true;
+  if (filters?.topcon === 'sim') query.topcon_recorded = true;
+  if (filters?.boleto === 'sim') query.boleto_recorded = true;
+
+  const dateRange = issueDateRange(filters?.monthYear);
+  if (dateRange) query.issue_date = dateRange;
+
+  return query;
 }
 
 function supplierAllowed(inv, supplierByCnpj, filters) {
@@ -137,14 +194,11 @@ export default async function(req) {
     const filters = { ...(payload?.filters || {}), documentType: payload?.documentType || 'nfe' };
     const sortConfig = payload?.sortConfig || [{ key: 'issue_date', direction: 'desc' }];
     const allowedCnpjs = await getAllowedCnpjs(base44, user);
-
-    const query = allowedCnpjs && allowedCnpjs.length > 0 ? { branch_cnpj: { $in: allowedCnpjs } } : {};
-    const [summaryRows, suppliers] = await Promise.all([
-      listAll(base44, query),
-      base44.asServiceRole.entities.Supplier.list(),
-    ]);
-
+    const suppliers = await base44.asServiceRole.entities.Supplier.list();
     const supplierByCnpj = new Map(suppliers.map((s) => [s.cnpj, s]));
+    const query = buildInvoiceQuery(filters, allowedCnpjs, suppliers);
+    const summaryRows = await listAll(base44, query);
+
     const monthBase = applyFilters(summaryRows, filters, supplierByCnpj, allowedCnpjs, true);
     const availableMonths = Array.from(new Set(monthBase.map((inv) => monthYearOf(inv.issue_date)).filter(Boolean))).sort().reverse();
     const countFilters = { ...filters, tomadorGroup: undefined };
