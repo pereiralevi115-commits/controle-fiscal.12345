@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -7,39 +7,48 @@ import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
-import { useInvoices } from "@/hooks/useInvoices";
+import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
 import { useAuth } from "@/lib/AuthContext";
-import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 export default function Invoices() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
+  const { isLoading: branchFilterLoading } = useBranchFilter();
   const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [page, setPage] = useState(0);
+  const [sortConfig, setSortConfig] = useState([{ key: "issue_date", direction: "desc" }]);
 
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const { data: pageData, isLoading } = usePaginatedInvoices({
+    documentType: "nfe",
+    filters,
+    sortConfig,
+    page,
+    enabled: !branchFilterLoading,
+  });
 
-  const toggleSelectAll = (checked, docs) =>
-    setSelectedIds(checked ? docs.map((d) => d.id) : []);
-  const [sortConfig, setSortConfig] = useState([
-    { key: "issue_date", direction: "desc" }
-  ]);
-
-  const { data: invoices = [], isLoading } = useInvoices("nfe", allowedCnpjs, !branchFilterLoading);
+  const invoices = pageData?.items || [];
+  const total = pageData?.total || 0;
+  const pageSize = pageData?.pageSize || 50;
+  const availableMonths = pageData?.availableMonths || [];
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => base44.entities.Branch.list(),
   });
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => base44.entities.Supplier.list(),
-  });
+  useEffect(() => {
+    setPage(0);
+    setSelectedIds([]);
+  }, [filters, sortConfig]);
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAll = (checked, docs) =>
+    setSelectedIds(checked ? docs.map((d) => d.id) : []);
 
   const markReceivedMutation = useMutation({
     mutationFn: (invoice) =>
@@ -48,82 +57,11 @@ export default function Invoices() {
         received_date: new Date().toISOString().split("T")[0],
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
       setSelectedInvoice(null);
       toast.success("Nota marcada como recebida!");
     },
   });
-
-  // Notas que passam em TODOS os filtros, exceto o de mês. Serve de base tanto
-  // para a lista exibida (aplicando o mês depois) quanto para os meses do seletor.
-  const filteredWithoutMonth = useMemo(() => {
-    return invoices.filter((inv) => {
-      const searchMatch =
-        filters.search === "" ||
-        inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        inv.number?.includes(filters.search);
-      const statusMatch = filters.status === "all" || inv.status === filters.status;
-      const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
-
-      let cancelledMatch = true;
-      if (filters.cancelled === "ativas") {
-        cancelledMatch = !inv.cancelled;
-      } else if (filters.cancelled === "canceladas") {
-        cancelledMatch = inv.cancelled;
-      }
-
-      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
-      const supplierNotHidden = !supplier || !supplier.hidden;
-      const supplierHasNoCategory = !supplier || (!supplier.materia_prima && !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria);
-
-      const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
-      const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
-      const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived;
-      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierHasNoCategory && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived && notCompleted;
-    });
-  }, [invoices, filters.search, filters.status, filters.branch, filters.cancelled, filters.sigv, filters.topcon, filters.boleto, suppliers, allowedCnpjs]);
-
-  const filteredInvoices = useMemo(() => {
-    let filtered = filteredWithoutMonth.filter((inv) => {
-      const monthMatch = !filters.monthYear || filters.monthYear === "all" || (() => {
-        if (!inv.issue_date) return false;
-        const date = new Date(inv.issue_date + "T12:00:00");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${month}-${year}` === filters.monthYear;
-      })();
-      return monthMatch;
-    });
-
-    // Sort by multiple criteria
-    filtered.sort((a, b) => {
-      for (let config of sortConfig) {
-        const aValue = a[config.key];
-        const bValue = b[config.key];
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        let comparison = 0;
-        if (typeof aValue === "string") {
-          comparison = aValue.localeCompare(bValue);
-        } else {
-          comparison = aValue - bValue;
-        }
-
-        if (comparison !== 0) {
-          return config.direction === "asc" ? comparison : -comparison;
-        }
-      }
-      return 0;
-    });
-
-    return filtered;
-  }, [filteredWithoutMonth, filters.monthYear, sortConfig]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => {
@@ -135,16 +73,6 @@ export default function Invoices() {
       return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
     });
   };
-
-  // Meses disponíveis para o seletor: derivados das notas que de fato aparecem
-  // nesta tela. Reaplicamos os mesmos filtros, exceto o de mês, para que o
-  // seletor mostre apenas meses com registro no contexto atual.
-  const availableMonths = useMemo(
-    () => getMonthsFromInvoices(filteredWithoutMonth),
-    [filteredWithoutMonth]
-  );
-
-  const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
 
   if (isLoading || branchFilterLoading) {
     return (
@@ -160,27 +88,28 @@ export default function Invoices() {
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">NF-e</h1>
           <p className="text-slate-500 mt-1">
-            {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
+            {total} nota{total !== 1 ? "s" : ""} encontrada{total !== 1 ? "s" : ""}
           </p>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} availableMonths={availableMonths} showCancelledFilter={true} />
+        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} availableMonths={availableMonths} showCancelledFilter />
 
         <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 
         <div className="bg-white rounded-xl shadow-lg border-0">
-        <InvoiceTable
-          invoices={filteredInvoices}
-          branches={branches}
-          onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
-          onViewDetails={setSelectedInvoice}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-          selectable={isAdmin}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
-        />
+          <InvoiceTable
+            invoices={invoices}
+            branches={branches}
+            onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
+            onViewDetails={setSelectedInvoice}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            selectable={isAdmin}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            pagination={{ page, pageSize, total, onPageChange: setPage }}
+          />
         </div>
 
         <InvoiceDetailDialog

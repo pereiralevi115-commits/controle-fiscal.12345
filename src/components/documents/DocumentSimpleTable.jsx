@@ -12,12 +12,14 @@ import { formatCNPJ } from "@/lib/formatters";
 import InvoiceActionButtons from "@/components/invoices/InvoiceActionButtons";
 import InvoiceNotesButton from "@/components/invoices/InvoiceNotesButton";
 import InvoiceDeleteButton from "@/components/invoices/InvoiceDeleteButton";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showTomador = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll }) {
+export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showTomador = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, pagination }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
+  const usingExternalPagination = !!pagination;
 
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -32,6 +34,7 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
   };
 
   const sortedDocuments = useMemo(() => {
+    if (usingExternalPagination) return documents || [];
     if (!documents || !sortKey) return documents || [];
     const getValue = (doc) => {
       switch (sortKey) {
@@ -53,19 +56,22 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
       else cmp = String(va).localeCompare(String(vb), "pt-BR");
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [documents, sortKey, sortDir, branches]);
+  }, [documents, sortKey, sortDir, branches, usingExternalPagination]);
 
   const [page, setPage] = useState(0);
-  const pageCount = Math.ceil(sortedDocuments.length / PAGE_SIZE);
+  const currentPage = usingExternalPagination ? pagination.page : page;
+  const pageSize = usingExternalPagination ? pagination.pageSize : PAGE_SIZE;
+  const total = usingExternalPagination ? pagination.total : sortedDocuments.length;
+  const pageCount = Math.ceil(total / pageSize);
 
-  useEffect(() => { setPage(0); }, [sortKey, sortDir]);
+  useEffect(() => { if (!usingExternalPagination) setPage(0); }, [sortKey, sortDir, usingExternalPagination]);
   useEffect(() => {
-    if (page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
-  }, [page, pageCount]);
+    if (!usingExternalPagination && page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount, usingExternalPagination]);
 
   const pageDocuments = useMemo(
-    () => sortedDocuments.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
-    [sortedDocuments, page]
+    () => usingExternalPagination ? sortedDocuments : sortedDocuments.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [sortedDocuments, page, usingExternalPagination]
   );
 
   const SortIcon = ({ column }) => {
@@ -98,7 +104,8 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
   }
 
   return (
-    <div className="overflow-x-auto">
+    <TooltipProvider delayDuration={100}>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -175,12 +182,13 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
         </TableBody>
       </Table>
       <TablePagination
-        page={page}
+        page={currentPage}
         pageCount={pageCount}
-        total={sortedDocuments.length}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={usingExternalPagination ? pagination.onPageChange : setPage}
       />
     </div>
+    </TooltipProvider>
   );
 }

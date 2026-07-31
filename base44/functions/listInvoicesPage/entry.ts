@@ -4,7 +4,7 @@ const PAGE_SIZE = 50;
 
 const SUMMARY_FIELDS = [
   'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'recipient_name', 'recipient_cnpj',
-  'series', 'number', 'issue_date', 'due_date', 'due_date_edited', 'total_value', 'total_products',
+  'tomador_name', 'tomador_cnpj', 'series', 'number', 'issue_date', 'due_date', 'due_date_edited', 'total_value', 'total_products',
   'tax_icms', 'tax_ipi', 'tax_pis', 'status', 'cancelled', 'cancellation_date', 'cancelled_by_id',
   'cancelled_by_name', 'cancelled_at', 'archived', 'archive_notes', 'sigv_recorded', 'sigv_recorded_by_id',
   'sigv_recorded_by_name', 'sigv_recorded_at', 'sigv_updated_by_id', 'sigv_updated_by_name', 'sigv_updated_at',
@@ -14,7 +14,17 @@ const SUMMARY_FIELDS = [
   'boleto_updated_by_name', 'boleto_updated_at', 'internal_notes', 'internal_notes_list', 'service_description'
 ];
 
-const PAGE_FIELDS = [...SUMMARY_FIELDS, 'additional_info', 'items', 'installments', 'payments'];
+const PAGE_FIELDS = [
+  ...SUMMARY_FIELDS,
+  'additional_info', 'items', 'installments', 'payments', 'cte_modal', 'cte_cfop', 'cte_service_type',
+  'cte_payment_type', 'cte_origin_city', 'cte_origin_state', 'cte_destination_city', 'cte_destination_state',
+  'cte_tomador_name', 'cte_tomador_cnpj', 'cte_tomador_ie', 'cte_tomador_address', 'cte_tomador_number',
+  'cte_tomador_district', 'cte_tomador_city', 'cte_tomador_state', 'cte_tomador_zip', 'cte_tomador_phone',
+  'sender_name', 'sender_cnpj', 'sender_ie', 'sender_address', 'sender_number', 'sender_district',
+  'sender_city', 'sender_state', 'sender_zip', 'sender_phone', 'expedidor_name', 'expedidor_cnpj',
+  'recebedor_name', 'recebedor_cnpj', 'product_description', 'cargo_quantity', 'cargo_quantity_unit',
+  'freight_components', 'origin_documents'
+];
 
 function normalizeText(value) {
   return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -70,13 +80,19 @@ async function getAllowedCnpjs(base44, user) {
   return branches.filter((b) => user.branch_ids.includes(b.id)).map((b) => b.cnpj);
 }
 
-function supplierAllowed(inv, supplierByCnpj) {
+function supplierAllowed(inv, supplierByCnpj, filters) {
   const supplier = supplierByCnpj.get(inv.supplier_cnpj || '');
+  if (filters?.includeAllSuppliers) return true;
+  if (filters?.categoryFlag) return !!supplier && supplier[filters.categoryFlag] === true;
   if (!supplier) return true;
   if (supplier.hidden) return false;
   if (supplier.materia_prima) return false;
   if (!supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria) return true;
   return supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria;
+}
+
+function isConcretarTomador(inv) {
+  return normalizeText(inv.tomador_name).includes('concretar');
 }
 
 function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth = false) {
@@ -87,6 +103,8 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
     if (docType !== documentType) return false;
     if (allowedCnpjs && !allowedCnpjs.includes(inv.branch_cnpj)) return false;
     if (filters?.branch && filters.branch !== 'all' && inv.branch_cnpj !== filters.branch) return false;
+    if (filters?.tomadorGroup === 'concretar' && !isConcretarTomador(inv)) return false;
+    if (filters?.tomadorGroup === 'outros' && isConcretarTomador(inv)) return false;
     if (search && !normalizeText(inv.supplier_name).includes(search) && !String(inv.number || '').includes(filters.search || '')) return false;
     if (filters?.status && filters.status !== 'all' && inv.status !== filters.status) return false;
     if (filters?.cancelled === 'ativas' && inv.cancelled) return false;
@@ -95,9 +113,15 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
     if (filters?.topcon && filters.topcon !== 'all' && (filters.topcon === 'sim') !== !!inv.topcon_recorded) return false;
     if (filters?.boleto && filters.boleto !== 'all' && (filters.boleto === 'sim') !== !!inv.boleto_recorded) return false;
     if (!ignoreMonth && filters?.monthYear && filters.monthYear !== 'all' && monthYearOf(inv.issue_date) !== filters.monthYear) return false;
-    if (inv.archived) return false;
-    if (inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded) return false;
-    return supplierAllowed(inv, supplierByCnpj);
+    const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
+    if (filters?.archivedMode === 'archived') {
+      if (!inv.archived && !allRecorded) return false;
+      if (inv.cancelled) return false;
+    } else if (filters?.cancelled !== 'canceladas') {
+      if (inv.archived) return false;
+      if (allRecorded) return false;
+    }
+    return supplierAllowed(inv, supplierByCnpj, filters);
   });
 }
 
@@ -123,6 +147,12 @@ export default async function(req) {
     const supplierByCnpj = new Map(suppliers.map((s) => [s.cnpj, s]));
     const monthBase = applyFilters(summaryRows, filters, supplierByCnpj, allowedCnpjs, true);
     const availableMonths = Array.from(new Set(monthBase.map((inv) => monthYearOf(inv.issue_date)).filter(Boolean))).sort().reverse();
+    const countFilters = { ...filters, tomadorGroup: undefined };
+    const countBase = applyFilters(summaryRows, countFilters, supplierByCnpj, allowedCnpjs, true);
+    const tomadorCounts = {
+      concretar: countBase.filter(isConcretarTomador).length,
+      outros: countBase.filter((inv) => !isConcretarTomador(inv)).length,
+    };
     const filtered = sortRows(applyFilters(summaryRows, filters, supplierByCnpj, allowedCnpjs), sortConfig);
     const total = filtered.length;
     const pageSummaries = filtered.slice(page * pageSize, page * pageSize + pageSize);
@@ -135,7 +165,7 @@ export default async function(req) {
       items = pageSummaries.map((row) => byId.get(row.id) || row);
     }
 
-    return Response.json({ items, total, page, pageSize, availableMonths });
+    return Response.json({ items, total, page, pageSize, availableMonths, tomadorCounts });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

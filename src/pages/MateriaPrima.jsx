@@ -1,130 +1,18 @@
-import React, { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { toast } from "sonner";
-import InvoiceTable from "@/components/invoices/InvoiceTable";
-import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
-import InvoiceFilters from "@/components/invoices/InvoiceFilters";
-import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
+import CategoryInvoiceTab from "@/components/documents/CategoryInvoiceTab";
 import MateriaPrimaReport from "@/components/reports/MateriaPrimaReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
-import { useBranchFilter } from "@/hooks/useBranchFilter";
-import { useInvoices } from "@/hooks/useInvoices";
-import { useAuth } from "@/lib/AuthContext";
-import { getMonthsFromInvoices } from "@/lib/availableMonths";
 
 export default function MateriaPrima() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
-  const { allowedCnpjs } = useBranchFilter();
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
-
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  const toggleSelectAll = (checked, docs) =>
-    setSelectedIds(checked ? docs.map((d) => d.id) : []);
-  const [sortConfig, setSortConfig] = useState([
-    { key: "issue_date", direction: "desc" }
-  ]);
-
-  const { data: invoices = [], isLoading } = useInvoices();
-
+  const [currentItems, setCurrentItems] = useState([]);
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => base44.entities.Branch.list(),
   });
-
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => base44.entities.Supplier.list(),
-  });
-
-  const markReceivedMutation = useMutation({
-    mutationFn: (invoice) =>
-      base44.entities.Invoice.update(invoice.id, {
-        status: "recebida",
-        received_date: new Date().toISOString().split("T")[0],
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      setSelectedInvoice(null);
-      toast.success("Nota marcada como recebida!");
-    },
-  });
-
-  const filteredWithoutMonth = useMemo(() => {
-    return invoices.filter((inv) => {
-      const searchMatch =
-        filters.search === "" ||
-        inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        inv.number?.includes(filters.search);
-      const statusMatch = filters.status === "all" || inv.status === filters.status;
-      const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
-      let cancelledMatch = true;
-      if (filters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
-      else if (filters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
-      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
-      const supplierNotHidden = supplier && supplier.materia_prima === true;
-      const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
-      const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
-      const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived;
-      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && sigvMatch && topconMatch && boletoMatch && liderBranchMatch && notArchived && notCompleted;
-    });
-  }, [invoices, filters.search, filters.status, filters.branch, filters.cancelled, filters.sigv, filters.topcon, filters.boleto, suppliers, allowedCnpjs]);
-
-  const availableMonths = useMemo(() => getMonthsFromInvoices(filteredWithoutMonth), [filteredWithoutMonth]);
-
-  const filteredInvoices = useMemo(() => {
-    let filtered = filteredWithoutMonth.filter((inv) => {
-      return filters.monthYear === "all" || (inv.issue_date && (() => {
-        const date = new Date(inv.issue_date + "T12:00:00");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${month}-${year}` === filters.monthYear;
-      })());
-    });
-
-    filtered.sort((a, b) => {
-      for (let config of sortConfig) {
-        const aValue = a[config.key];
-        const bValue = b[config.key];
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        let comparison = typeof aValue === "string" ? aValue.localeCompare(bValue) : aValue - bValue;
-        if (comparison !== 0) return config.direction === "asc" ? comparison : -comparison;
-      }
-      return 0;
-    });
-
-    return filtered;
-  }, [filteredWithoutMonth, filters.monthYear, sortConfig]);
-
-  const handleSort = (key) => {
-    setSortConfig((prev) => {
-      const existing = prev.find((s) => s.key === key);
-      let next;
-      if (!existing) next = [{ key, direction: "asc" }, ...prev];
-      else if (existing.direction === "asc") next = prev.map((s) => s.key === key ? { ...s, direction: "desc" } : s);
-      else next = prev.filter((s) => s.key !== key);
-      return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
@@ -132,9 +20,6 @@ export default function MateriaPrima() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Matéria Prima</h1>
-            <p className="text-slate-500 mt-1">
-              {filteredInvoices.length} nota{filteredInvoices.length !== 1 ? "s" : ""} encontrada{filteredInvoices.length !== 1 ? "s" : ""}
-            </p>
           </div>
           <Button onClick={() => setShowReport(true)} className="gap-2">
             <FileBarChart className="w-4 h-4" />
@@ -142,37 +27,12 @@ export default function MateriaPrima() {
           </Button>
         </div>
 
-        <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} availableMonths={availableMonths} showCancelledFilter={true} />
-
-        <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
-
-        <div className="bg-white rounded-xl shadow-lg border-0">
-          <InvoiceTable
-            invoices={filteredInvoices}
-            branches={branches}
-            onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
-            onViewDetails={setSelectedInvoice}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            selectable={isAdmin}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelect}
-            onToggleSelectAll={toggleSelectAll}
-          />
-        </div>
-
-        <InvoiceDetailDialog
-          invoice={selectedInvoice}
-          open={!!selectedInvoice}
-          onClose={() => setSelectedInvoice(null)}
-          onMarkReceived={(inv) => markReceivedMutation.mutate(inv)}
-          branches={branches}
-        />
+        <CategoryInvoiceTab documentType="nfe" supplierFlag="materia_prima" branches={branches} onItemsChange={setCurrentItems} />
 
         <MateriaPrimaReport
           open={showReport}
           onClose={() => setShowReport(false)}
-          invoices={filteredInvoices}
+          invoices={currentItems}
           branches={branches}
         />
       </div>
