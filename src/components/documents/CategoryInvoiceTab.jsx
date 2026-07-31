@@ -10,11 +10,22 @@ import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
-export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange }) {
+export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange, extraFilters = {}, showCancelledFilter = true }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all", categoryFlag: supplierFlag });
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    branch: "all",
+    cancelled: "ativas",
+    sigv: "all",
+    topcon: "all",
+    boleto: "all",
+    monthYear: "all",
+    ...extraFilters,
+    categoryFlag: supplierFlag,
+  });
   const [sortConfig, setSortConfig] = useState([{ key: "issue_date", direction: "desc" }]);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -80,7 +91,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
         {total} nota{total !== 1 ? "s" : ""} encontrada{total !== 1 ? "s" : ""}
       </p>
 
-      <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={documents} availableMonths={availableMonths} showCancelledFilter />
+      <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={documents} availableMonths={availableMonths} showCancelledFilter={showCancelledFilter} />
 
       <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 

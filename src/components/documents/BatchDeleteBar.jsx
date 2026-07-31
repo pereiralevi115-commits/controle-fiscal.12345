@@ -37,6 +37,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
       toast.success(`${selectedIds.length} nota(s) excluída(s)! Não serão reimportadas.`);
       setOpen(false);
       onClear();
@@ -50,6 +51,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
     mutationFn: ({ data }) => applyToAll(selectedIds, data),
     onSuccess: (_res, { label }) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
       toast.success(`${selectedIds.length} nota(s): ${label} aplicado!`);
       onClear();
     },
