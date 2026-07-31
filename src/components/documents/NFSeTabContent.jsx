@@ -14,8 +14,8 @@ import { getMonthsFromInvoices } from "@/lib/availableMonths";
  * através de `supplierFlag` (ex: "gestao_compras").
  */
 export default function NFSeTabContent({ branches, suppliers, supplierFlag }) {
-  const { data: documents = [] } = useInvoices("nfse");
-  const { allowedCnpjs } = useBranchFilter();
+  const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
+  const { data: documents = [] } = useInvoices("nfse", allowedCnpjs, !branchFilterLoading);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 

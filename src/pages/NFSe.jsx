@@ -31,7 +31,7 @@ export default function NFSe() {
     { key: "issue_date", direction: "desc" }
   ]);
 
-  const { data: documents = [], isLoading } = useInvoices("nfse");
+  const { data: documents = [], isLoading } = useInvoices("nfse", allowedCnpjs, !branchFilterLoading);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
