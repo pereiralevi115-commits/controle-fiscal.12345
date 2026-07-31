@@ -43,24 +43,27 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
 
 const PAGE_SIZE = 50;
 
-export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false }) {
+export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false, pagination }) {
   const [page, setPage] = useState(0);
-
-  const pageCount = Math.ceil(invoices.length / PAGE_SIZE);
+  const usingExternalPagination = !!pagination;
+  const currentPage = usingExternalPagination ? pagination.page : page;
+  const pageSize = usingExternalPagination ? pagination.pageSize : PAGE_SIZE;
+  const total = usingExternalPagination ? pagination.total : invoices.length;
+  const pageCount = Math.ceil(total / pageSize);
 
   // Volta para a primeira página apenas quando a ordenação muda.
   useEffect(() => {
-    setPage(0);
-  }, [sortConfig]);
+    if (!usingExternalPagination) setPage(0);
+  }, [sortConfig, usingExternalPagination]);
 
   // Garante que a página atual continue válida se a lista diminuir
   useEffect(() => {
-    if (page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
-  }, [page, pageCount]);
+    if (!usingExternalPagination && page > 0 && page >= pageCount) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount, usingExternalPagination]);
 
   const pageInvoices = useMemo(
-    () => invoices.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
-    [invoices, page]
+    () => usingExternalPagination ? invoices : invoices.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [invoices, page, usingExternalPagination]
   );
 
   const getBranchName = (branchCnpj) => {
@@ -75,7 +78,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
     }).format(value || 0);
   };
 
-  if (invoices.length === 0) {
+  if (total === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground">
         <p className="text-lg font-medium">Nenhuma nota fiscal encontrada</p>
@@ -85,7 +88,8 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
   }
 
   return (
-    <div className="overflow-x-auto">
+    <TooltipProvider delayDuration={100}>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -210,21 +214,19 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
                   <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />
                   <InvoiceNotesButton invoice={invoice} />
                   <InvoiceDeleteButton invoice={invoice} />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onViewDetails(invoice)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Ver detalhes</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => onViewDetails(invoice)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Ver detalhes</TooltipContent>
+                  </Tooltip>
                 </div>
               </TableCell>
             </TableRow>
@@ -232,12 +234,13 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
         </TableBody>
       </Table>
       <TablePagination
-        page={page}
+        page={currentPage}
         pageCount={pageCount}
-        total={invoices.length}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={usingExternalPagination ? pagination.onPageChange : setPage}
       />
     </div>
+    </TooltipProvider>
   );
 }

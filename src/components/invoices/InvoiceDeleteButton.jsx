@@ -15,6 +15,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { removeInvoiceFromCaches } from "@/lib/invoiceCache";
 
 export default function InvoiceDeleteButton({ invoice }) {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export default function InvoiceDeleteButton({ invoice }) {
   const deleteMutation = useMutation({
     mutationFn: () => base44.functions.invoke("deleteInvoice", { invoiceId: invoice.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      removeInvoiceFromCaches(queryClient, invoice.id);
       toast.success("Nota excluída! Ela não será reimportada.");
       setOpen(false);
     },
@@ -46,7 +47,8 @@ export default function InvoiceDeleteButton({ invoice }) {
         <Trash2 className="w-3.5 h-3.5" />
       </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      {open && (
+        <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir nota fiscal?</AlertDialogTitle>
@@ -70,7 +72,8 @@ export default function InvoiceDeleteButton({ invoice }) {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+        </AlertDialog>
+      )}
     </>
   );
 }

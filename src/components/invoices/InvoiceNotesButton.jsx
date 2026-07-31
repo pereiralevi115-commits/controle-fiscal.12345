@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { updateInvoiceInCaches } from "@/lib/invoiceCache";
 
 // Converte o campo legado (texto único) em formato de lista, se necessário
 const getNotes = (invoice) => {
@@ -33,8 +34,8 @@ export default function InvoiceNotesButton({ invoice }) {
 
   const saveMutation = useMutation({
     mutationFn: (list) => base44.entities.Invoice.update(invoice.id, { internal_notes_list: list, internal_notes: "" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    onSuccess: (_result, list) => {
+      updateInvoiceInCaches(queryClient, invoice.id, { internal_notes_list: list, internal_notes: "" });
     },
   });
 
@@ -91,7 +92,8 @@ export default function InvoiceNotesButton({ invoice }) {
         </Tooltip>
       </TooltipProvider>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {open && (
+        <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Observações Internas</DialogTitle>
@@ -159,7 +161,8 @@ export default function InvoiceNotesButton({ invoice }) {
             </DialogFooter>
           </div>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      )}
     </>
   );
 }

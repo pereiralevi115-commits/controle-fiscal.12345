@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -13,7 +13,8 @@ import NFSeReport from "@/components/reports/NFSeReport";
 import { Button } from "@/components/ui/button";
 import { FileBarChart } from "lucide-react";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
-import { useInvoices } from "@/hooks/useInvoices";
+import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
+import { updateInvoiceInCaches } from "@/lib/invoiceCache";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function NF() {
@@ -38,6 +39,8 @@ export default function NF() {
   const [nfseSortConfig, setNfseSortConfig] = useState([
     { key: "issue_date", direction: "desc" }
   ]);
+  const [nfePage, setNfePage] = useState(0);
+  const [nfsePage, setNfsePage] = useState(0);
 
   const toggleSelect = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -48,17 +51,26 @@ export default function NF() {
   const toggleSelectAllNfse = (checked, docs) =>
     setSelectedNfseIds(checked ? docs.map((d) => d.id) : []);
 
-  const { data: invoices = [], isLoading } = useInvoices();
-  const { data: nfseDocuments = [], isLoading: isLoadingNfse } = useInvoices("nfse");
+  const { data: nfeData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading } = usePaginatedInvoices({
+    documentType: "nfe",
+    filters,
+    sortConfig,
+    page: nfePage,
+    enabled: !branchFilterLoading,
+  });
+  const { data: nfseData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading: isLoadingNfse } = usePaginatedInvoices({
+    documentType: "nfse",
+    filters: nfseFilters,
+    sortConfig: nfseSortConfig,
+    page: nfsePage,
+    enabled: !branchFilterLoading,
+  });
+  const filteredInvoices = nfeData.items || [];
+  const filteredNfse = nfseData.items || [];
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => base44.entities.Branch.list(),
-  });
-
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => base44.entities.Supplier.list(),
   });
 
   const markReceivedMutation = useMutation({
@@ -67,104 +79,17 @@ export default function NF() {
         status: "recebida",
         received_date: new Date().toISOString().split("T")[0],
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    onSuccess: (_result, invoice) => {
+      updateInvoiceInCaches(queryClient, invoice.id, {
+        status: "recebida",
+        received_date: new Date().toISOString().split("T")[0],
+      });
       setSelectedInvoice(null);
       toast.success("Nota marcada como recebida!");
     },
   });
 
-  const sortInvoices = (list, config) => {
-    return [...list].sort((a, b) => {
-      for (let cfg of config) {
-        const aValue = a[cfg.key];
-        const bValue = b[cfg.key];
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-        let comparison = typeof aValue === "string" ? aValue.localeCompare(bValue) : aValue - bValue;
-        if (comparison !== 0) return cfg.direction === "asc" ? comparison : -comparison;
-      }
-      return 0;
-    });
-  };
 
-  const filteredInvoices = useMemo(() => {
-    let filtered = invoices.filter((inv) => {
-      const searchMatch =
-        filters.search === "" ||
-        inv.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        inv.number?.includes(filters.search);
-      const statusMatch = filters.status === "all" || inv.status === filters.status;
-      const branchMatch = filters.branch === "all" || inv.branch_cnpj === filters.branch;
-
-      let cancelledMatch = true;
-      if (filters.cancelled === "ativas") {
-        cancelledMatch = !inv.cancelled;
-      } else if (filters.cancelled === "canceladas") {
-        cancelledMatch = inv.cancelled;
-      }
-
-      const supplier = suppliers.find((s) => s.cnpj === inv.supplier_cnpj);
-      const supplierNotHidden = !supplier || !supplier.hidden;
-      const supplierInScope = !supplier || (
-        !supplier.materia_prima && (
-          !supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria
-            ? true
-            : supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria
-        )
-      );
-
-      const sigvMatch = filters.sigv === "all" || (filters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
-      const topconMatch = filters.topcon === "all" || (filters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
-      const boletoMatch = filters.boleto === "all" || (filters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-
-      const monthYearMatch = filters.monthYear === "all" || (inv.issue_date && (() => {
-        const date = new Date(inv.issue_date + "T12:00:00");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${month}-${year}` === filters.monthYear;
-      })());
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-      const notArchived = !inv.archived;
-      const notCompleted = !(inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded);
-      return searchMatch && statusMatch && branchMatch && cancelledMatch && supplierNotHidden && supplierInScope && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch && notArchived && notCompleted;
-    });
-
-    return sortInvoices(filtered, sortConfig);
-  }, [invoices, filters, sortConfig, suppliers, allowedCnpjs]);
-
-  const filteredNfse = useMemo(() => {
-    let filtered = nfseDocuments.filter((inv) => {
-      const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
-      if (inv.archived || allRecorded) return false;
-
-      const searchMatch =
-        nfseFilters.search === "" ||
-        inv.supplier_name?.toLowerCase().includes(nfseFilters.search.toLowerCase()) ||
-        inv.number?.includes(nfseFilters.search);
-      const branchMatch = nfseFilters.branch === "all" || inv.branch_cnpj === nfseFilters.branch;
-
-      let cancelledMatch = true;
-      if (nfseFilters.cancelled === "ativas") cancelledMatch = !inv.cancelled;
-      else if (nfseFilters.cancelled === "canceladas") cancelledMatch = inv.cancelled;
-
-      const sigvMatch = nfseFilters.sigv === "all" || (nfseFilters.sigv === "sim" ? inv.sigv_recorded : !inv.sigv_recorded);
-      const topconMatch = nfseFilters.topcon === "all" || (nfseFilters.topcon === "sim" ? inv.topcon_recorded : !inv.topcon_recorded);
-      const boletoMatch = nfseFilters.boleto === "all" || (nfseFilters.boleto === "sim" ? inv.boleto_recorded : !inv.boleto_recorded);
-
-      const monthYearMatch = nfseFilters.monthYear === "all" || (inv.issue_date && (() => {
-        const date = new Date(inv.issue_date + "T12:00:00");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const year = date.getFullYear();
-        return `${month}-${year}` === nfseFilters.monthYear;
-      })());
-      const liderBranchMatch = !allowedCnpjs || allowedCnpjs.includes(inv.branch_cnpj);
-
-      return searchMatch && branchMatch && cancelledMatch && sigvMatch && topconMatch && boletoMatch && monthYearMatch && liderBranchMatch;
-    });
-
-    return sortInvoices(filtered, nfseSortConfig);
-  }, [nfseDocuments, nfseFilters, nfseSortConfig, allowedCnpjs]);
 
   const cycleSort = (prev, key) => {
     const existing = prev.find((s) => s.key === key);
@@ -179,10 +104,24 @@ export default function NF() {
     return next.length === 0 && key !== "issue_date" ? [{ key: "issue_date", direction: "desc" }] : next;
   };
 
-  const handleSort = (key) => setSortConfig((prev) => cycleSort(prev, key));
-  const handleNfseSort = (key) => setNfseSortConfig((prev) => cycleSort(prev, key));
+  const handleSort = (key) => {
+    setNfePage(0);
+    setSortConfig((prev) => cycleSort(prev, key));
+  };
+  const handleNfseSort = (key) => {
+    setNfsePage(0);
+    setNfseSortConfig((prev) => cycleSort(prev, key));
+  };
+  const handleFiltersChange = (next) => {
+    setNfePage(0);
+    setFilters(next);
+  };
+  const handleNfseFiltersChange = (next) => {
+    setNfsePage(0);
+    setNfseFilters(next);
+  };
 
-  if (isLoading || isLoadingNfse || branchFilterLoading) {
+  if ((activeTab === "nfe" && isLoading) || (activeTab === "nfse" && isLoadingNfse) || branchFilterLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -205,12 +144,12 @@ export default function NF() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="nfe">NF-e ({filteredInvoices.length})</TabsTrigger>
-            <TabsTrigger value="nfse">NFS-e ({filteredNfse.length})</TabsTrigger>
+            <TabsTrigger value="nfe">NF-e ({nfeData.total || 0})</TabsTrigger>
+            <TabsTrigger value="nfse">NFS-e ({nfseData.total || 0})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="nfe" className="space-y-6">
-            <InvoiceFilters filters={filters} onFilterChange={setFilters} branches={branches} invoices={invoices} showCancelledFilter={true} />
+            <InvoiceFilters filters={filters} onFilterChange={handleFiltersChange} branches={branches} invoices={filteredInvoices} availableMonths={nfeData.availableMonths || []} showCancelledFilter={true} />
             <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
             <div className="bg-white rounded-xl shadow-lg border-0">
               <InvoiceTable
@@ -224,12 +163,13 @@ export default function NF() {
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAll={toggleSelectAll}
+                pagination={{ page: nfePage, pageSize: nfeData.pageSize || 50, total: nfeData.total || 0, onPageChange: setNfePage }}
               />
             </div>
           </TabsContent>
 
           <TabsContent value="nfse" className="space-y-6">
-            <InvoiceFilters filters={nfseFilters} onFilterChange={setNfseFilters} branches={branches} invoices={nfseDocuments} showCancelledFilter={true} />
+            <InvoiceFilters filters={nfseFilters} onFilterChange={handleNfseFiltersChange} branches={branches} invoices={filteredNfse} availableMonths={nfseData.availableMonths || []} showCancelledFilter={true} />
             <BatchDeleteBar selectedIds={selectedNfseIds} onClear={() => setSelectedNfseIds([])} />
             <div className="bg-white rounded-xl shadow-lg border-0">
               <InvoiceTable
@@ -244,6 +184,7 @@ export default function NF() {
                 onToggleSelect={toggleSelectNfse}
                 onToggleSelectAll={toggleSelectAllNfse}
                 isService={true}
+                pagination={{ page: nfsePage, pageSize: nfseData.pageSize || 50, total: nfseData.total || 0, onPageChange: setNfsePage }}
               />
             </div>
           </TabsContent>

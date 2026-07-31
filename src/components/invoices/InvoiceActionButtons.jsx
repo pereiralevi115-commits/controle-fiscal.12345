@@ -7,7 +7,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { updateInvoiceInCaches } from "@/lib/invoiceCache";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
@@ -22,10 +23,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
     onMutate: async (data) => {
       await queryClient.cancelQueries({ queryKey: ["invoices"] });
       const previousInvoiceQueries = queryClient.getQueriesData({ queryKey: ["invoices"] });
-      queryClient.setQueriesData({ queryKey: ["invoices"] }, (old = []) => {
-        if (!Array.isArray(old)) return old;
-        return old.map((item) => item.id === invoiceId ? { ...item, ...data } : item);
-      });
+      updateInvoiceInCaches(queryClient, invoiceId, data);
       return { previousInvoiceQueries };
     },
     onError: (_err, _data, context) => {
@@ -146,64 +144,68 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   return (
     <>
       {/* Dialog de escolha: Arquivar ou Cancelar */}
-      <Dialog open={showChoiceDialog} onOpenChange={setShowChoiceDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Arquivar ou Cancelar?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">
-            NF {invoice.series ? `${invoice.series}/` : ""}{invoice.number} — {invoice.supplier_name}
-          </p>
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <Button
-              onClick={handleChoiceArquivar}
-              className="bg-slate-800 hover:bg-slate-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
-            >
-              📁 ARQUIVAR
-            </Button>
-            <Button
-              onClick={handleChoiceCancelar}
-              disabled={recordMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
-            >
-              ✕ CANCELAR
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Arquivar Nota Fiscal</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">
+      {showChoiceDialog && (
+        <Dialog open={showChoiceDialog} onOpenChange={setShowChoiceDialog}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Arquivar ou Cancelar?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground py-1">
               NF {invoice.series ? `${invoice.series}/` : ""}{invoice.number} — {invoice.supplier_name}
             </p>
-            <div className="space-y-1.5">
-              <Label htmlFor="archive-notes">Observação</Label>
-              <Textarea
-                id="archive-notes"
-                placeholder="Digite o motivo ou observação para arquivar..."
-                value={archiveNotes}
-                onChange={(e) => setArchiveNotes(e.target.value)}
-                rows={3}
-              />
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button
+                onClick={handleChoiceArquivar}
+                className="bg-slate-800 hover:bg-slate-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
+              >
+                📁 ARQUIVAR
+              </Button>
+              <Button
+                onClick={handleChoiceCancelar}
+                disabled={recordMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white h-16 flex-col gap-1 text-sm font-semibold"
+              >
+                ✕ CANCELAR
+              </Button>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>Cancelar</Button>
-            <Button
-              onClick={handleArchiveConfirm}
-              disabled={recordMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Arquivar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showArchiveDialog && (
+        <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Arquivar Nota Fiscal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                NF {invoice.series ? `${invoice.series}/` : ""}{invoice.number} — {invoice.supplier_name}
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="archive-notes">Observação</Label>
+                <Textarea
+                  id="archive-notes"
+                  placeholder="Digite o motivo ou observação para arquivar..."
+                  value={archiveNotes}
+                  onChange={(e) => setArchiveNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowArchiveDialog(false)}>Cancelar</Button>
+              <Button
+                onClick={handleArchiveConfirm}
+                disabled={recordMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Arquivar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
     <div className="flex items-center justify-end gap-2">
       {showOutrasOperacoes && (
@@ -226,28 +228,26 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
         const lockedDdaBoleto = btn.id === "BOLETO" && invoice[btn.field] && isDdaBoletoRecorded();
         const canClick = canEdit && !lockedDdaBoleto;
         return (
-          <TooltipProvider key={btn.id} delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => canClick && handleButtonClick(btn.id)}
-                  disabled={recordMutation.isPending || !canEdit}
-                  className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
-                    invoice[btn.field]
-                      ? `${btn.activeBg} text-white border-2`
-                      : `${btn.textColor} hover:${btn.bgColor}`
-                  } ${lockedDdaBoleto ? "cursor-not-allowed" : ""} ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
-                >
-                  {btn.label}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-xs">
-                {buildAuditTitle(btn)}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip key={btn.id}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => canClick && handleButtonClick(btn.id)}
+                disabled={recordMutation.isPending || !canEdit}
+                className={`h-7 px-3 text-xs font-medium transition-all ${btn.borderColor} ${
+                  invoice[btn.field]
+                    ? `${btn.activeBg} text-white border-2`
+                    : `${btn.textColor} hover:${btn.bgColor}`
+                } ${lockedDdaBoleto ? "cursor-not-allowed" : ""} ${!canEdit ? "cursor-not-allowed pointer-events-none" : ""}`}
+              >
+                {btn.label}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              {buildAuditTitle(btn)}
+            </TooltipContent>
+          </Tooltip>
         );
       })}
     </div>
