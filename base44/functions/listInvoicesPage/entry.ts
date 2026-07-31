@@ -144,8 +144,8 @@ function supplierAllowed(inv, supplierByCnpj, filters) {
   if (!supplier) return true;
   if (supplier.hidden) return false;
   if (supplier.materia_prima) return false;
-  if (!supplier.gestao_compras && !supplier.gestao_frota && !supplier.controladoria) return true;
-  return supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria;
+  if (supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria) return false;
+  return true;
 }
 
 function isConcretarTomador(inv) {
