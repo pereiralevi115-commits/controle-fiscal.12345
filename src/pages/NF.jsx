@@ -23,7 +23,7 @@ export default function NF() {
   const isAdmin = user?.role === "admin";
   const { allowedCnpjs, isLoading: branchFilterLoading } = useBranchFilter();
 
-  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
+  const [filters, setFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all", includeManagementSuppliers: true });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
@@ -33,7 +33,7 @@ export default function NF() {
   ]);
 
   // NFS-e tab state
-  const [nfseFilters, setNfseFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all" });
+  const [nfseFilters, setNfseFilters] = useState({ search: "", status: "all", branch: "all", cancelled: "ativas", sigv: "all", topcon: "all", boleto: "all", monthYear: "all", includeManagementSuppliers: true });
   const [selectedNfse, setSelectedNfse] = useState(null);
   const [selectedNfseIds, setSelectedNfseIds] = useState([]);
   const [nfseSortConfig, setNfseSortConfig] = useState([
