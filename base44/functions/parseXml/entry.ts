@@ -32,12 +32,16 @@ function getCteTaker(inf, ide) {
 
 function getNFSeNationalRecipient(inf, toma) {
   const tomaCnpj = getTagText(toma, "CNPJ") || getTagText(toma, "CPF");
-  const source = tomaCnpj ? toma : (
+  const rawSource = tomaCnpj ? toma : (
     inf?.getElementsByTagName("interm")[0]
+    || inf?.getElementsByTagName("Interm")[0]
     || inf?.getElementsByTagName("IntermediarioServico")[0]
     || inf?.getElementsByTagName("Intermediario")[0]
     || inf?.getElementsByTagName("IdentificacaoIntermediario")[0]
   );
+  const source = rawSource?.getElementsByTagName("infInterm")[0]
+    || rawSource?.getElementsByTagName("InfInterm")[0]
+    || rawSource;
   const end = source?.getElementsByTagName("end")[0] || source?.getElementsByTagName("Endereco")[0];
   const endNac = end?.getElementsByTagName("endNac")[0] || source?.getElementsByTagName("endNac")[0];
   return {
