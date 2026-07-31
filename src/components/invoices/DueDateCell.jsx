@@ -4,9 +4,10 @@ import { ptBR } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/AuthContext";
+import { updateInvoiceInCaches } from "@/lib/invoiceCache";
 
 export default function DueDateCell({ invoice }) {
   const { hasPermission } = useAuth();
@@ -15,6 +16,7 @@ export default function DueDateCell({ invoice }) {
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
+  const dayRef = useRef(null);
   const monthRef = useRef(null);
   const yearRef = useRef(null);
   const queryClient = useQueryClient();
@@ -33,8 +35,11 @@ export default function DueDateCell({ invoice }) {
         due_date: newDate,
         due_date_edited: true,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    onSuccess: (_result, newDate) => {
+      updateInvoiceInCaches(queryClient, invoice.id, {
+        due_date: newDate,
+        due_date_edited: true,
+      });
       toast.success("Vencimento atualizado!");
       setEditing(false);
     },
@@ -56,9 +61,12 @@ export default function DueDateCell({ invoice }) {
   };
 
   const handleSave = () => {
-    const d = day.padStart(2, "0");
-    const m = month.padStart(2, "0");
-    const y = year;
+    const currentDay = dayRef.current?.value || day;
+    const currentMonth = monthRef.current?.value || month;
+    const currentYear = yearRef.current?.value || year;
+    const d = currentDay.padStart(2, "0");
+    const m = currentMonth.padStart(2, "0");
+    const y = currentYear;
     if (d && m && y && y.length === 4) {
       const dateStr = `${y}-${m}-${d}`;
       mutation.mutate(dateStr);
@@ -82,7 +90,6 @@ export default function DueDateCell({ invoice }) {
   const handleYearChange = (e) => {
     const val = e.target.value.replace(/\D/g, "").slice(0, 4);
     setYear(val);
-    if (val.length === 4) handleSaveWithValues(day, month, val);
   };
 
   const handleSaveWithValues = (d, m, y) => {
@@ -125,6 +132,7 @@ export default function DueDateCell({ invoice }) {
     return (
       <div className="flex items-center gap-0.5" onKeyDown={handleKeyDown}>
         <input
+          ref={dayRef}
           autoFocus
           type="text"
           placeholder="DD"
@@ -148,9 +156,18 @@ export default function DueDateCell({ invoice }) {
           placeholder="AAAA"
           value={year}
           onChange={handleYearChange}
-          onBlur={handleSave}
           className="border border-blue-400 rounded px-1 py-0.5 text-sm w-14 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
         />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={mutation.isPending}
+          className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+          aria-label="Salvar vencimento"
+          title="Salvar vencimento"
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
       </div>
     );
   }
