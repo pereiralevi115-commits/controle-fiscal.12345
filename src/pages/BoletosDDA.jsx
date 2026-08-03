@@ -24,6 +24,7 @@ export default function BoletosDDA() {
     queryClient.invalidateQueries({ queryKey: ["boletosDda"] });
     queryClient.invalidateQueries({ queryKey: ["boletosDdaArchived"] });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
   };
 
   const linkMutation = useMutation({

@@ -54,6 +54,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       setSelected(null);
       toast.success("Nota marcada como recebida!");
     },

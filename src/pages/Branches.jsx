@@ -27,6 +27,7 @@ export default function Branches({ embedded } = {}) {
     mutationFn: (data) => base44.entities.Branch.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Filial cadastrada!");
       closeDialog();
     },
@@ -36,6 +37,7 @@ export default function Branches({ embedded } = {}) {
     mutationFn: ({ id, data }) => base44.entities.Branch.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Filial atualizada!");
       closeDialog();
     },
@@ -45,6 +47,7 @@ export default function Branches({ embedded } = {}) {
     mutationFn: (id) => base44.entities.Branch.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Filial removida!");
     },
   });

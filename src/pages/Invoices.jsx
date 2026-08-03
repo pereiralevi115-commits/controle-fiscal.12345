@@ -58,6 +58,7 @@ export default function Invoices() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       setSelectedInvoice(null);
       toast.success("Nota marcada como recebida!");
     },

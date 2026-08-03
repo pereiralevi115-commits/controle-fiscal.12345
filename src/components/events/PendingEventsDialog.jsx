@@ -44,6 +44,7 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
       setSelectedIds((prev) => prev.filter((id) => id !== variables.eventId));
       queryClient.invalidateQueries({ queryKey: ["pending-fiscal-events"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success(variables.action === "approve" ? "Evento aprovado e aplicado à nota." : "Evento rejeitado.");
     },
     onError: (err) => {
@@ -59,6 +60,7 @@ export default function PendingEventsDialog({ open, onOpenChange }) {
       setSelectedIds((prev) => prev.filter((id) => !eventIds.includes(id)));
       queryClient.invalidateQueries({ queryKey: ["pending-fiscal-events"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success(`${approved} evento(s) aprovado(s) e aplicado(s) às notas.`);
     },
     onError: (err) => {

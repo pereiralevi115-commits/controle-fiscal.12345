@@ -58,6 +58,7 @@ export default function CancelledInvoiceTab({ documentType = "nfe", branches = [
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Cancelamento desfeito!");
     },
   });

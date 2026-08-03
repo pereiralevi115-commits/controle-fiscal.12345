@@ -166,6 +166,7 @@ export default function LocalXmlImportCard() {
 
       setResult(finalResult);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       if (totalSuccess > 0) toast.success(`${totalSuccess} nota(s) importada(s) com sucesso!`);
       if (totalErrors > 0) toast.warning(`${totalErrors} arquivo(s) com erro`);
       setFiles([]);

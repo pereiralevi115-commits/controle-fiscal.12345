@@ -62,6 +62,7 @@ export default function Suppliers({ embedded } = {}) {
     mutationFn: (data) => base44.entities.Supplier.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       setFormData({ name: "", cnpj: "", phone: "", email: "" });
       setShowDialog(false);
       toast.success("Fornecedor adicionado!");
@@ -72,6 +73,7 @@ export default function Suppliers({ embedded } = {}) {
     mutationFn: ({ id, data }) => base44.entities.Supplier.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Fornecedor atualizado!");
     },
   });
@@ -80,6 +82,7 @@ export default function Suppliers({ embedded } = {}) {
     mutationFn: ({ id, field, value }) => base44.entities.Supplier.update(id, { [field]: value }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Fornecedor atualizado!");
     },
   });
@@ -146,6 +149,7 @@ export default function Suppliers({ embedded } = {}) {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success(`Fornecedores atualizados! (${result.created} criados, ${result.updated} atualizados)`);
     },
     onError: () => {

@@ -107,6 +107,7 @@ export default function UsersPage() {
       base44.entities.User.update(userId, { profile_id: profileId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Perfil atualizado!");
     },
     onError: () => toast.error("Erro ao atualizar perfil"),
@@ -116,6 +117,7 @@ export default function UsersPage() {
     mutationFn: ({ userId, data }) => base44.entities.User.update(userId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       toast.success("Usuário atualizado!");
       setEditOpen(false);
     },

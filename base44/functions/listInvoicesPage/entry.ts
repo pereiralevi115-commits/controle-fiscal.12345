@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { getAllowedCnpjs, isConcretarTomador, normalizeText } from '../../shared/invoiceAccess.ts';
 
 const PAGE_SIZE = 50;
 const IMPOSSIBLE_QUERY = { id: '__no_invoice_match__' };
@@ -26,10 +27,6 @@ const PAGE_FIELDS = [
   'recebedor_name', 'recebedor_cnpj', 'product_description', 'cargo_quantity', 'cargo_quantity_unit',
   'freight_components', 'origin_documents'
 ];
-
-function normalizeText(value) {
-  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
 
 function monthYearOf(value) {
   if (!value) return '';
@@ -79,17 +76,6 @@ async function listAll(base44, query) {
     skip += limit;
   }
   return rows;
-}
-
-async function getAllowedCnpjs(base44, user) {
-  if (!user || user.role === 'admin') return null;
-  if (!user.profile_id || !Array.isArray(user.branch_ids) || user.branch_ids.length === 0) return null;
-  const profiles = await base44.asServiceRole.entities.UserProfile.filter({ id: user.profile_id });
-  const profile = profiles[0];
-  const isLider = normalizeText(profile?.name) === 'lider';
-  if (!isLider) return null;
-  const branches = await base44.asServiceRole.entities.Branch.list();
-  return branches.filter((b) => user.branch_ids.includes(b.id)).map((b) => b.cnpj);
 }
 
 function applyBranchQuery(query, filters, allowedCnpjs) {
@@ -150,10 +136,6 @@ function supplierAllowed(inv, supplierByCnpj, filters) {
   if (filters?.includeManagementSuppliers) return true;
   if (supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria) return false;
   return true;
-}
-
-function isConcretarTomador(inv) {
-  return normalizeText(inv.tomador_name).includes('concretar');
 }
 
 function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth = false) {
