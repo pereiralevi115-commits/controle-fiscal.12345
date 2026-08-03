@@ -134,7 +134,7 @@ export default function NF() {
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Financeiro</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">FINANCEIRO NFE/NFSE</h1>
           </div>
           <Button onClick={() => setShowReport(true)} className="gap-2">
             <FileBarChart className="w-4 h-4" />
