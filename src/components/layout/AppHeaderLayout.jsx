@@ -10,7 +10,7 @@ const APP_NAME = 'Controle Fiscal';
 const APP_LOGO = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697370b851ff4a130adcda27/17b9d331c_Designsemnome57.png';
 
 const notasFiscaisItems = [
-  { key: 'nf', name: 'FINANCEIRO NFE/NFSE', path: '/nf', icon: FileText },
+  { key: 'nf', name: 'Financ. NF-e/NFS-e', path: '/nf', icon: FileText },
   { key: 'cte', name: 'CT-e', path: '/cte', icon: Package },
   { key: 'nfse', name: 'NFS-e', path: '/nfse', icon: Receipt },
   { key: 'notas', name: 'NF-e', path: '/notas', icon: FileText },
