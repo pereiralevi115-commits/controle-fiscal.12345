@@ -5,27 +5,20 @@ const PAGE_SIZE = 50;
 const IMPOSSIBLE_QUERY = { id: '__no_invoice_match__' };
 
 const SUMMARY_FIELDS = [
-  'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'recipient_name', 'recipient_cnpj',
-  'tomador_name', 'tomador_cnpj', 'series', 'number', 'issue_date', 'due_date', 'due_date_edited', 'total_value', 'total_products',
-  'tax_icms', 'tax_ipi', 'tax_pis', 'status', 'cancelled', 'cancellation_date', 'cancelled_by_id',
-  'cancelled_by_name', 'cancelled_at', 'archived', 'archive_notes', 'sigv_recorded', 'sigv_recorded_by_id',
-  'sigv_recorded_by_name', 'sigv_recorded_at', 'sigv_updated_by_id', 'sigv_updated_by_name', 'sigv_updated_at',
-  'topcon_recorded', 'topcon_recorded_by_id', 'topcon_recorded_by_name', 'topcon_recorded_at',
-  'topcon_updated_by_id', 'topcon_updated_by_name', 'topcon_updated_at', 'boleto_recorded',
-  'boleto_recorded_by_id', 'boleto_recorded_by_name', 'boleto_recorded_at', 'boleto_updated_by_id',
-  'boleto_updated_by_name', 'boleto_updated_at', 'internal_notes', 'internal_notes_list', 'service_description'
+  'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'tomador_name', 'tomador_cnpj',
+  'number', 'issue_date', 'due_date', 'total_value', 'status', 'cancelled', 'archived',
+  'sigv_recorded', 'topcon_recorded', 'boleto_recorded'
 ];
 
 const PAGE_FIELDS = [
   ...SUMMARY_FIELDS,
-  'additional_info', 'items', 'installments', 'payments', 'cte_modal', 'cte_cfop', 'cte_service_type',
-  'cte_payment_type', 'cte_origin_city', 'cte_origin_state', 'cte_destination_city', 'cte_destination_state',
-  'cte_tomador_name', 'cte_tomador_cnpj', 'cte_tomador_ie', 'cte_tomador_address', 'cte_tomador_number',
-  'cte_tomador_district', 'cte_tomador_city', 'cte_tomador_state', 'cte_tomador_zip', 'cte_tomador_phone',
-  'sender_name', 'sender_cnpj', 'sender_ie', 'sender_address', 'sender_number', 'sender_district',
-  'sender_city', 'sender_state', 'sender_zip', 'sender_phone', 'expedidor_name', 'expedidor_cnpj',
-  'recebedor_name', 'recebedor_cnpj', 'product_description', 'cargo_quantity', 'cargo_quantity_unit',
-  'freight_components', 'origin_documents'
+  'recipient_name', 'recipient_cnpj', 'series', 'due_date_edited', 'total_products', 'tax_icms', 'tax_ipi', 'tax_pis',
+  'additional_info', 'items', 'installments', 'payments', 'service_description', 'internal_notes', 'internal_notes_list',
+  'archive_notes', 'cancelled_by_id', 'cancelled_by_name', 'cancelled_at', 'cancellation_date',
+  'sigv_recorded_by_id', 'sigv_recorded_by_name', 'sigv_recorded_at', 'sigv_updated_by_id', 'sigv_updated_by_name', 'sigv_updated_at',
+  'topcon_recorded_by_id', 'topcon_recorded_by_name', 'topcon_recorded_at', 'topcon_updated_by_id', 'topcon_updated_by_name', 'topcon_updated_at',
+  'boleto_recorded_by_id', 'boleto_recorded_by_name', 'boleto_recorded_at', 'boleto_updated_by_id', 'boleto_updated_by_name', 'boleto_updated_at',
+  'product_description', 'origin_documents'
 ];
 
 function monthYearOf(value) {
@@ -90,10 +83,21 @@ function applyBranchQuery(query, filters, allowedCnpjs) {
 }
 
 function applySupplierQuery(query, filters, suppliers) {
-  if (!filters?.categoryFlag) return true;
-  const cnpjs = suppliers.filter((supplier) => supplier[filters.categoryFlag] === true).map((supplier) => supplier.cnpj).filter(Boolean);
-  if (cnpjs.length === 0) return false;
-  query.supplier_cnpj = { $in: cnpjs };
+  if (filters?.categoryFlag) {
+    const cnpjs = suppliers.filter((supplier) => supplier[filters.categoryFlag] === true).map((supplier) => supplier.cnpj).filter(Boolean);
+    if (cnpjs.length === 0) return false;
+    query.supplier_cnpj = { $in: cnpjs };
+    return true;
+  }
+
+  if (!filters?.includeAllSuppliers) {
+    const excludedCnpjs = suppliers
+      .filter((supplier) => supplier.hidden || supplier.materia_prima || (!filters?.includeManagementSuppliers && (supplier.gestao_compras || supplier.gestao_frota || supplier.controladoria)))
+      .map((supplier) => supplier.cnpj)
+      .filter(Boolean);
+    if (excludedCnpjs.length > 0) query.supplier_cnpj = { $nin: excludedCnpjs };
+  }
+
   return true;
 }
 
@@ -168,6 +172,16 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
   });
 }
 
+function compactPageRow(row) {
+  return {
+    ...row,
+    items: Array.isArray(row.items) ? row.items.slice(0, 8).map((item) => ({ description: item.description })) : row.items,
+    installments: Array.isArray(row.installments) ? row.installments.map((inst) => ({ number: inst.number, due_date: inst.due_date, value: inst.value })) : row.installments,
+    payments: Array.isArray(row.payments) ? row.payments.map((pay) => ({ payment_type: pay.payment_type, value: pay.value })) : row.payments,
+    origin_documents: undefined,
+  };
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -202,7 +216,7 @@ export default async function(req) {
     if (ids.length > 0) {
       const fullRows = await base44.asServiceRole.entities.Invoice.filter({ id: { $in: ids } }, '-issue_date', pageSize, 0, PAGE_FIELDS);
       const byId = new Map(fullRows.map((row) => [row.id, row]));
-      items = pageSummaries.map((row) => byId.get(row.id) || row);
+      items = pageSummaries.map((row) => compactPageRow(byId.get(row.id) || row));
     }
 
     return Response.json({ items, total, page, pageSize, availableMonths, tomadorCounts });

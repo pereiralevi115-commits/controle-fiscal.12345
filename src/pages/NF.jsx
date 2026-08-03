@@ -51,19 +51,19 @@ export default function NF() {
   const toggleSelectAllNfse = (checked, docs) =>
     setSelectedNfseIds(checked ? docs.map((d) => d.id) : []);
 
-  const { data: nfeData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading } = usePaginatedInvoices({
+  const { data: nfeData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading, isFetching } = usePaginatedInvoices({
     documentType: "nfe",
     filters,
     sortConfig,
     page: nfePage,
-    enabled: !branchFilterLoading,
+    enabled: !branchFilterLoading && activeTab === "nfe",
   });
-  const { data: nfseData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading: isLoadingNfse } = usePaginatedInvoices({
+  const { data: nfseData = { items: [], total: 0, availableMonths: [], pageSize: 50 }, isLoading: isLoadingNfse, isFetching: isFetchingNfse } = usePaginatedInvoices({
     documentType: "nfse",
     filters: nfseFilters,
     sortConfig: nfseSortConfig,
     page: nfsePage,
-    enabled: !branchFilterLoading,
+    enabled: !branchFilterLoading && activeTab === "nfse",
   });
   const filteredInvoices = nfeData.items || [];
   const filteredNfse = nfseData.items || [];
@@ -121,7 +121,10 @@ export default function NF() {
     setNfseFilters(next);
   };
 
-  if ((activeTab === "nfe" && isLoading) || (activeTab === "nfse" && isLoadingNfse) || branchFilterLoading) {
+  const isCurrentTabLoading = activeTab === "nfe" ? isLoading : isLoadingNfse;
+  const isCurrentTabFetching = activeTab === "nfe" ? isFetching : isFetchingNfse;
+
+  if (branchFilterLoading || (isCurrentTabLoading && (activeTab === "nfe" ? filteredInvoices.length === 0 : filteredNfse.length === 0))) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -144,14 +147,19 @@ export default function NF() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="nfe">FINANCEIRO NF-e ({nfeData.total || 0})</TabsTrigger>
-            <TabsTrigger value="nfse">FINANCEIRO NFS-e ({nfseData.total || 0})</TabsTrigger>
+            <TabsTrigger value="nfe">FINANCEIRO NF-e ({activeTab === "nfe" || nfeData.total ? nfeData.total || 0 : "..."})</TabsTrigger>
+            <TabsTrigger value="nfse">FINANCEIRO NFS-e ({activeTab === "nfse" || nfseData.total ? nfseData.total || 0 : "..."})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="nfe" className="space-y-6">
             <InvoiceFilters filters={filters} onFilterChange={handleFiltersChange} branches={branches} invoices={filteredInvoices} availableMonths={nfeData.availableMonths || []} showCancelledFilter={true} />
             <BatchDeleteBar selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
-            <div className="bg-white rounded-xl shadow-lg border-0">
+            <div className="bg-white rounded-xl shadow-lg border-0 relative">
+              {isCurrentTabFetching && !isCurrentTabLoading && (
+                <div className="absolute right-4 top-3 z-10 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm">
+                  Atualizando...
+                </div>
+              )}
               <InvoiceTable
                 invoices={filteredInvoices}
                 branches={branches}
@@ -171,7 +179,12 @@ export default function NF() {
           <TabsContent value="nfse" className="space-y-6">
             <InvoiceFilters filters={nfseFilters} onFilterChange={handleNfseFiltersChange} branches={branches} invoices={filteredNfse} availableMonths={nfseData.availableMonths || []} showCancelledFilter={true} />
             <BatchDeleteBar selectedIds={selectedNfseIds} onClear={() => setSelectedNfseIds([])} />
-            <div className="bg-white rounded-xl shadow-lg border-0">
+            <div className="bg-white rounded-xl shadow-lg border-0 relative">
+              {isCurrentTabFetching && !isCurrentTabLoading && (
+                <div className="absolute right-4 top-3 z-10 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 shadow-sm">
+                  Atualizando...
+                </div>
+              )}
               <InvoiceTable
                 invoices={filteredNfse}
                 branches={branches}
