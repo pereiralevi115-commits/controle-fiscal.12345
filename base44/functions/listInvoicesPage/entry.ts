@@ -134,6 +134,9 @@ function buildInvoiceQuery(filters, allowedCnpjs, suppliers) {
   const dateRange = issueDateRange(filters?.monthYear);
   if (dateRange) query.issue_date = dateRange;
 
+  const rawSearch = String(filters?.search || '').trim();
+  if (/^\d+$/.test(rawSearch)) query.number = rawSearch;
+
   return query;
 }
 
