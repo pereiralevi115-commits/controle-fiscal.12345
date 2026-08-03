@@ -27,7 +27,7 @@ export default function MateriaPrima() {
           </Button>
         </div>
 
-        <CategoryInvoiceTab documentType="nfe" supplierFlag="materia_prima" branches={branches} onItemsChange={setCurrentItems} />
+        <CategoryInvoiceTab documentType="nfe" supplierFlag="materia_prima" branches={branches} onItemsChange={setCurrentItems} showActionButtons={false} />
 
         <MateriaPrimaReport
           open={showReport}

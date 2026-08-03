@@ -43,7 +43,7 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort }) => {
 
 const PAGE_SIZE = 50;
 
-export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false, pagination }) {
+export default function InvoiceTable({ invoices, branches, onMarkReceived, onViewDetails, sortConfig, onSort, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, isService = false, pagination, showActionButtons = true }) {
   const [page, setPage] = useState(0);
   const usingExternalPagination = !!pagination;
   const currentPage = usingExternalPagination ? pagination.page : page;
@@ -211,7 +211,7 @@ export default function InvoiceTable({ invoices, branches, onMarkReceived, onVie
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />
+                  {showActionButtons && <InvoiceActionButtons invoiceId={invoice.id} invoice={invoice} />}
                   <InvoiceNotesButton invoice={invoice} />
                   <InvoiceDeleteButton invoice={invoice} />
                   <Tooltip>

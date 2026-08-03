@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
-export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange, extraFilters = {}, showCancelledFilter = true }) {
+export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange, extraFilters = {}, showCancelledFilter = true, showActionButtons = true }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -30,6 +30,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const lastItemsSignature = useRef("");
 
   const { data: pageData, isLoading } = usePaginatedInvoices({ documentType, filters, sortConfig, page });
   const documents = pageData?.items || [];
@@ -43,7 +44,11 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
   }, [filters, sortConfig]);
 
   useEffect(() => {
-    onItemsChange?.(documents);
+    if (!onItemsChange) return;
+    const signature = documents.map((item) => item.id).join("|");
+    if (signature === lastItemsSignature.current) return;
+    lastItemsSignature.current = signature;
+    onItemsChange(documents);
   }, [documents, onItemsChange]);
 
   const markReceivedMutation = useMutation({
@@ -109,6 +114,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
           isService={documentType === "nfse"}
+          showActionButtons={showActionButtons}
           pagination={{ page, pageSize, total, onPageChange: setPage }}
         />
       </div>
