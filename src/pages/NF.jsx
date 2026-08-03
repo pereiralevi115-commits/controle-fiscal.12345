@@ -144,8 +144,8 @@ export default function NF() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="nfe">NF-e ({nfeData.total || 0})</TabsTrigger>
-            <TabsTrigger value="nfse">NFS-e ({nfseData.total || 0})</TabsTrigger>
+            <TabsTrigger value="nfe">FINANCEIRO NF-e ({nfeData.total || 0})</TabsTrigger>
+            <TabsTrigger value="nfse">FINANCEIRO NFS-e ({nfseData.total || 0})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="nfe" className="space-y-6">
