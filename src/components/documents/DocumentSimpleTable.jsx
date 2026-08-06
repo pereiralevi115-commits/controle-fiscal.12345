@@ -17,7 +17,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 
-export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showTomador = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, pagination }) {
+export default function DocumentSimpleTable({ documents, branches = [], emptyLabel, onViewDetails, showDescription = false, showTomador = false, showActionButtons = false, selectable = false, selectedIds = [], onToggleSelect, onToggleSelectAll, pagination, sortConfig = [], onSort }) {
   const getBranchName = (cnpj) => branches.find((b) => b.cnpj === cnpj)?.name || "—";
   const usingExternalPagination = !!pagination;
 
@@ -25,6 +25,10 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
   const [sortDir, setSortDir] = useState("asc");
 
   const handleSort = (key) => {
+    if (usingExternalPagination && onSort) {
+      onSort(key);
+      return;
+    }
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -38,13 +42,20 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
     if (!documents || !sortKey) return documents || [];
     const getValue = (doc) => {
       switch (sortKey) {
-        case "filial": return getBranchName(doc.branch_cnpj).toLowerCase();
-        case "emitente": return (doc.supplier_name || "").toLowerCase();
-        case "tomador": return (doc.tomador_name || doc.recipient_name || "").toLowerCase();
-        case "numero": return parseInt(doc.number, 10) || 0;
-        case "emissao": return doc.issue_date || "";
-        case "descricao": return (doc.service_description || "").toLowerCase();
-        case "valor": return doc.total_value || 0;
+        case "filial":
+        case "branch_cnpj": return getBranchName(doc.branch_cnpj).toLowerCase();
+        case "emitente":
+        case "supplier_name": return (doc.supplier_name || "").toLowerCase();
+        case "tomador":
+        case "tomador_name": return (doc.tomador_name || doc.recipient_name || "").toLowerCase();
+        case "numero":
+        case "number": return parseInt(doc.number, 10) || 0;
+        case "emissao":
+        case "issue_date": return doc.issue_date || "";
+        case "descricao":
+        case "service_description": return (doc.service_description || "").toLowerCase();
+        case "valor":
+        case "total_value": return doc.total_value || 0;
         default: return "";
       }
     };
@@ -75,8 +86,11 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
   );
 
   const SortIcon = ({ column }) => {
-    if (sortKey !== column) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
-    return sortDir === "asc"
+    const activeSort = usingExternalPagination
+      ? sortConfig.find((s) => s.key === column)
+      : (sortKey === column ? { direction: sortDir } : null);
+    if (!activeSort) return <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />;
+    return activeSort.direction === "asc"
       ? <ArrowUp className="w-3.5 h-3.5" />
       : <ArrowDown className="w-3.5 h-3.5" />;
   };
@@ -118,13 +132,13 @@ export default function DocumentSimpleTable({ documents, branches = [], emptyLab
                 />
               </TableHead>
             )}
-            <SortableHead column="filial" label="Filial" />
-            <SortableHead column="emitente" label="Emitente" />
-            {showTomador && <SortableHead column="tomador" label="Tomador" />}
-            <SortableHead column="numero" label="Número" />
-            <SortableHead column="emissao" label="Emissão" />
-            {showDescription && <SortableHead column="descricao" label="Descrição / Observações" />}
-            <SortableHead column="valor" label="Valor" align="right" />
+            <SortableHead column="branch_cnpj" label="Filial" />
+            <SortableHead column="supplier_name" label="Emitente" />
+            {showTomador && <SortableHead column="tomador_name" label="Tomador" />}
+            <SortableHead column="number" label="Número" />
+            <SortableHead column="issue_date" label="Emissão" />
+            {showDescription && <SortableHead column="service_description" label="Descrição / Observações" />}
+            <SortableHead column="total_value" label="Valor" align="right" />
             <TableHead className="font-semibold text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>

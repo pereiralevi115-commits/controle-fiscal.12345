@@ -20,11 +20,12 @@ export default function CTe() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showReport, setShowReport] = useState(false);
   const [page, setPage] = useState(0);
+  const [sortConfig, setSortConfig] = useState([{ key: "issue_date", direction: "desc" }]);
 
   const { data: pageData, isLoading } = usePaginatedInvoices({
     documentType: "cte",
     filters,
-    sortConfig: [{ key: "issue_date", direction: "desc" }],
+    sortConfig,
     page,
   });
 
@@ -42,7 +43,16 @@ export default function CTe() {
   useEffect(() => {
     setPage(0);
     setSelectedIds([]);
-  }, [filters]);
+  }, [filters, sortConfig]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      const existing = prev.find((s) => s.key === key);
+      if (!existing) return [{ key, direction: "asc" }];
+      if (existing.direction === "asc") return [{ key, direction: "desc" }];
+      return [{ key: "issue_date", direction: "desc" }];
+    });
+  };
 
   const toggleSelect = (id) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -103,6 +113,8 @@ export default function CTe() {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
+            sortConfig={sortConfig}
+            onSort={handleSort}
             pagination={{ page, pageSize, total, onPageChange: setPage }}
           />
         </div>
