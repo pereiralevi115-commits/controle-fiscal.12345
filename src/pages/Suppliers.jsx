@@ -17,6 +17,7 @@ export default function Suppliers({ embedded } = {}) {
   const [showDialog, setShowDialog] = useState(false);
   const [formData, setFormData] = useState({ name: "", cnpj: "", phone: "", email: "" });
   const [sortConfig, setSortConfig] = useState([]);
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState([]);
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -272,6 +273,7 @@ export default function Suppliers({ embedded } = {}) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-12 font-semibold">Selecionar</TableHead>
               <TableHead className="font-semibold">
                 <SortableHeader label="Fornecedor" sortKey="name" />
               </TableHead>
@@ -293,13 +295,16 @@ export default function Suppliers({ embedded } = {}) {
           <TableBody>
             {sortedAndFilteredSuppliers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan="5" className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan="7" className="text-center py-8 text-muted-foreground">
                   Nenhum fornecedor encontrado
                 </TableCell>
               </TableRow>
             ) : (
               sortedAndFilteredSuppliers.map((supplier) => {
-                const rowColor = supplier.materia_prima
+                const isSelected = selectedSupplierIds.includes(supplier.id);
+                const rowColor = isSelected
+                  ? "bg-yellow-300 hover:bg-yellow-300 text-slate-950"
+                  : supplier.materia_prima
                   ? "bg-orange-50"
                   : supplier.gestao_compras
                   ? "bg-blue-50"
@@ -310,6 +315,18 @@ export default function Suppliers({ embedded } = {}) {
                   : "";
                 return (
                 <TableRow key={supplier.id} className={rowColor}>
+                  <TableCell>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        setSelectedSupplierIds((prev) => checked
+                          ? [...prev, supplier.id]
+                          : prev.filter((id) => id !== supplier.id)
+                        );
+                      }}
+                      aria-label={`Selecionar ${supplier.name}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell className="text-sm font-mono">{formatCNPJ(supplier.cnpj)}</TableCell>
                   <TableCell className="text-sm">{formatPhone(supplier.phone) || "—"}</TableCell>
