@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Layers, ShoppingCart, Truck, BarChart2, Loader2 } from "lucide-react";
+import { Layers, ShoppingCart, Truck, BarChart2, Loader2, Download } from "lucide-react";
 import { formatCNPJ, formatPhone } from "@/lib/formatters";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -169,12 +169,77 @@ export default function Suppliers({ embedded } = {}) {
 
 
 
+  const getSupplierCategories = (supplier) => {
+    const categories = [];
+    if (supplier.materia_prima) categories.push("Matéria Prima");
+    if (supplier.gestao_compras) categories.push("Gestão de Compras");
+    if (supplier.gestao_frota) categories.push("Gestão de Frota");
+    if (supplier.controladoria) categories.push("Controladoria");
+    return categories;
+  };
+
   const getCategoryName = (supplier) => {
-    if (supplier.materia_prima) return "Matéria Prima";
-    if (supplier.gestao_compras) return "Gestão de Compras";
-    if (supplier.gestao_frota) return "Gestão de Frota";
-    if (supplier.controladoria) return "Controladoria";
-    return "Nenhuma";
+    const categories = getSupplierCategories(supplier);
+    return categories[0] || "Nenhuma";
+  };
+
+  const escapeHtml = (value) => String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  const suppliersWithCategories = suppliers.filter((supplier) => getSupplierCategories(supplier).length > 0);
+
+  const exportSuppliersCategoriesXls = () => {
+    if (suppliersWithCategories.length === 0) {
+      toast.info("Nenhum fornecedor com categoria cadastrada para exportar.");
+      return;
+    }
+
+    const rows = suppliersWithCategories
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"))
+      .map((supplier) => `
+        <tr>
+          <td>${escapeHtml(supplier.name)}</td>
+          <td>${escapeHtml(formatCNPJ(supplier.cnpj))}</td>
+          <td>${escapeHtml(formatPhone(supplier.phone) || "")}</td>
+          <td>${escapeHtml(supplier.email)}</td>
+          <td>${escapeHtml(getSupplierCategories(supplier).join(", "))}</td>
+        </tr>
+      `)
+      .join("");
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8"></head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr>
+                <th>Fornecedor</th>
+                <th>CNPJ</th>
+                <th>Telefone</th>
+                <th>Email</th>
+                <th>Categorias</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `relatorio-fornecedores-categorias-${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`${suppliersWithCategories.length} fornecedor(es) exportado(s).`);
   };
 
   const sortedAndFilteredSuppliers = suppliers
@@ -249,15 +314,26 @@ export default function Suppliers({ embedded } = {}) {
               {sortedAndFilteredSuppliers.length} fornecedor{sortedAndFilteredSuppliers.length !== 1 ? "es" : ""} cadastrado{sortedAndFilteredSuppliers.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <Button 
-            onClick={() => extractSuppliersMutation.mutate()}
-            variant="outline"
-            className="gap-2 text-slate-600"
-            disabled={extractSuppliersMutation.isPending}
-          >
-            {extractSuppliersMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            Extrair de Notas Fiscais
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              onClick={exportSuppliersCategoriesXls}
+              variant="outline"
+              className="gap-2 text-slate-600"
+              disabled={suppliersWithCategories.length === 0}
+            >
+              <Download className="w-4 h-4" />
+              Exportar categorias .xls
+            </Button>
+            <Button 
+              onClick={() => extractSuppliersMutation.mutate()}
+              variant="outline"
+              className="gap-2 text-slate-600"
+              disabled={extractSuppliersMutation.isPending}
+            >
+              {extractSuppliersMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Extrair de Notas Fiscais
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-3">
