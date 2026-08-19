@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
-export const INVOICE_PAGE_SIZE = 50;
+export const INVOICE_PAGE_SIZE = 25;
 
 function useDebouncedValue(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);

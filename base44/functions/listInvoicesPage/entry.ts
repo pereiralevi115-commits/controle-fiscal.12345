@@ -1,8 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getAllowedCnpjs, isConcretarTomador, normalizeText } from '../../shared/invoiceAccess.ts';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 25;
 const IMPOSSIBLE_QUERY = { id: '__no_invoice_match__' };
+const CACHE_TTL_MS = 60 * 1000;
+const summaryCache = new Map();
+const supplierCache = { expiresAt: 0, rows: null };
+const pageRowsCache = new Map();
 
 const SUMMARY_FIELDS = [
   'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'tomador_name', 'tomador_cnpj',
@@ -57,6 +61,10 @@ function sortRows(list, config) {
 }
 
 async function listAll(base44, query) {
+  const key = JSON.stringify(query || {});
+  const cached = summaryCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.rows;
+
   const rows = [];
   let skip = 0;
   const limit = 1000;
@@ -68,6 +76,25 @@ async function listAll(base44, query) {
     if (page.length < limit) break;
     skip += limit;
   }
+  summaryCache.set(key, { rows, expiresAt: Date.now() + CACHE_TTL_MS });
+  return rows;
+}
+
+async function listSuppliers(base44) {
+  if (supplierCache.rows && supplierCache.expiresAt > Date.now()) return supplierCache.rows;
+  const rows = await base44.asServiceRole.entities.Supplier.list();
+  supplierCache.rows = rows;
+  supplierCache.expiresAt = Date.now() + CACHE_TTL_MS;
+  return rows;
+}
+
+async function listPageRows(base44, ids, pageSize) {
+  if (ids.length === 0) return [];
+  const key = ids.join('|');
+  const cached = pageRowsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.rows;
+  const rows = await base44.asServiceRole.entities.Invoice.filter({ id: { $in: ids } }, '-issue_date', pageSize, 0, PAGE_FIELDS);
+  pageRowsCache.set(key, { rows, expiresAt: Date.now() + CACHE_TTL_MS });
   return rows;
 }
 
@@ -105,7 +132,7 @@ function buildInvoiceQuery(filters, allowedCnpjs, suppliers) {
   const query = {};
   const documentType = filters?.documentType || 'nfe';
 
-  if (documentType !== 'nfe') query.document_type = documentType;
+  query.document_type = documentType;
   if (!applyBranchQuery(query, filters, allowedCnpjs)) return IMPOSSIBLE_QUERY;
   if (!applySupplierQuery(query, filters, suppliers)) return IMPOSSIBLE_QUERY;
 
@@ -118,8 +145,11 @@ function buildInvoiceQuery(filters, allowedCnpjs, suppliers) {
   }
 
   if (filters?.sigv === 'sim') query.sigv_recorded = true;
+  if (filters?.sigv === 'nao') query.sigv_recorded = { $ne: true };
   if (filters?.topcon === 'sim') query.topcon_recorded = true;
+  if (filters?.topcon === 'nao') query.topcon_recorded = { $ne: true };
   if (filters?.boleto === 'sim') query.boleto_recorded = true;
+  if (filters?.boleto === 'nao') query.boleto_recorded = { $ne: true };
 
   const dateRange = issueDateRange(filters?.monthYear);
   if (dateRange) query.issue_date = dateRange;
@@ -173,12 +203,58 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
 }
 
 function compactPageRow(row) {
+  const shortText = (value, max = 180) => {
+    if (!value) return undefined;
+    const text = String(value);
+    return text.length > max ? `${text.slice(0, max)}...` : text;
+  };
+
   return {
-    ...row,
-    items: Array.isArray(row.items) ? row.items.slice(0, 8).map((item) => ({ description: item.description })) : row.items,
-    installments: Array.isArray(row.installments) ? row.installments.map((inst) => ({ number: inst.number, due_date: inst.due_date, value: inst.value })) : row.installments,
-    payments: Array.isArray(row.payments) ? row.payments.map((pay) => ({ payment_type: pay.payment_type, value: pay.value })) : row.payments,
-    origin_documents: undefined,
+    id: row.id,
+    document_type: row.document_type,
+    branch_cnpj: row.branch_cnpj,
+    supplier_name: row.supplier_name,
+    supplier_cnpj: row.supplier_cnpj,
+    recipient_name: row.recipient_name,
+    recipient_cnpj: row.recipient_cnpj,
+    tomador_name: row.tomador_name,
+    tomador_cnpj: row.tomador_cnpj,
+    series: row.series,
+    number: row.number,
+    issue_date: row.issue_date,
+    due_date: row.due_date,
+    due_date_edited: row.due_date_edited,
+    total_value: row.total_value,
+    total_products: row.total_products,
+    tax_icms: row.tax_icms,
+    tax_ipi: row.tax_ipi,
+    tax_pis: row.tax_pis,
+    status: row.status,
+    cancelled: row.cancelled,
+    archived: row.archived,
+    archive_notes: row.archive_notes,
+    additional_info: shortText(row.additional_info),
+    service_description: shortText(row.service_description),
+    items: Array.isArray(row.items) ? row.items.slice(0, 6).map((item) => ({ description: shortText(item.description, 80) })) : [],
+    installments: Array.isArray(row.installments) ? row.installments.map((inst) => ({ number: inst.number, due_date: inst.due_date, value: inst.value })) : [],
+    payments: Array.isArray(row.payments) ? row.payments.map((pay) => ({ payment_type: pay.payment_type, value: pay.value })) : [],
+    internal_notes: row.internal_notes,
+    internal_notes_list: Array.isArray(row.internal_notes_list) ? row.internal_notes_list : [],
+    sigv_recorded: row.sigv_recorded,
+    sigv_recorded_by_name: row.sigv_recorded_by_name,
+    sigv_recorded_at: row.sigv_recorded_at,
+    sigv_updated_by_name: row.sigv_updated_by_name,
+    sigv_updated_at: row.sigv_updated_at,
+    topcon_recorded: row.topcon_recorded,
+    topcon_recorded_by_name: row.topcon_recorded_by_name,
+    topcon_recorded_at: row.topcon_recorded_at,
+    topcon_updated_by_name: row.topcon_updated_by_name,
+    topcon_updated_at: row.topcon_updated_at,
+    boleto_recorded: row.boleto_recorded,
+    boleto_recorded_by_name: row.boleto_recorded_by_name,
+    boleto_recorded_at: row.boleto_recorded_at,
+    boleto_updated_by_name: row.boleto_updated_by_name,
+    boleto_updated_at: row.boleto_updated_at,
   };
 }
 
@@ -193,8 +269,10 @@ export default async function(req) {
     const pageSize = Math.min(100, Math.max(10, Number(payload?.pageSize) || PAGE_SIZE));
     const filters = { ...(payload?.filters || {}), documentType: payload?.documentType || 'nfe' };
     const sortConfig = payload?.sortConfig || [{ key: 'issue_date', direction: 'desc' }];
-    const allowedCnpjs = await getAllowedCnpjs(base44, user);
-    const suppliers = await base44.asServiceRole.entities.Supplier.list();
+    const [allowedCnpjs, suppliers] = await Promise.all([
+      getAllowedCnpjs(base44, user),
+      listSuppliers(base44),
+    ]);
     const supplierByCnpj = new Map(suppliers.map((s) => [s.cnpj, s]));
     const query = buildInvoiceQuery(filters, allowedCnpjs, suppliers);
     const summaryRows = await listAll(base44, query);
@@ -214,7 +292,7 @@ export default async function(req) {
 
     let items = pageSummaries;
     if (ids.length > 0) {
-      const fullRows = await base44.asServiceRole.entities.Invoice.filter({ id: { $in: ids } }, '-issue_date', pageSize, 0, PAGE_FIELDS);
+      const fullRows = await listPageRows(base44, ids, pageSize);
       const byId = new Map(fullRows.map((row) => [row.id, row]));
       items = pageSummaries.map((row) => compactPageRow(byId.get(row.id) || row));
     }

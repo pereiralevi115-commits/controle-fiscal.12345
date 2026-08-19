@@ -10,7 +10,7 @@ import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
 import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
-export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange, extraFilters = {}, showCancelledFilter = true, showActionButtons = true }) {
+export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag, branches = [], onItemsChange, extraFilters = {}, showCancelledFilter = true, showActionButtons = true, enabled = true }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -32,7 +32,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
   const [selectedIds, setSelectedIds] = useState([]);
   const lastItemsSignature = useRef("");
 
-  const { data: pageData, isLoading } = usePaginatedInvoices({ documentType, filters, sortConfig, page });
+  const { data: pageData, isLoading } = usePaginatedInvoices({ documentType, filters, sortConfig, page, enabled });
   const documents = pageData?.items || [];
   const total = pageData?.total || 0;
   const pageSize = pageData?.pageSize || 50;

@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import CategoryInvoiceTab from "@/components/documents/CategoryInvoiceTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function GestaodeCompras() {
+  const [activeTab, setActiveTab] = useState("nfe");
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => base44.entities.Branch.list(),
@@ -15,16 +16,16 @@ export default function GestaodeCompras() {
       <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
         <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight">Gestão de Compras</h1>
 
-        <Tabs defaultValue="nfe" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="nfe">NF-e</TabsTrigger>
             <TabsTrigger value="nfse">NFS-e</TabsTrigger>
           </TabsList>
           <TabsContent value="nfe" className="mt-0">
-            <CategoryInvoiceTab documentType="nfe" supplierFlag="gestao_compras" branches={branches} />
+            <CategoryInvoiceTab documentType="nfe" supplierFlag="gestao_compras" branches={branches} enabled={activeTab === "nfe"} />
           </TabsContent>
           <TabsContent value="nfse" className="mt-0">
-            <CategoryInvoiceTab documentType="nfse" supplierFlag="gestao_compras" branches={branches} />
+            <CategoryInvoiceTab documentType="nfse" supplierFlag="gestao_compras" branches={branches} enabled={activeTab === "nfse"} />
           </TabsContent>
         </Tabs>
       </div>

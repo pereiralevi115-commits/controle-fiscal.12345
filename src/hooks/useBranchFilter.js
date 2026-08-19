@@ -8,27 +8,21 @@ import { useQuery } from '@tanstack/react-query';
  * Otherwise returns null (no restriction).
  */
 export function useBranchFilter() {
-  const { user, isLoadingAuth } = useAuth();
-
-  const { data: profiles = [], isLoading: profilesLoading } = useQuery({
-    queryKey: ['userProfiles'],
-    queryFn: () => base44.entities.UserProfile.list(),
-  });
+  const { user, userProfile, isLoadingAuth } = useAuth();
 
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
     queryKey: ['branches'],
     queryFn: () => base44.entities.Branch.list(),
   });
 
-  const isLoading = isLoadingAuth || profilesLoading || branchesLoading;
+  const isLoading = isLoadingAuth || branchesLoading;
 
   // Enquanto o auth ou os dados ainda carregam, bloqueia com isLoading=true e allowedCnpjs=null
   if (isLoading) return { allowedCnpjs: null, allowedBranchIds: null, isLider: null, branches, isLoading: true };
 
   if (!user) return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches, isLoading: false };
 
-  const profile = profiles.find((p) => p.id === user.profile_id);
-  const isLider = profile?.name?.toLowerCase() === 'líder' || profile?.name?.toLowerCase() === 'lider';
+  const isLider = userProfile?.name?.toLowerCase() === 'líder' || userProfile?.name?.toLowerCase() === 'lider';
 
   if (!isLider || !user.branch_ids?.length) {
     return { allowedCnpjs: null, allowedBranchIds: null, isLider: false, branches, isLoading: false };
