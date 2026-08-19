@@ -67,6 +67,24 @@ export default function NF() {
   });
   const filteredInvoices = nfeData.items || [];
   const filteredNfse = nfseData.items || [];
+  const reportDocumentType = activeTab === "nfse" ? "nfse" : "nfe";
+  const reportFilters = activeTab === "nfse" ? nfseFilters : filters;
+  const reportSortConfig = activeTab === "nfse" ? nfseSortConfig : sortConfig;
+  const { data: reportData, isFetching: isFetchingReport } = useQuery({
+    queryKey: ["invoiceReport", reportDocumentType, reportFilters, reportSortConfig],
+    queryFn: async () => {
+      const response = await base44.functions.invoke("listInvoicesPage", {
+        documentType: reportDocumentType,
+        filters: reportFilters,
+        sortConfig: reportSortConfig,
+        allRecords: true,
+      });
+      return response.data;
+    },
+    enabled: showReport && !branchFilterLoading,
+    staleTime: 2 * 60 * 1000,
+  });
+  const reportInvoices = reportData?.items || (activeTab === "nfse" ? filteredNfse : filteredInvoices);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -222,15 +240,17 @@ export default function NF() {
           <NFSeReport
             open={showReport}
             onClose={() => setShowReport(false)}
-            invoices={filteredNfse}
+            invoices={reportInvoices}
             branches={branches}
+            isLoadingFullData={isFetchingReport && !reportData}
           />
         ) : (
           <NFReport
             open={showReport}
             onClose={() => setShowReport(false)}
-            invoices={filteredInvoices}
+            invoices={reportInvoices}
             branches={branches}
+            isLoadingFullData={isFetchingReport && !reportData}
           />
         )}
       </div>

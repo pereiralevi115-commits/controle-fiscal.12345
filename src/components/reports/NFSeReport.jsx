@@ -20,7 +20,7 @@ const BRANCH_ORDER = [
   "SANTO ANTONIO DA PATRULHA", "VILA FLORES"
 ];
 
-export default function NFSeReport({ open, onClose, invoices, branches }) {
+export default function NFSeReport({ open, onClose, invoices, branches, isLoadingFullData }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -227,7 +227,7 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
               <Label className="text-xs text-slate-500">Até (vencimento)</Label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-[150px]" />
             </div>
-            <Button onClick={handleGeneratePDF} disabled={isGenerating} className="gap-2">
+            <Button onClick={handleGeneratePDF} disabled={isGenerating || isLoadingFullData} className="gap-2">
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {isGenerating ? "Gerando..." : "Gerar PDF"}
             </Button>
@@ -248,9 +248,15 @@ export default function NFSeReport({ open, onClose, invoices, branches }) {
             </div>
           </div>
 
-          <div className="bg-slate-50 border-l-4 border-slate-800 px-4 py-3 text-sm text-slate-700">
-            <strong>{periodInvoices.length}</strong> nota(s)
-          </div>
+          {isLoadingFullData ? (
+            <div className="bg-amber-50 border-l-4 border-amber-500 px-4 py-3 text-sm text-amber-800">
+              Carregando todos os registros do relatório...
+            </div>
+          ) : (
+            <div className="bg-slate-50 border-l-4 border-slate-800 px-4 py-3 text-sm text-slate-700">
+              <strong>{periodInvoices.length}</strong> nota(s)
+            </div>
+          )}
 
           <div className="overflow-x-auto border border-slate-200 rounded">
             <table className="w-full min-w-[1140px] text-[11px] table-fixed">

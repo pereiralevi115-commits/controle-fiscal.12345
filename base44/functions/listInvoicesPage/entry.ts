@@ -10,7 +10,7 @@ const pageRowsCache = new Map();
 
 const SUMMARY_FIELDS = [
   'id', 'document_type', 'branch_cnpj', 'supplier_name', 'supplier_cnpj', 'tomador_name', 'tomador_cnpj',
-  'number', 'issue_date', 'due_date', 'total_value', 'status', 'cancelled', 'archived',
+  'series', 'number', 'issue_date', 'due_date', 'total_value', 'status', 'cancelled', 'archived', 'service_description',
   'sigv_recorded', 'topcon_recorded', 'boleto_recorded'
 ];
 
@@ -202,6 +202,25 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
   });
 }
 
+function compactReportRow(row) {
+  return {
+    id: row.id,
+    document_type: row.document_type,
+    branch_cnpj: row.branch_cnpj,
+    supplier_name: row.supplier_name,
+    supplier_cnpj: row.supplier_cnpj,
+    series: row.series,
+    number: row.number,
+    issue_date: row.issue_date,
+    due_date: row.due_date,
+    total_value: row.total_value,
+    service_description: row.service_description,
+    sigv_recorded: row.sigv_recorded,
+    topcon_recorded: row.topcon_recorded,
+    boleto_recorded: row.boleto_recorded,
+  };
+}
+
 function compactPageRow(row) {
   const shortText = (value, max = 180) => {
     if (!value) return undefined;
@@ -287,6 +306,11 @@ export default async function(req) {
     };
     const filtered = sortRows(applyFilters(summaryRows, filters, supplierByCnpj, allowedCnpjs), sortConfig);
     const total = filtered.length;
+
+    if (payload?.allRecords) {
+      return Response.json({ items: filtered.map(compactReportRow), total, page: 0, pageSize: total, availableMonths, tomadorCounts });
+    }
+
     const pageSummaries = filtered.slice(page * pageSize, page * pageSize + pageSize);
     const ids = pageSummaries.map((inv) => inv.id);
 
