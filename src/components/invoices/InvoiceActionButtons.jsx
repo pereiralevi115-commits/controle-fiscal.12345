@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const { hasPermission, user, userProfile } = useAuth();
-  const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras' || userProfile?.name === 'Gestor';
+  const showOutrasOperacoes = user?.role === 'admin' || userProfile?.name === 'Compras' || userProfile?.name === 'Gestor' || userProfile?.name === 'Financeiro';
   const queryClient = useQueryClient();
   const [showChoiceDialog, setShowChoiceDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
