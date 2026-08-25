@@ -9,6 +9,15 @@ function getTagText(parent, tagName) {
   return elements[0]?.textContent?.trim() || "";
 }
 
+function getDirectTagText(parent, tagName) {
+  if (!parent?.childNodes) return "";
+  for (let i = 0; i < parent.childNodes.length; i++) {
+    const node = parent.childNodes[i];
+    if (node.tagName === tagName) return node.textContent?.trim() || "";
+  }
+  return "";
+}
+
 function getCteParty(inf, tagName) {
   const party = inf?.getElementsByTagName(tagName)[0];
   return {
@@ -103,9 +112,10 @@ const IGNORED_EVENT_TYPES = new Set(["210200", "210210", "210220", "210240"]);
 
 function parseEvento(doc) {
   const infEvento = doc.getElementsByTagName("infEvento")[0];
-  const tpEvento = getTagText(infEvento, "tpEvento");
-  // A chave do documento referenciado pode estar em chNFe ou chCTe.
-  const accessKey = getTagText(infEvento, "chNFe") || getTagText(infEvento, "chCTe");
+  const tpEvento = getDirectTagText(infEvento, "tpEvento") || getTagText(infEvento, "tpEvento");
+  // Usa somente a chave direta do evento. Eventos de CT-e podem conter chNFe
+  // dentro de nós internos, mas isso não significa cancelamento da NF-e.
+  const accessKey = getDirectTagText(infEvento, "chCTe") || getDirectTagText(infEvento, "chNFe");
   const detEvento = infEvento.getElementsByTagName("detEvento")[0];
   const description = getTagText(detEvento, "xCorrecao")
     || getTagText(detEvento, "xJust")
