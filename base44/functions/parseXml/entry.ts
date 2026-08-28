@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
 import { parseCTeDocument } from '../../shared/cteParser.ts';
+import { ensureInvoiceDestinationRegistered, loadRegisteredBranchCnpjs } from '../../shared/importValidation.ts';
 
 function getTagText(parent, tagName) {
   if (!parent) return "";
@@ -700,6 +701,7 @@ Deno.serve(async (req) => {
 
     try {
       const errors = [];
+      const branchCnpjs = await loadRegisteredBranchCnpjs(base44);
 
       // 1) Parse de todos os XMLs em memória (sem tocar no banco).
       //    Eventos (cancelamento, CC-e, etc.) são separados dos documentos.
@@ -713,6 +715,7 @@ Deno.serve(async (req) => {
             continue;
           }
           parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
+          ensureInvoiceDestinationRegistered(parsed, branchCnpjs);
           parsedDocs.push({ index: i, parsed });
         } catch (err) {
           errors.push({ index: i, error: err.message });

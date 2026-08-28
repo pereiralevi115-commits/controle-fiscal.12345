@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
 import { parseCTeDocument } from '../../shared/cteParser.ts';
 import { reconcilePendingEventsForInvoice } from '../../shared/fiscalEventReconcile.ts';
+import { ensureInvoiceDestinationRegistered, loadRegisteredBranchCnpjs } from '../../shared/importValidation.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de parseXml.js) ----------
 function getTagText(parent, tagName) {
@@ -401,6 +402,7 @@ async function importXmlBatchLocal(base44, xmlContents) {
   let success = 0;
   let errors = 0;
   const errorDetails = [];
+  const branchCnpjs = await loadRegisteredBranchCnpjs(base44);
 
   for (let i = 0; i < xmlContents.length; i++) {
     try {
@@ -417,6 +419,7 @@ async function importXmlBatchLocal(base44, xmlContents) {
       }
 
       parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
+      ensureInvoiceDestinationRegistered(parsed, branchCnpjs);
 
       // Pula notas que foram excluídas manualmente pelo admin (não devem voltar).
       let blocked = [];
@@ -728,6 +731,7 @@ async function processOneDriveXmlFile(base44, accessToken, file, folder) {
     }
 
     parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
+    ensureInvoiceDestinationRegistered(parsed, await loadRegisteredBranchCnpjs(base44));
 
     let blocked = [];
     if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });

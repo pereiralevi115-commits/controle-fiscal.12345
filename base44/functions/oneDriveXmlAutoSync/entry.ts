@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DOMParser } from 'npm:xmldom@0.6.0';
 import { parseCTeDocument } from '../../shared/cteParser.ts';
 import { reconcilePendingEventsForInvoice } from '../../shared/fiscalEventReconcile.ts';
+import { ensureInvoiceDestinationRegistered, loadRegisteredBranchCnpjs } from '../../shared/importValidation.ts';
 
 // ---------- Parser de XML embutido (espelha a lógica de oneDriveXmlManager) ----------
 function getTagText(parent, tagName) {
@@ -365,6 +366,7 @@ async function applyEvent(base44, parsed) {
 async function importXmlContents(base44, xmlContents) {
   let success = 0;
   let errors = 0;
+  const branchCnpjs = await loadRegisteredBranchCnpjs(base44);
 
   for (const xml of xmlContents) {
     try {
@@ -377,6 +379,7 @@ async function importXmlContents(base44, xmlContents) {
       }
 
       parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
+      ensureInvoiceDestinationRegistered(parsed, branchCnpjs);
 
       // Pula notas excluídas manualmente pelo admin (não devem voltar).
       let blocked = [];
@@ -621,6 +624,7 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
   let success = 0;
   let errors = 0;
   let processed = 0;
+  const branchCnpjs = await loadRegisteredBranchCnpjs(base44);
 
   for (const file of candidates) {
     if (processed >= budget) break;
@@ -670,6 +674,7 @@ async function importPendingXmls(base44, accessToken, folder, budget) {
       }
 
       parsed.branch_cnpj = parsed.branch_cnpj || parsed.recipient_cnpj;
+      ensureInvoiceDestinationRegistered(parsed, branchCnpjs);
       let blocked = [];
       if (parsed.access_key) blocked = await base44.asServiceRole.entities.DeletedInvoiceKey.filter({ access_key: parsed.access_key });
       if (blocked.length === 0 && parsed.number && parsed.supplier_cnpj) {
