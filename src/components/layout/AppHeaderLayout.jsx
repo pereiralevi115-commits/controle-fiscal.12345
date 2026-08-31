@@ -28,7 +28,7 @@ const gerencialItems = [
   { key: 'conferencia', name: 'Conferência', path: '/conferencia', icon: GitCompareArrows },
   { key: 'boletos-dda', name: 'Boletos DDA', path: '/boletos-dda', icon: ReceiptText },
   { key: 'boletos-arquivados', accessKey: 'boletos-dda', name: 'Boletos Arquivados', path: '/boletos-arquivados', icon: Archive },
-  { key: 'relatorio-votorantim-agosto', accessKey: 'dashboard', name: 'Relatório Agosto', path: '/relatorio-votorantim-agosto', icon: BarChart2 },
+  { key: 'relatorio-votorantim-agosto', accessKey: 'dashboard', name: 'Relatório Votorantim', path: '/relatorio-votorantim-agosto', icon: BarChart2 },
   { key: 'canceladas', name: 'Canceladas', path: '/canceladas', icon: XCircle },
   { key: 'fornecedores', name: 'Fornecedores', path: '/fornecedores', icon: Building2 },
   { key: 'filiais', name: 'Filiais', path: '/filiais', icon: Building2 },
