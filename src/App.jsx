@@ -26,6 +26,7 @@ import NFSe from './pages/NFSe';
 import Conferencia from './pages/Conferencia';
 import BoletosDDA from './pages/BoletosDDA';
 import BoletosArquivados from './pages/BoletosArquivados';
+import RelatorioVotorantimAgosto from './pages/RelatorioVotorantimAgosto';
 import { useLocation } from 'react-router-dom';
 import AppHeaderLayout from './components/layout/AppHeaderLayout';
 
@@ -66,6 +67,8 @@ const AuthenticatedApp = () => {
         return <BoletosDDA />;
       case '/boletos-arquivados':
         return <BoletosArquivados />;
+      case '/relatorio-votorantim-agosto':
+        return <RelatorioVotorantimAgosto />;
       case '/importar':
         return <ImportXml />;
       case '/filiais':
