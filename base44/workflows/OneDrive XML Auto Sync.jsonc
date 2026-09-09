@@ -1,0 +1,38 @@
+{
+  "name": "OneDrive XML Auto Sync",
+  "description": "Importa automaticamente os XMLs da pasta configurada do OneDrive quando h\u00e1 mudan\u00e7as",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "connector",
+      "events": [
+        "updated"
+      ],
+      "integration_type": "one_drive",
+      "resource_id": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "onedrive_xml_auto_sync",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "oneDriveXmlAutoSync",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "oneDriveXmlAutoSync"
+  }
+}

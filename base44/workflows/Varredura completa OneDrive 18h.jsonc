@@ -1,0 +1,44 @@
+{
+  "name": "Varredura completa OneDrive 18h",
+  "description": "Executa uma varredura di\u00e1ria dos XMLs do OneDrive \u00e0s 18h, usando a mesma trava da importa\u00e7\u00e3o para n\u00e3o conflitar com importa\u00e7\u00f5es manuais ou autom\u00e1ticas.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 21 * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "varredura_completa_onedrive_18h",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "oneDriveXmlAutoSync",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "oneDriveXmlAutoSync"
+  }
+}
