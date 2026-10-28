@@ -1,3 +1,13 @@
+let freshUntil = 0;
+export const shouldRefreshInvoices = () => Date.now() < freshUntil;
+
+export function refreshInvoiceQueries(queryClient) {
+  freshUntil = Date.now() + 65000;
+  return Promise.all(["invoices", "invoicePage", "invoiceReport", "dashboardSummary"].map((key) =>
+    queryClient.invalidateQueries({ queryKey: [key] })
+  ));
+}
+
 const monthYearOf = (value) => {
   if (!value) return "";
   const date = new Date(`${String(value).substring(0, 10)}T12:00:00`);
@@ -20,7 +30,7 @@ const matchesPageFilters = (item, queryKey) => {
   if (filters.boleto && filters.boleto !== "all" && (filters.boleto === "sim") !== !!item.boleto_recorded) return false;
   if (filters.monthYear && filters.monthYear !== "all" && monthYearOf(item.issue_date) !== filters.monthYear) return false;
 
-  const allRecorded = item.sigv_recorded && item.topcon_recorded && item.boleto_recorded;
+  const allRecorded = item.sigv_recorded && item.topcon_recorded;
   if (filters.archivedMode === "archived") {
     if (!item.archived && !allRecorded) return false;
     if (item.cancelled) return false;

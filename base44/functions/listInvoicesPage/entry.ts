@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getAllowedCnpjs, isConcretarTomador, normalizeText } from '../../shared/invoiceAccess.ts';
+import { isInvoiceCompleted } from '../../shared/invoiceCompletion.ts';
 
 const PAGE_SIZE = 25;
 const IMPOSSIBLE_QUERY = { id: '__no_invoice_match__' };
@@ -60,10 +61,10 @@ function sortRows(list, config) {
   });
 }
 
-async function listAll(base44, query) {
+async function listAll(base44, query, refresh = false) {
   const key = JSON.stringify(query || {});
   const cached = summaryCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.rows;
+  if (!refresh && cached && cached.expiresAt > Date.now()) return cached.rows;
 
   const rows = [];
   let skip = 0;
@@ -88,11 +89,11 @@ async function listSuppliers(base44) {
   return rows;
 }
 
-async function listPageRows(base44, ids, pageSize) {
+async function listPageRows(base44, ids, pageSize, refresh = false) {
   if (ids.length === 0) return [];
   const key = ids.join('|');
   const cached = pageRowsCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.rows;
+  if (!refresh && cached && cached.expiresAt > Date.now()) return cached.rows;
   const rows = await base44.asServiceRole.entities.Invoice.filter({ id: { $in: ids } }, '-issue_date', pageSize, 0, PAGE_FIELDS);
   pageRowsCache.set(key, { rows, expiresAt: Date.now() + CACHE_TTL_MS });
   return rows;
@@ -140,8 +141,11 @@ function buildInvoiceQuery(filters, allowedCnpjs, suppliers) {
   if (filters?.cancelled === 'canceladas') query.cancelled = true;
   else if (filters?.cancelled === 'ativas' || filters?.archivedMode === 'archived') query.cancelled = { $ne: true };
 
-  if (filters?.archivedMode !== 'archived' && filters?.cancelled !== 'canceladas') {
+  if (filters?.archivedMode === 'archived') {
+    query.$or = [{ archived: true }, { sigv_recorded: true, topcon_recorded: true }];
+  } else if (filters?.cancelled !== 'canceladas') {
     query.archived = { $ne: true };
+    query.$or = [{ sigv_recorded: { $ne: true } }, { topcon_recorded: { $ne: true } }];
   }
 
   if (filters?.sigv === 'sim') query.sigv_recorded = true;
@@ -190,7 +194,7 @@ function applyFilters(rows, filters, supplierByCnpj, allowedCnpjs, ignoreMonth =
     if (filters?.topcon && filters.topcon !== 'all' && (filters.topcon === 'sim') !== !!inv.topcon_recorded) return false;
     if (filters?.boleto && filters.boleto !== 'all' && (filters.boleto === 'sim') !== !!inv.boleto_recorded) return false;
     if (!ignoreMonth && filters?.monthYear && filters.monthYear !== 'all' && monthYearOf(inv.issue_date) !== filters.monthYear) return false;
-    const allRecorded = inv.sigv_recorded && inv.topcon_recorded && inv.boleto_recorded;
+    const allRecorded = isInvoiceCompleted(inv);
     if (filters?.archivedMode === 'archived') {
       if (!inv.archived && !allRecorded) return false;
       if (inv.cancelled) return false;
@@ -298,7 +302,7 @@ export default async function(req) {
     ]);
     const supplierByCnpj = new Map(suppliers.map((s) => [s.cnpj, s]));
     const query = buildInvoiceQuery(filters, allowedCnpjs, suppliers);
-    const summaryRows = await listAll(base44, query);
+    const summaryRows = await listAll(base44, query, payload?.refresh === true);
 
     const monthBase = applyFilters(summaryRows, filters, supplierByCnpj, allowedCnpjs, true);
     const availableMonths = Array.from(new Set(monthBase.map((inv) => monthYearOf(inv.issue_date)).filter(Boolean))).sort().reverse();
@@ -320,7 +324,7 @@ export default async function(req) {
 
     let items = pageSummaries;
     if (ids.length > 0) {
-      const fullRows = await listPageRows(base44, ids, pageSize);
+      const fullRows = await listPageRows(base44, ids, pageSize, payload?.refresh === true);
       const byId = new Map(fullRows.map((row) => [row.id, row]));
       items = pageSummaries.map((row) => compactPageRow(byId.get(row.id) || row));
     }

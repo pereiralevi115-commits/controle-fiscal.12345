@@ -15,6 +15,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
+import { refreshInvoiceQueries } from "@/lib/invoiceCache";
 
 // Aplica a mesma alteração a todas as notas selecionadas, em pequenos lotes para
 // não estourar o rate limit do banco.
@@ -36,9 +37,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
       await base44.functions.invoke("deleteInvoicesBatch", { invoiceIds: selectedIds });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
+      refreshInvoiceQueries(queryClient);
       toast.success(`${selectedIds.length} nota(s) excluída(s)! Não serão reimportadas.`);
       setOpen(false);
       onClear();
@@ -51,9 +50,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
   const markMutation = useMutation({
     mutationFn: ({ data }) => applyToAll(selectedIds, data),
     onSuccess: (_res, { label }) => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoicePage"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
+      refreshInvoiceQueries(queryClient);
       toast.success(`${selectedIds.length} nota(s): ${label} aplicado!`);
       onClear();
     },
@@ -70,7 +67,7 @@ export default function BatchDeleteBar({ selectedIds, onClear }) {
     { id: "archive", label: "Arquivar", data: { archived: true }, className: "border-slate-400 text-white hover:bg-white/10" },
     { id: "sigv", label: "SIGV", data: { sigv_recorded: true }, className: "border-emerald-400 text-emerald-200 hover:bg-emerald-500/20" },
     { id: "topcon", label: "TOPCON", data: { topcon_recorded: true }, className: "border-violet-400 text-violet-200 hover:bg-violet-500/20" },
-    { id: "boleto", label: "Boleto", data: { boleto_recorded: true }, className: "border-amber-400 text-amber-200 hover:bg-amber-500/20" },
+
   ];
 
   return (

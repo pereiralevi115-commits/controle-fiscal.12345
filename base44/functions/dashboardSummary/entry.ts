@@ -1,14 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getAllowedCnpjs, getUserProfile, isConcretarTomador, normalizeText } from '../../shared/invoiceAccess.ts';
+import { isInvoiceCompleted as isCompleted } from '../../shared/invoiceCompletion.ts';
 
 const DASHBOARD_FIELDS = [
   'id', 'document_type', 'branch_cnpj', 'supplier_cnpj', 'tomador_name', 'issue_date', 'total_value',
   'cancelled', 'archived', 'sigv_recorded', 'topcon_recorded', 'boleto_recorded'
 ];
 
-function isCompleted(inv) {
-  return !!inv.sigv_recorded && !!inv.topcon_recorded && !!inv.boleto_recorded;
-}
 
 function issueDateQuery(startDate, endDate) {
   if (!startDate && !endDate) return {};

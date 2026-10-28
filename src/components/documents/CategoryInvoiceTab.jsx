@@ -7,6 +7,7 @@ import BatchDeleteBar from "@/components/documents/BatchDeleteBar";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceDetailDialog from "@/components/invoices/InvoiceDetailDialog";
 import NFSeDetailDialog from "@/components/invoices/NFSeDetailDialog";
+import CTeDetailDialog from "@/components/invoices/CTeDetailDialog";
 import { usePaginatedInvoices } from "@/hooks/usePaginatedInvoices";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -89,7 +90,7 @@ export default function CategoryInvoiceTab({ documentType = "nfe", supplierFlag,
     );
   }
 
-  const DetailDialog = documentType === "nfse" ? NFSeDetailDialog : InvoiceDetailDialog;
+  const DetailDialog = documentType === "cte" ? CTeDetailDialog : documentType === "nfse" ? NFSeDetailDialog : InvoiceDetailDialog;
 
   return (
     <div className="space-y-6">

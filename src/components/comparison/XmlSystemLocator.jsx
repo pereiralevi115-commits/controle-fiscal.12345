@@ -76,7 +76,7 @@ function getAllocation(invoice, supplier, branchMap) {
   const type = invoice.document_type === "nfse" ? "NFS-e" : invoice.document_type === "cte" ? "CT-e" : "NF-e";
   const branch = branchMap[invoice.branch_cnpj] ? ` · ${branchMap[invoice.branch_cnpj]}` : "";
   if (invoice.cancelled) return `Canceladas (${type})${branch}`;
-  if (invoice.archived || (invoice.sigv_recorded && invoice.topcon_recorded && invoice.boleto_recorded)) return `Arquivadas (${type})${branch}`;
+  if (invoice.archived || (invoice.sigv_recorded && invoice.topcon_recorded)) return `Arquivadas (${type})${branch}`;
   if (invoice.document_type === "cte") return `Dashboard > CT-e${branch}`;
   if (supplier?.materia_prima) return `Dashboard > Matéria Prima${branch}`;
   if (supplier?.gestao_compras) return `Dashboard > Gestão de Compras (${type})${branch}`;

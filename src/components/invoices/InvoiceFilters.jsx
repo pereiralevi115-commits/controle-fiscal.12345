@@ -142,19 +142,7 @@ export default function InvoiceFilters({ filters, onFilterChange, branches, invo
           <SelectItem value="nao">TOPCON: Não</SelectItem>
         </SelectContent>
       </Select>
-      <Select
-        value={filters.boleto || "all"}
-        onValueChange={(val) => onFilterChange({ ...filters, boleto: val })}
-      >
-        <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="BOLETO" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">BOLETO: Todos</SelectItem>
-          <SelectItem value="sim">BOLETO: Sim</SelectItem>
-          <SelectItem value="nao">BOLETO: Não</SelectItem>
-        </SelectContent>
-      </Select>
+
     </div>
   );
 }

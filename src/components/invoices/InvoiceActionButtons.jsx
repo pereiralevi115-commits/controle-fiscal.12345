@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
-import { updateInvoiceInCaches } from "@/lib/invoiceCache";
+import { updateInvoiceInCaches, refreshInvoiceQueries } from "@/lib/invoiceCache";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function InvoiceActionButtons({ invoiceId, invoice }) {
@@ -32,6 +32,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
       updateInvoiceInCaches(queryClient, invoiceId, data);
       return { previousQueries };
     },
+    onSuccess: () => refreshInvoiceQueries(queryClient),
     onError: (_err, _data, context) => {
       context?.previousQueries?.forEach(([queryKey, data]) => {
         queryClient.setQueryData(queryKey, data);
@@ -144,7 +145,7 @@ export default function InvoiceActionButtons({ invoiceId, invoice }) {
   const buttons = [
     { id: "SIGV", label: "SIGV", permission: "toggle_sigv", borderColor: "border-emerald-500", textColor: "text-emerald-600", bgColor: "bg-emerald-50", activeBg: "bg-emerald-600", field: "sigv_recorded", auditPrefix: "sigv" },
     { id: "TOPCON", label: "TOPCON", permission: "toggle_topcon", borderColor: "border-violet-500", textColor: "text-violet-600", bgColor: "bg-violet-50", activeBg: "bg-violet-600", field: "topcon_recorded", auditPrefix: "topcon" },
-    { id: "BOLETO", label: "BOLETO", permission: "toggle_boleto", borderColor: "border-amber-500", textColor: "text-amber-600", bgColor: "bg-amber-50", activeBg: "bg-amber-600", field: "boleto_recorded", auditPrefix: "boleto" }
+
   ];
 
   return (

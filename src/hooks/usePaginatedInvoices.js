@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { shouldRefreshInvoices } from "@/lib/invoiceCache";
 
 export const INVOICE_PAGE_SIZE = 25;
 
@@ -27,6 +28,7 @@ export function usePaginatedInvoices({ documentType, filters, sortConfig, page, 
         sortConfig,
         page,
         pageSize: INVOICE_PAGE_SIZE,
+        refresh: shouldRefreshInvoices(),
       });
       return response.data;
     },

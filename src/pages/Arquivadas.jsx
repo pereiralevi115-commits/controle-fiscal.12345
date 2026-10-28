@@ -17,12 +17,16 @@ export default function Arquivadas({ embedded } = {}) {
       <TabsList>
         <TabsTrigger value="nfe">NF-e</TabsTrigger>
         <TabsTrigger value="nfse">NFS-e</TabsTrigger>
+        <TabsTrigger value="cte">CT-e</TabsTrigger>
       </TabsList>
       <TabsContent value="nfe" className="mt-0">
         <CategoryInvoiceTab documentType="nfe" branches={branches} extraFilters={extraFilters} showCancelledFilter={false} />
       </TabsContent>
       <TabsContent value="nfse" className="mt-0">
         <CategoryInvoiceTab documentType="nfse" branches={branches} extraFilters={extraFilters} showCancelledFilter={false} />
+      </TabsContent>
+      <TabsContent value="cte" className="mt-0">
+        <CategoryInvoiceTab documentType="cte" branches={branches} extraFilters={extraFilters} showCancelledFilter={false} />
       </TabsContent>
     </Tabs>
   );
